@@ -13,10 +13,13 @@ export async function DELETE(request, { params }) {
   }
   try {
     await writeDb(
-      (current) => ({
-        ...current,
-        records: (current.records || []).filter((r) => r.id !== id),
-      }),
+      (current) => {
+        const records = (current.records || []).filter((r) => r.id !== id);
+        const productos = Array.from(
+          new Set(records.map((r) => String(r.producto || '').trim()).filter(Boolean))
+        );
+        return { ...current, records, productos };
+      },
       `Eliminar registro ${id}`
     );
     return Response.json({ ok: true, id });
