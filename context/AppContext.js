@@ -20,7 +20,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { fetchState, createRecord, removeRecord } from '@/lib/api';
+import { fetchState, createRecord, removeRecord, updateRecord as updateRecordApi } from '@/lib/api';
 import { toMillis } from '@/lib/utils';
 
 const AppContext = createContext(null);
@@ -31,6 +31,7 @@ export function AppProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
 
@@ -71,8 +72,18 @@ export function AppProvider({ children }) {
     loadRecords();
   }, [loadRecords]);
 
-  const openModal = useCallback(() => setModalOpen(true), []);
-  const closeModal = useCallback(() => setModalOpen(false), []);
+  const openModal = useCallback(() => {
+    setEditingRecord(null);
+    setModalOpen(true);
+  }, []);
+  const openEdit = useCallback((record) => {
+    setEditingRecord(record);
+    setModalOpen(true);
+  }, []);
+  const closeModal = useCallback(() => {
+    setEditingRecord(null);
+    setModalOpen(false);
+  }, []);
 
   const addRecord = useCallback(
     async (data) => {
@@ -94,15 +105,28 @@ export function AppProvider({ children }) {
     [showToast]
   );
 
+  const updateRecord = useCallback(
+    async (id, data) => {
+      const { record, productos: prods } = await updateRecordApi(id, data);
+      setRecords((prev) => prev.map((r) => (r.id === id ? record : r)));
+      setProductos(prods);
+      showToast('Registro actualizado correctamente');
+      return record;
+    },
+    [showToast]
+  );
+
   // Valores unicos para el autocompletado (extraidos de la cache local).
   const uniqueValues = useMemo(() => {
     const FIELDS = [
       'producto',
+      'codigoProducto',
       'patente',
       'chofer',
       'pesoBalanza',
       'planta',
       'cliente',
+      'proveedor',
       'nroRemitoFalpat',
     ];
     const sets = Object.fromEntries(FIELDS.map((f) => [f, new Set()]));
@@ -140,11 +164,14 @@ export function AppProvider({ children }) {
       error,
       reload: loadRecords,
       addRecord,
+      updateRecord,
       deleteRecord,
       uniqueValues,
       stats,
       modalOpen,
+      editingRecord,
       openModal,
+      openEdit,
       closeModal,
       toast,
       showToast,
@@ -156,11 +183,14 @@ export function AppProvider({ children }) {
       error,
       loadRecords,
       addRecord,
+      updateRecord,
       deleteRecord,
       uniqueValues,
       stats,
       modalOpen,
+      editingRecord,
       openModal,
+      openEdit,
       closeModal,
       toast,
       showToast,

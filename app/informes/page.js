@@ -264,13 +264,23 @@ export default function Informes() {
                     >
                       <td className="px-4 py-3 font-semibold text-falpat-soft">{e.producto}</td>
                       <td className="px-4 py-3">
-                        <div className="font-mono text-xs font-bold text-falpat-soft">
-                          {e.entradas} · {fmtTn(e.entradasTn)}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="inline-flex rounded-md bg-white/[0.04] px-2 py-1 text-[11px] font-bold text-slate-300">
+                            {e.entradas} movimientos
+                          </span>
+                          <span className="inline-flex rounded-md bg-falpat/15 px-2 py-1 font-mono text-xs font-bold text-falpat-soft">
+                            {fmtTn(e.entradasTn)}
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-mono text-xs font-bold text-volt">
-                          {e.salidas} · {fmtTn(e.salidasTn)}
+                        <div className="flex flex-col gap-1.5">
+                          <span className="inline-flex rounded-md bg-white/[0.04] px-2 py-1 text-[11px] font-bold text-slate-300">
+                            {e.salidas} movimientos
+                          </span>
+                          <span className="inline-flex rounded-md bg-volt/15 px-2 py-1 font-mono text-xs font-bold text-volt">
+                            {fmtTn(e.salidasTn)}
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -291,10 +301,24 @@ export default function Informes() {
                     Totales
                   </td>
                   <td className="px-4 py-3 font-mono text-xs font-bold text-falpat-soft">
-                    {totals.entradas} · {fmtTn(totals.entradasTn)}
+                    <div className="flex flex-col gap-1.5">
+                      <span className="inline-flex rounded-md bg-white/[0.06] px-2 py-1 text-[11px] font-bold text-slate-200">
+                        {totals.entradas} movimientos
+                      </span>
+                      <span className="inline-flex rounded-md bg-falpat/20 px-2 py-1 font-mono text-xs font-bold text-falpat-soft">
+                        {fmtTn(totals.entradasTn)}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs font-bold text-volt">
-                    {totals.salidas} · {fmtTn(totals.salidasTn)}
+                    <div className="flex flex-col gap-1.5">
+                      <span className="inline-flex rounded-md bg-white/[0.06] px-2 py-1 text-[11px] font-bold text-slate-200">
+                        {totals.salidas} movimientos
+                      </span>
+                      <span className="inline-flex rounded-md bg-volt/20 px-2 py-1 font-mono text-xs font-bold text-volt">
+                        {fmtTn(totals.salidasTn)}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs font-bold text-slate-100">
                     {fmtTn(balanceTn)}

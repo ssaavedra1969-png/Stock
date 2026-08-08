@@ -12,7 +12,14 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { AppContext } from '@/context/AppContext';
 import Autocomplete from './Autocomplete';
-import { cn, todayISO } from '@/lib/utils';
+import { cn, todayISO, toMillis } from '@/lib/utils';
+import {
+  unidadPorCodigo,
+  unidadPorNombre,
+  normalizar,
+  CATALOGO_PRODUCTOS,
+  cantidadConUnidad,
+} from '@/lib/productos';
 import {
   IconX,
   IconArrowUpRight,
@@ -28,6 +35,7 @@ import {
 
 const EMPTY_FORM = {
   producto: '',
+  codigoProducto: '',
   fechaRemito: todayISO(),
   patente: '',
   chofer: '',
@@ -37,7 +45,33 @@ const EMPTY_FORM = {
   pesoBalanza: '',
   planta: '',
   cliente: '',
+  proveedor: '',
 };
+
+// "2026-01-02T12:00:00.000Z" -> "2026-01-02" (para <input type="date">)
+function toDateInput(value) {
+  const ms = toMillis(value);
+  if (!ms) return '';
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function fromRecord(rec) {
+  return {
+    producto: rec.producto || '',
+    codigoProducto: rec.codigoProducto || '',
+    fechaRemito: toDateInput(rec.fechaRemito) || todayISO(),
+    patente: rec.patente || '',
+    chofer: rec.chofer || '',
+    nroRemitoProveedor: rec.nroRemitoProveedor || '',
+    nroRemitoFalpat: rec.nroRemitoFalpat || '',
+    pesoProveedor: rec.pesoProveedor || '',
+    pesoBalanza: rec.pesoBalanza || '',
+    planta: rec.planta || '',
+    cliente: rec.cliente || '',
+    proveedor: rec.proveedor || '',
+  };
+}
 
 function Field({ label, icon, required, error, children }) {
   return (
@@ -54,11 +88,19 @@ function Field({ label, icon, required, error, children }) {
 }
 
 export default function ModalForm() {
-  const { modalOpen, closeModal, addRecord, uniqueValues } = useContext(AppContext);
+  const {
+    modalOpen,
+    closeModal,
+    addRecord,
+    updateRecord,
+    editingRecord,
+    uniqueValues,
+  } = useContext(AppContext);
   const [carga, setCarga] = useState('Entrada');
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const isEdit = Boolean(editingRecord);
 
   const requiredFields = useMemo(() => {
     const common = [
@@ -71,18 +113,18 @@ export default function ModalForm() {
       'planta',
     ];
     return carga === 'Entrada'
-      ? [...common, 'nroRemitoProveedor', 'pesoProveedor']
+      ? [...common, 'nroRemitoProveedor', 'pesoProveedor', 'proveedor']
       : [...common, 'cliente'];
   }, [carga]);
 
   // Reset al abrir y cierre por teclado / bloqueo de scroll
   useEffect(() => {
     if (modalOpen) {
-      setForm({ ...EMPTY_FORM, fechaRemito: todayISO() });
+      setCarga(editingRecord?.carga || 'Entrada');
+      setForm(editingRecord ? fromRecord(editingRecord) : { ...EMPTY_FORM, fechaRemito: todayISO() });
       setErrors({});
-      setCarga('Entrada');
     }
-  }, [modalOpen]);
+  }, [modalOpen, editingRecord]);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -105,6 +147,37 @@ export default function ModalForm() {
       setForm((f) => ({ ...f, [key]: value }));
       if (errors[key]) setErrors((er) => ({ ...er, [key]: undefined }));
     };
+  }
+
+  // Al elegir un producto del catálogo, completa el código automáticamente
+  // (si el campo código está vacío) para no repetir la tarea a mano.
+  function onProductoChange(e) {
+    const value = typeof e === 'string' ? e : e.target.value;
+    setForm((f) => {
+      const next = { ...f, producto: value };
+      if (!f.codigoProducto.trim()) {
+        const match = CATALOGO_PRODUCTOS.find(
+          (p) => p.codigo && normalizar(p.nombre) === normalizar(value)
+        );
+        if (match) next.codigoProducto = match.codigo;
+      }
+      return next;
+    });
+    if (errors.producto) setErrors((er) => ({ ...er, producto: undefined }));
+  }
+
+  // El peso de balanza se puede tipear solo el número: si el producto
+  // pertenece al catálogo, se completa la unidad correcta al final.
+  function onPesoBalanzaChange(e) {
+    const value = typeof e === 'string' ? e : e.target.value;
+    setForm((f) => {
+      const numero = value.trim().replace(',', '.');
+      if (!/^\d+([.,]\d+)?$/.test(numero)) return { ...f, pesoBalanza: value };
+      const unidad = unidadPorCodigo(f.codigoProducto || '') || unidadPorNombre(f.producto);
+      const formateado = cantidadConUnidad(numero.replace(',', '.'), unidad);
+      return { ...f, pesoBalanza: formateado };
+    });
+    if (errors.pesoBalanza) setErrors((er) => ({ ...er, pesoBalanza: undefined }));
   }
 
   function switchCarga(next) {
@@ -136,6 +209,7 @@ export default function ModalForm() {
       const payload = {
         carga,
         producto: form.producto.trim(),
+        codigoProducto: form.codigoProducto.trim().toUpperCase(),
         fechaRemito: new Date(`${form.fechaRemito}T12:00:00`),
         patente: form.patente.trim().toUpperCase(),
         chofer: form.chofer.trim(),
@@ -146,10 +220,15 @@ export default function ModalForm() {
           ? {
               nroRemitoProveedor: form.nroRemitoProveedor.trim(),
               pesoProveedor: form.pesoProveedor.trim(),
+              proveedor: form.proveedor.trim(),
             }
           : { cliente: form.cliente.trim() }),
       };
-      await addRecord(payload);
+      if (isEdit) {
+        await updateRecord(editingRecord.id, payload);
+      } else {
+        await addRecord(payload);
+      }
       closeModal();
     } catch (err) {
       console.error('Error al guardar:', err);
@@ -182,7 +261,7 @@ export default function ModalForm() {
           <div>
             <h2 className="section-title flex items-center gap-2">
               <IconBox className="h-5 w-5 text-falpat" />
-              Nuevo registro
+              {isEdit ? 'Editar registro' : 'Nuevo registro'}
             </h2>
             <p className="section-sub mt-0.5">Stock de materiales · GRUPO FALPAT SRL</p>
           </div>
@@ -208,11 +287,30 @@ export default function ModalForm() {
               <Autocomplete
                 options={uniqueValues.producto}
                 value={form.producto}
-                onChange={setField('producto')}
+                onChange={onProductoChange}
                 error={errors.producto}
                 placeholder="Elegí o escribí un producto nuevo"
               />
             </Field>
+
+            {/* Código de producto */}
+            <Field
+              label="Código de producto"
+              icon={<IconBox className="h-4 w-4 text-slate-500" />}
+              error={errors.codigoProducto}
+            >
+              <Autocomplete
+                options={CATALOGO_PRODUCTOS.map((p) => p.codigo).filter(Boolean)}
+                value={form.codigoProducto}
+                onChange={setField('codigoProducto')}
+                placeholder="Ej: P620 (opcional)"
+              />
+            </Field>
+            {form.codigoProducto && (
+              <p className="mt-1 text-xs text-slate-500">
+                Medida: {unidadPorCodigo(form.codigoProducto)}
+              </p>
+            )}
 
             {/* Toggle Entrada / Salida */}
             <div>
@@ -246,7 +344,7 @@ export default function ModalForm() {
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Los pesos se registran en toneladas (tn).
+                Materiales a granel en toneladas (tn); el resto en su unidad.
               </p>
             </div>
 
@@ -342,6 +440,21 @@ export default function ModalForm() {
                       className={cn('field', errors.pesoProveedor && 'field-error')}
                     />
                   </Field>
+
+                  <Field
+                    label="Proveedor"
+                    icon={<IconBuilding className="h-4 w-4 text-slate-500" />}
+                    required
+                    error={errors.proveedor}
+                  >
+                    <Autocomplete
+                      options={uniqueValues.proveedor}
+                      value={form.proveedor}
+                      onChange={setField('proveedor')}
+                      error={errors.proveedor}
+                      placeholder="Nombre del proveedor"
+                    />
+                  </Field>
                 </>
               ) : (
                 <Field
@@ -409,6 +522,8 @@ export default function ModalForm() {
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-night-950/40 border-t-night-950" />
                   Guardando…
                 </>
+              ) : isEdit ? (
+                'Guardar cambios'
               ) : (
                 'Guardar registro'
               )}

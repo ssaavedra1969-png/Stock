@@ -119,10 +119,26 @@ export function IconTrash({ className }) {
   );
 }
 
+export function IconPencil({ className }) {
+  return (
+    <svg {...base({ className })} aria-hidden="true">
+      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+    </svg>
+  );
+}
+
 export function IconChevronDown({ className }) {
   return (
     <svg {...base({ className })} aria-hidden="true">
       <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+export function IconChevronUp({ className }) {
+  return (
+    <svg {...base({ className })} aria-hidden="true">
+      <polyline points="6 15 12 9 18 15" />
     </svg>
   );
 }

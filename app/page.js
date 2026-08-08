@@ -4,14 +4,13 @@
 // app/page.js
 // Dashboard principal de GRUPO FALPAT SRL:
 // - Tarjetas de conteo (Entradas / Salidas / Total / Último)
-// - Filtro por producto
-// - Tabla responsiva con los últimos 20 registros
+// - Tabla responsiva con los últimos 20 registros (ordenable por columna)
 // - Búsqueda en tiempo real
 // - FAB "AGREGAR REGISTRO"
 // ============================================================
 import { useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDate, normalizeText, cn } from '@/lib/utils';
+import { formatDate, normalizeText, cn, toMillis } from '@/lib/utils';
 import StatsCard from '@/components/StatsCard';
 import SearchBar from '@/components/SearchBar';
 import {
@@ -29,9 +28,66 @@ import {
   IconTruck,
   IconScale,
   IconBuilding,
+  IconChevronUp,
+  IconChevronDown,
+  IconPencil,
 } from '@/components/Icons';
 
 const MAX_TABLE_ROWS = 20;
+
+const COLUMNS = [
+  { key: 'producto', label: 'Producto', type: 'text' },
+  { key: 'codigoProducto', label: 'Código', type: 'text' },
+  { key: 'fechaRemito', label: 'Fecha', type: 'date' },
+  { key: 'carga', label: 'Carga', type: 'text' },
+  { key: 'patente', label: 'Patente', type: 'text' },
+  { key: 'chofer', label: 'Chofer', type: 'text' },
+  { key: 'nroRemitoFalpat', label: 'Nro Falpat', type: 'text' },
+  { key: 'nroRemitoProveedor', label: 'Remito Proveedor', type: 'text' },
+  { key: 'proveedorCliente', label: 'Proveedor / Cliente', type: 'text' },
+  { key: 'pesoProveedor', label: 'Peso Proveedor', type: 'number' },
+  { key: 'pesoBalanza', label: 'Peso Balanza', type: 'number' },
+  { key: 'planta', label: 'Planta', type: 'text' },
+];
+
+// Valor numérico de un peso con unidad ("35.4 tn", "1000 u", "").
+function numeroPeso(v) {
+  if (v == null) return 0;
+  const n = parseFloat(String(v).replace(/[^\d.,]/g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getSortValue(r, key) {
+  if (key === 'fechaRemito') return toMillis(r.fechaRemito) || 0;
+  if (key === 'pesoBalanza' || key === 'pesoProveedor') return numeroPeso(r[key]);
+  if (key === 'proveedorCliente') return (r.carga === 'Entrada' ? r.proveedor : r.cliente) || '';
+  return String(r[key] || '');
+}
+
+function SortHeader({ column, sort, onSort }) {
+  const active = sort.key === column.key;
+  const up = active && sort.dir === 'asc';
+  const down = active && sort.dir === 'desc';
+  return (
+    <th className="px-4 py-3">
+      <button
+        type="button"
+        onClick={() => onSort(column.key)}
+        title={`Ordenar por ${column.label}`}
+        className={cn(
+          'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.16em] transition hover:text-slate-200',
+          active ? 'text-falpat-soft' : 'text-slate-500'
+        )}
+      >
+        {column.label}
+        <span className="flex flex-col leading-none">
+          <IconChevronUp className={cn('h-2.5 w-2.5', up ? 'text-falpat' : 'text-slate-700')} />
+          <IconChevronDown className={cn('h-2.5 w-2.5', down ? 'text-falpat' : 'text-slate-700')} />
+        </span>
+      </button>
+    </th>
+  );
+}
 
 function Skeleton({ className }) {
   return <div className={`animate-pulse rounded-xl bg-white/[0.05] ${className}`} />;
@@ -124,30 +180,7 @@ function BadgeCarga({ carga }) {
   );
 }
 
-function ProductPills({ productos, selected, onSelect }) {
-  const items = ['Todos', ...productos];
-  return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((p) => (
-        <button
-          key={p}
-          type="button"
-          onClick={() => onSelect(p)}
-          className={cn(
-            'rounded-full border px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition',
-            selected === p
-              ? 'border-falpat/60 bg-falpat/15 text-falpat-soft shadow-glow'
-              : 'border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/25 hover:text-slate-200'
-          )}
-        >
-          {p}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function TableRow({ record, onDelete }) {
+function TableRow({ record, onEdit, onDelete }) {
   const isEntrada = record.carga === 'Entrada';
   return (
     <tr className="border-b border-white/[0.05] transition last:border-0 hover:bg-white/[0.03]">
@@ -156,6 +189,15 @@ function TableRow({ record, onDelete }) {
           <IconBox className="h-3.5 w-3.5 shrink-0 text-slate-500" />
           <span className="max-w-[150px] truncate">{record.producto || '—'}</span>
         </span>
+      </td>
+      <td className="whitespace-nowrap px-4 py-3">
+        {record.codigoProducto ? (
+          <span className="inline-flex rounded-md border border-falpat/30 bg-falpat/10 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-falpat-soft">
+            {record.codigoProducto}
+          </span>
+        ) : (
+          <span className="text-slate-600">—</span>
+        )}
       </td>
       <td className="whitespace-nowrap px-4 py-3 font-mono text-xs tabular-nums text-slate-300">
         {formatDate(record.fechaRemito)}
@@ -181,20 +223,22 @@ function TableRow({ record, onDelete }) {
           {record.nroRemitoFalpat}
         </span>
       </td>
-      <td className="px-4 py-3 text-xs text-slate-400">
+      <td className="px-4 py-3">
+        <span className="flex items-center gap-1.5 font-mono text-xs text-slate-300">
+          <IconFileText className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+          <span className="max-w-[120px] truncate">{record.nroRemitoProveedor || '—'}</span>
+        </span>
+      </td>
+      <td className="px-4 py-3">
         {isEntrada ? (
-          <span className="flex flex-col leading-tight">
-            <span className="max-w-[130px] truncate font-mono text-slate-300">
-              {record.nroRemitoProveedor || '—'}
-            </span>
-            <span className="max-w-[130px] truncate text-slate-500">
-              {record.pesoProveedor || ''}
-            </span>
+          <span className="max-w-[150px] truncate text-xs font-semibold text-slate-200">
+            {record.proveedor || '—'}
           </span>
         ) : (
-          <span className="max-w-[150px] truncate">{record.cliente || '—'}</span>
+          <span className="max-w-[150px] truncate text-xs">{record.cliente || '—'}</span>
         )}
       </td>
+      <td className="px-4 py-3 text-xs text-slate-400">{record.pesoProveedor || '—'}</td>
       <td className="px-4 py-3">
         <span className="flex items-center gap-1.5 font-mono text-xs text-slate-300">
           <IconScale className="h-3.5 w-3.5 shrink-0 text-slate-500" />
@@ -204,19 +248,30 @@ function TableRow({ record, onDelete }) {
       <td className="px-4 py-3">
         <span className="flex items-center gap-1.5 text-xs text-slate-300">
           <IconBuilding className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-          <span className="max-w-[130px] truncate">{record.planta}</span>
+          <span className="max-w-[110px] truncate">{record.planta}</span>
         </span>
       </td>
-      <td className="px-4 py-3 text-right">
-        <button
-          type="button"
-          onClick={() => onDelete(record.id)}
-          className="rounded-lg p-2 text-slate-600 transition hover:bg-red-500/10 hover:text-red-400"
-          aria-label="Eliminar registro"
-          title="Eliminar registro"
-        >
-          <IconTrash className="h-4 w-4" />
-        </button>
+      <td className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-4 py-3 text-right">
+        <div className="flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => onEdit(record)}
+            className="rounded-lg p-2 text-slate-600 transition hover:bg-falpat/10 hover:text-falpat-soft"
+            aria-label="Editar registro"
+            title="Editar registro"
+          >
+            <IconPencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(record.id)}
+            className="rounded-lg p-2 text-slate-600 transition hover:bg-red-500/10 hover:text-red-400"
+            aria-label="Eliminar registro"
+            title="Eliminar registro"
+          >
+            <IconTrash className="h-4 w-4" />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -228,15 +283,18 @@ function TableSkeleton() {
       {Array.from({ length: 6 }).map((_, i) => (
         <tr key={i} className="border-b border-white/[0.05] last:border-0">
           <td className="px-4 py-4"><Skeleton className="h-3.5 w-24" /></td>
+          <td className="px-4 py-4"><Skeleton className="h-4 w-10" /></td>
           <td className="px-4 py-4"><Skeleton className="h-3.5 w-16" /></td>
           <td className="px-4 py-4"><Skeleton className="h-5 w-20" /></td>
           <td className="px-4 py-4"><Skeleton className="h-3.5 w-24" /></td>
           <td className="px-4 py-4"><Skeleton className="h-3.5 w-28" /></td>
           <td className="px-4 py-4"><Skeleton className="h-3.5 w-24" /></td>
           <td className="px-4 py-4"><Skeleton className="h-3.5 w-20" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-20" /></td>
           <td className="px-4 py-4"><Skeleton className="h-3.5 w-24" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-5 w-8" /></td>
+          <td className="px-4 py-4"><Skeleton className="h-3.5 w-16" /></td>
+          <td className="px-4 py-4"><Skeleton className="h-3.5 w-20" /></td>
+          <td className="px-4 py-4"><Skeleton className="h-3.5 w-16" /></td>
+          <td className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-4 py-4"><Skeleton className="h-5 w-8" /></td>
         </tr>
       ))}
     </>
@@ -244,28 +302,24 @@ function TableSkeleton() {
 }
 
 export default function Home() {
-  const { records, productos, loading, error, reload, deleteRecord, openModal, showToast } = useApp();
+  const { records, loading, error, reload, deleteRecord, openEdit, openModal, showToast } = useApp();
   const [query, setQuery] = useState('');
-  const [producto, setProducto] = useState('Todos');
-
-  // Filtro por producto (afecta tarjetas + tabla)
-  const byProduct = useMemo(
-    () => (producto === 'Todos' ? records : records.filter((r) => r.producto === producto)),
-    [records, producto]
-  );
+  const [sort, setSort] = useState({ key: 'fechaRemito', dir: 'desc' });
 
   // Búsqueda en tiempo real
   const filtered = useMemo(() => {
     const q = normalizeText(query);
-    if (!q) return byProduct;
-    return byProduct.filter((r) => {
+    if (!q) return records;
+    return records.filter((r) => {
       const haystack = normalizeText(
         [
           r.producto,
+          r.codigoProducto,
           r.patente,
           r.chofer,
           r.nroRemitoFalpat,
           r.nroRemitoProveedor,
+          r.proveedor,
           r.cliente,
           r.planta,
           r.pesoBalanza,
@@ -273,16 +327,38 @@ export default function Home() {
       );
       return haystack.includes(q);
     });
-  }, [byProduct, query]);
+  }, [records, query]);
 
-  const visible = filtered.slice(0, MAX_TABLE_ROWS);
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    const { key, dir } = sort;
+    arr.sort((a, b) => {
+      const va = getSortValue(a, key);
+      const vb = getSortValue(b, key);
+      const cmp =
+        typeof va === 'number' && typeof vb === 'number'
+          ? va - vb
+          : String(va).localeCompare(String(vb), 'es', { sensitivity: 'base' });
+      return dir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sort]);
+
+  const visible = sorted.slice(0, MAX_TABLE_ROWS);
+
+  function onSort(key) {
+    setSort((s) => {
+      if (s.key === key) return { key, dir: s.dir === 'asc' ? 'desc' : 'asc' };
+      return { key, dir: key === 'fechaRemito' ? 'desc' : 'asc' };
+    });
+  }
 
   const statsByProduct = useMemo(() => {
-    const total = byProduct.length;
-    const entradas = byProduct.filter((r) => r.carga === 'Entrada').length;
+    const total = records.length;
+    const entradas = records.filter((r) => r.carga === 'Entrada').length;
     const salidas = total - entradas;
-    return { total, entradas, salidas, ultimo: byProduct[0] || null };
-  }, [byProduct]);
+    return { total, entradas, salidas, ultimo: records[0] || null };
+  }, [records]);
 
   async function handleDelete(id) {
     if (!window.confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
@@ -348,7 +424,7 @@ export default function Home() {
         <StatsCard
           label="Total movimientos"
           value={loading ? '…' : statsByProduct.total}
-          sub={producto === 'Todos' ? 'Registros almacenados' : `Filtro: ${producto}`}
+          sub="Registros almacenados"
           icon={<IconLayers className="h-5 w-5" />}
           tone="white"
         />
@@ -372,17 +448,17 @@ export default function Home() {
             <div>
               <h2 className="section-title">Últimos movimientos</h2>
               <p className="section-sub mt-0.5">
-                Mostrando {visible.length} de {filtered.length} registro{filtered.length !== 1 ? 's' : ''}
+                Mostrando {visible.length} de {filtered.length} registro{filtered.length !== 1 ? 's' : ''} ·
+                deslizá la tabla con la barra de abajo para ver todas las columnas
               </p>
             </div>
             <SearchBar value={query} onChange={setQuery} />
           </div>
-          <ProductPills productos={productos} selected={producto} onSelect={setProducto} />
         </div>
 
         {loading ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1050px] border-collapse">
+          <div className="table-scroll">
+            <table className="w-full min-w-[1320px] border-collapse">
               <tbody>
                 <TableSkeleton />
               </tbody>
@@ -390,29 +466,23 @@ export default function Home() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-4">
-            <EmptyState filtered={query || producto !== 'Todos'} />
+            <EmptyState filtered={Boolean(query)} />
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1050px] border-collapse text-left">
+            <div className="table-scroll">
+              <table className="w-full min-w-[1320px] border-collapse text-left">
                 <thead>
-                  <tr className="border-b border-white/10 text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                    <th className="px-4 py-3 font-bold">Producto</th>
-                    <th className="px-4 py-3 font-bold">Fecha</th>
-                    <th className="px-4 py-3 font-bold">Carga</th>
-                    <th className="px-4 py-3 font-bold">Patente</th>
-                    <th className="px-4 py-3 font-bold">Chofer</th>
-                    <th className="px-4 py-3 font-bold">Nro Falpat</th>
-                    <th className="px-4 py-3 font-bold">Proveedor / Cliente</th>
-                    <th className="px-4 py-3 font-bold">Peso Balanza</th>
-                    <th className="px-4 py-3 font-bold">Planta</th>
-                    <th className="px-4 py-3" />
+                  <tr className="border-b border-white/10">
+                    {COLUMNS.map((col) => (
+                      <SortHeader key={col.key} column={col} sort={sort} onSort={onSort} />
+                    ))}
+                    <th className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {visible.map((record) => (
-                    <TableRow key={record.id} record={record} onDelete={handleDelete} />
+                    <TableRow key={record.id} record={record} onEdit={openEdit} onDelete={handleDelete} />
                   ))}
                 </tbody>
               </table>
