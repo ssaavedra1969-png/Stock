@@ -7,21 +7,29 @@
 // ============================================================
 import { useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { toMillis, parseWeight } from '@/lib/utils';
-import StatsCard from '@/components/StatsCard';
+import { toMillis, parseWeight, normalizeText } from '@/lib/utils';
 import {
   IconArrowUpRight,
   IconArrowDownLeft,
-  IconLayers,
   IconScale,
   IconAlert,
   IconRefresh,
   IconX,
+  IconSearch,
+  IconCalendar,
+  IconTruck,
 } from '@/components/Icons';
 
 function fmtTn(n) {
   const sign = n < 0 ? '-' : '';
   return `${sign}${Math.abs(n).toFixed(1).replace('.', ',')} tn`;
+}
+
+function toDateInput(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function ErrorPanel({ message, onRetry }) {
@@ -44,24 +52,61 @@ function ErrorPanel({ message, onRetry }) {
   );
 }
 
+const TIPOS = [
+  { value: 'Todos', label: 'Todos' },
+  { value: 'Entrada', label: 'Entradas' },
+  { value: 'Salida', label: 'Salidas' },
+];
+
+const RANGOS = [
+  { key: 'hoy', label: 'Hoy' },
+  { key: '7d', label: 'Últimos 7 días' },
+  { key: 'mes', label: 'Este mes' },
+  { key: 'todo', label: 'Todo el período' },
+];
+
 export default function Informes() {
   const { records, productos, loading, error, reload } = useApp();
   const [producto, setProducto] = useState('Todos');
+  const [tipo, setTipo] = useState('Todos');
+  const [planta, setPlanta] = useState('Todas');
+  const [busqueda, setBusqueda] = useState('');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+
+  const plantas = useMemo(
+    () => [...new Set(records.map((r) => r.planta).filter(Boolean))].sort(),
+    [records]
+  );
 
   const filtered = useMemo(() => {
     const min = desde ? toMillis(new Date(`${desde}T00:00:00`)) : null;
     const max = hasta ? toMillis(new Date(`${hasta}T23:59:59`)) : null;
+    const q = normalizeText(busqueda);
     return records.filter((r) => {
       if (producto !== 'Todos' && r.producto !== producto) return false;
+      if (tipo !== 'Todos' && r.carga !== tipo) return false;
+      if (planta !== 'Todas' && r.planta !== planta) return false;
+      if (q) {
+        const haystack = normalizeText(
+          [
+            r.patente,
+            r.chofer,
+            r.nroRemitoFalpat,
+            r.nroRemitoProveedor,
+            r.proveedor,
+            r.cliente,
+          ].join(' ')
+        );
+        if (!haystack.includes(q)) return false;
+      }
       const ms = toMillis(r.fechaRemito);
       if (ms == null) return false;
       if (min != null && ms < min) return false;
       if (max != null && ms > max) return false;
       return true;
     });
-  }, [records, producto, desde, hasta]);
+  }, [records, producto, tipo, planta, busqueda, desde, hasta]);
 
   const byProduct = useMemo(() => {
     const map = new Map();
@@ -104,12 +149,51 @@ export default function Informes() {
   );
 
   const balanceTn = totals.entradasTn - totals.salidasTn;
-  const hasFilters = producto !== 'Todos' || Boolean(desde) || Boolean(hasta);
+
+  const hasFilters =
+    producto !== 'Todos' ||
+    tipo !== 'Todos' ||
+    planta !== 'Todas' ||
+    Boolean(busqueda) ||
+    Boolean(desde) ||
+    Boolean(hasta);
+
+  const activeFilters = [
+    producto !== 'Todos',
+    tipo !== 'Todos',
+    planta !== 'Todas',
+    Boolean(busqueda),
+    Boolean(desde),
+    Boolean(hasta),
+  ].filter(Boolean).length;
 
   function clearFilters() {
     setProducto('Todos');
+    setTipo('Todos');
+    setPlanta('Todas');
+    setBusqueda('');
     setDesde('');
     setHasta('');
+  }
+
+  function quickRange(key) {
+    const now = new Date();
+    if (key === 'hoy') {
+      const d = toDateInput(now);
+      setDesde(d);
+      setHasta(d);
+    } else if (key === '7d') {
+      const from = new Date(now);
+      from.setDate(now.getDate() - 6);
+      setDesde(toDateInput(from));
+      setHasta(toDateInput(now));
+    } else if (key === 'mes') {
+      setDesde(toDateInput(new Date(now.getFullYear(), now.getMonth(), 1)));
+      setHasta(toDateInput(now));
+    } else if (key === 'todo') {
+      setDesde('');
+      setHasta('');
+    }
   }
 
   return (
@@ -138,9 +222,29 @@ export default function Informes() {
       {error && <ErrorPanel message={error} onRetry={reload} />}
 
       {/* Filtros */}
-      <div className="card">
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="min-w-[180px] flex-1 sm:max-w-xs">
+      <div className="card !p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <h2 className="section-title !text-lg">Filtros</h2>
+            {activeFilters > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-falpat/25 px-1.5 text-[11px] font-bold text-falpat-soft">
+                {activeFilters}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={clearFilters}
+            disabled={!hasFilters}
+            className="btn-ghost"
+          >
+            <IconX className="h-4 w-4" />
+            Limpiar filtros
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
             <label className="label">Producto</label>
             <select
               value={producto}
@@ -157,8 +261,65 @@ export default function Informes() {
               ))}
             </select>
           </div>
+
           <div>
-            <label className="label">Desde</label>
+            <label className="label">Planta</label>
+            <select
+              value={planta}
+              onChange={(e) => setPlanta(e.target.value)}
+              className="field"
+            >
+              <option value="Todas" className="bg-night-900">
+                Todas
+              </option>
+              {plantas.map((p) => (
+                <option key={p} value={p} className="bg-night-900">
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Tipo de movimiento</label>
+            <div className="inline-flex w-full rounded-lg border border-white/10 bg-black/20 p-1">
+              {TIPOS.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => setTipo(o.value)}
+                  className={
+                    'flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ' +
+                    (tipo === o.value
+                      ? 'bg-falpat/20 text-falpat-soft shadow'
+                      : 'text-slate-400 hover:text-slate-200')
+                  }
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-1">
+            <label className="label">Búsqueda</label>
+            <div className="relative">
+              <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Patente, chofer, remito, proveedor…"
+                className="field !pl-9"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">
+              <IconCalendar className="mr-1 inline h-3.5 w-3.5 text-slate-500" />
+              Desde
+            </label>
             <input
               type="date"
               value={desde}
@@ -166,8 +327,12 @@ export default function Informes() {
               className="field"
             />
           </div>
+
           <div>
-            <label className="label">Hasta</label>
+            <label className="label">
+              <IconCalendar className="mr-1 inline h-3.5 w-3.5 text-slate-500" />
+              Hasta
+            </label>
             <input
               type="date"
               value={hasta}
@@ -175,54 +340,63 @@ export default function Informes() {
               className="field"
             />
           </div>
-          <div>
-            <label className="label">&nbsp;</label>
-            <button
-              type="button"
-              onClick={clearFilters}
-              disabled={!hasFilters}
-              className="btn-ghost"
-            >
-              <IconX className="h-4 w-4" />
-              Limpiar
-            </button>
-          </div>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] uppercase tracking-wider text-slate-500">
+            Período rápido:
+          </span>
+          {RANGOS.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => quickRange(r.key)}
+              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-slate-300 transition hover:border-falpat/40 hover:bg-falpat/10 hover:text-falpat-soft"
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+
         <p className="mt-3 text-xs text-slate-500">
           Los pesos se suman desde el campo &quot;Peso (Balanza)&quot; en toneladas (tn).
         </p>
       </div>
 
-      {/* Tarjetas de resumen */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard
-          label="Total entradas"
-          value={loading ? '…' : totals.entradas}
-          sub={loading ? '' : `${fmtTn(totals.entradasTn)} ingresadas`}
-          icon={<IconArrowUpRight className="h-5 w-5" />}
-          tone="cyan"
-        />
-        <StatsCard
-          label="Total salidas"
-          value={loading ? '…' : totals.salidas}
-          sub={loading ? '' : `${fmtTn(totals.salidasTn)} despachadas`}
-          icon={<IconArrowDownLeft className="h-5 w-5" />}
-          tone="volt"
-        />
-        <StatsCard
-          label="Balance"
-          value={loading ? '…' : fmtTn(balanceTn)}
-          sub={balanceTn >= 0 ? 'Más entradas que salidas' : 'Más salidas que entradas'}
-          icon={<IconScale className="h-5 w-5" />}
-          tone={balanceTn >= 0 ? 'cyan' : 'volt'}
-        />
-        <StatsCard
-          label="Movimientos"
-          value={loading ? '…' : filtered.length}
-          sub={hasFilters ? 'Según los filtros aplicados' : 'Todos los registros'}
-          icon={<IconLayers className="h-5 w-5" />}
-          tone="white"
-        />
+      {/* Resumen compacto */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
+        <span className="inline-flex items-center gap-1.5">
+          <IconTruck className="h-4 w-4 text-falpat-soft" />
+          <b className="text-base leading-none text-white">{filtered.length}</b>
+          <span className="text-slate-500">viajes</span>
+        </span>
+        <span className="h-4 w-px bg-white/10" />
+        <span className="inline-flex items-center gap-1.5">
+          <IconArrowUpRight className="h-3.5 w-3.5 text-falpat-soft" />
+          <b className="text-base leading-none text-falpat-soft">{totals.entradas}</b>
+          <span className="text-slate-500">entradas</span>
+          <span className="font-mono text-slate-300">{fmtTn(totals.entradasTn)}</span>
+        </span>
+        <span className="h-4 w-px bg-white/10" />
+        <span className="inline-flex items-center gap-1.5">
+          <IconArrowDownLeft className="h-3.5 w-3.5 text-volt" />
+          <b className="text-base leading-none text-volt">{totals.salidas}</b>
+          <span className="text-slate-500">salidas</span>
+          <span className="font-mono text-slate-300">{fmtTn(totals.salidasTn)}</span>
+        </span>
+        <span className="h-4 w-px bg-white/10" />
+        <span className="inline-flex items-center gap-1.5">
+          <IconScale className="h-3.5 w-3.5 text-white" />
+          <span className="text-slate-500">Balance</span>
+          <b
+            className={
+              'font-mono text-base leading-none ' +
+              (balanceTn >= 0 ? 'text-falpat-soft' : 'text-volt')
+            }
+          >
+            {fmtTn(balanceTn)}
+          </b>
+        </span>
       </div>
 
       {/* Tabla por producto */}
@@ -231,7 +405,7 @@ export default function Informes() {
           <div>
             <h2 className="section-title">Resumen por producto</h2>
             <p className="section-sub mt-0.5">
-              {filtered.length} registro{filtered.length !== 1 ? 's' : ''} en el período
+              {filtered.length} viaje{filtered.length !== 1 ? 's' : ''} en el período
               seleccionado
             </p>
           </div>
@@ -266,7 +440,7 @@ export default function Informes() {
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1.5">
                           <span className="inline-flex rounded-md bg-white/[0.04] px-2 py-1 text-[11px] font-bold text-slate-300">
-                            {e.entradas} movimientos
+                            {e.entradas} viajes
                           </span>
                           <span className="inline-flex rounded-md bg-falpat/15 px-2 py-1 font-mono text-xs font-bold text-falpat-soft">
                             {fmtTn(e.entradasTn)}
@@ -276,7 +450,7 @@ export default function Informes() {
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1.5">
                           <span className="inline-flex rounded-md bg-white/[0.04] px-2 py-1 text-[11px] font-bold text-slate-300">
-                            {e.salidas} movimientos
+                            {e.salidas} viajes
                           </span>
                           <span className="inline-flex rounded-md bg-volt/15 px-2 py-1 font-mono text-xs font-bold text-volt">
                             {fmtTn(e.salidasTn)}
@@ -303,7 +477,7 @@ export default function Informes() {
                   <td className="px-4 py-3 font-mono text-xs font-bold text-falpat-soft">
                     <div className="flex flex-col gap-1.5">
                       <span className="inline-flex rounded-md bg-white/[0.06] px-2 py-1 text-[11px] font-bold text-slate-200">
-                        {totals.entradas} movimientos
+                        {totals.entradas} viajes
                       </span>
                       <span className="inline-flex rounded-md bg-falpat/20 px-2 py-1 font-mono text-xs font-bold text-falpat-soft">
                         {fmtTn(totals.entradasTn)}
@@ -313,7 +487,7 @@ export default function Informes() {
                   <td className="px-4 py-3 font-mono text-xs font-bold text-volt">
                     <div className="flex flex-col gap-1.5">
                       <span className="inline-flex rounded-md bg-white/[0.06] px-2 py-1 text-[11px] font-bold text-slate-200">
-                        {totals.salidas} movimientos
+                        {totals.salidas} viajes
                       </span>
                       <span className="inline-flex rounded-md bg-volt/20 px-2 py-1 font-mono text-xs font-bold text-volt">
                         {fmtTn(totals.salidasTn)}
