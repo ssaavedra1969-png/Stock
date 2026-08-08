@@ -6,8 +6,8 @@
       "producto": "ARENA FINA",
       "codigoProducto": "AF",
       "fechaRemito": "2026-06-22T12:00:00.000Z",
-      "patente": "",
-      "chofer": "",
+      "patente": "TEST123",
+      "chofer": "Prueba",
       "nroRemitoProveedor": "104653",
       "nroRemitoFalpat": "",
       "pesoProveedor": "",
@@ -31742,15 +31742,15 @@
   ],
   "productos": [
     "ARENA FINA",
-    "CPF 40 AVELLANEDA",
-    "MAPEFILL E BASGS 25KG",
     "PIEDRA 0-6",
-    "PIEDRA 10-30",
-    "PIEDRA 6-12",
     "PIEDRA 6-20",
-    "RDC DRUMS 200 KG",
-    "SELLADOR (MAPEFLEX PU 45 FT 111 GREY 20X 600ML",
+    "CPF 40 AVELLANEDA",
+    "PIEDRA 6-12",
     "W351R",
-    "W500R"
+    "PIEDRA 10-30",
+    "W500R",
+    "MAPEFILL E BASGS 25KG",
+    "SELLADOR (MAPEFLEX PU 45 FT 111 GREY 20X 600ML",
+    "RDC DRUMS 200 KG"
   ]
 }
