@@ -1,6 +1,21 @@
 {
   "records": [
     {
+      "id": "93e1d622-b7ec-4fc4-a5fc-b5cb1bc718bb",
+      "createdAt": "2026-08-08T14:17:12.536Z",
+      "carga": "Entrada",
+      "cliente": "",
+      "fechaRemito": "2026-08-08T12:00:00.000Z",
+      "chofer": "Prueba",
+      "nroRemitoProveedor": "",
+      "producto": "TEST AUTO",
+      "patente": "ZZ999ZZ",
+      "pesoBalanza": "1 tn",
+      "nroRemitoFalpat": "9999",
+      "planta": "Planta Test",
+      "pesoProveedor": ""
+    },
+    {
       "id": "d4dbfa98-9db3-41d0-96d1-43fc170b8e47",
       "createdAt": "2026-08-08T14:16:53.743Z",
       "carga": "Entrada",
