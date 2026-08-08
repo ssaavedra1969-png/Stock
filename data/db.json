@@ -1,21 +1,6 @@
 {
   "records": [
     {
-      "id": "d4dbfa98-9db3-41d0-96d1-43fc170b8e47",
-      "createdAt": "2026-08-08T14:16:53.743Z",
-      "carga": "Entrada",
-      "cliente": "",
-      "fechaRemito": "2026-08-08T12:00:00.000Z",
-      "chofer": "Prueba",
-      "nroRemitoProveedor": "",
-      "producto": "TEST AUTO",
-      "patente": "ZZ999ZZ",
-      "pesoBalanza": "1 tn",
-      "nroRemitoFalpat": "9999",
-      "planta": "Planta Test",
-      "pesoProveedor": ""
-    },
-    {
       "id": "seed-1",
       "carga": "Entrada",
       "producto": "Piedra 10.60",
