@@ -1,0 +1,67 @@
+[START OF PROMPT]
+ACTÚA COMO UN EXPERTO DESARROLLADOR FULL-STACK.
+Tu tarea es generar el código completo de una aplicación web para "GRUPO FALPAT SRL" que gestione el stock de materiales (entradas y salidas).
+
+REQUISITOS TÉCNICOS:
+- Frontend: Next.js 14 (App Router) con Tailwind CSS.
+- Backend/Database: Firebase Firestore (modo gratuito).
+- Hosting: Vercel (gratuito).
+- Código: Todo en un solo proyecto, estructurado y listo para copiar/pegar en archivos.
+
+DISEÑO UI/UX (MUY IMPORTANTE):
+- Inspirarse visualmente en https://falpat-control-de-vehiculos.vercel.app/ (paleta de colores oscuros, azul profundo/negro, acentos en cian/amarillo, estilo industrial moderno).
+- Usar tarjetas (Cards) con efecto Glassmorphism (fondo semitransparente con blur) y bordes sutiles.
+- Tener una barra lateral (Sidebar) o Navbar superior con el logo "GRUPO FALPAT SRL".
+- Dashboard principal: Resumen con tarjetas de conteo (Total Entradas, Total Salidas, Último movimiento).
+- Tabla responsiva mostrando los últimos 20 registros.
+- Botón flotante "AGREGAR REGISTRO" (FAB) que abre un Modal para el ingreso de datos.
+
+LÓGICA DE CAMPOS (CONDICIONAL):
+- Campo "Carga" tipo Toggle/Select con opciones: "Entrada" y "Salida".
+- SI selecciona "Entrada", mostrar:
+  Carga, Fecha Remito(Falpat), Patente, Chofer, Nro Remito(Proveedor), Nro Remito(Falpat), Unidad(Proveedor), Unidad(Balanza), Planta.
+- SI selecciona "Salida", mostrar:
+  Carga, Fecha Remito(Falpat SRL), Patente, Chofer, Nro Remito(Falpat SRL), Cliente, Unidad(Balanza), Planta.
+- Todos los campos son obligatorios excepto los que aplican solo a la opción contraria.
+
+FUNCIONALIDAD DE MEMORIA/AUTOCOMPLETADO:
+- Al hacer clic en los campos: "Patente", "Chofer", "Unidad(Balanza)", "Planta", debe aparecer un dropdown con opciones ya existentes en la base de datos para ese campo específico.
+- Implementar búsqueda fuzzy o filtro por coincidencia mientras se escribe (debounce de 300ms).
+- Para optimizar las lecturas de Firestore (límite gratuito), crear un contexto global (React Context) que al iniciar la app haga UNA SOLA LECTURA de todos los documentos (o solo los campos necesarios) y extraiga los valores únicos para cada campo. Así el autocompletado trabaja localmente sin hacer múltiples lecturas a Firestore. (Asumir que la cantidad de registros no superará los miles en el corto plazo para mantenerse en el free tier).
+
+ESTRUCTURA DE FIREBASE (FIRESTORE):
+- Colección: `materiales`
+- Documento:
+  {
+    carga: string,
+    fechaRemito: timestamp,
+    patente: string,
+    chofer: string,
+    nroRemitoProveedor: string (solo entrada),
+    nroRemitoFalpat: string,
+    unidadProveedor: string (solo entrada),
+    unidadBalanza: string,
+    planta: string,
+    cliente: string (solo salida),
+    createdAt: timestamp (serverTimestamp)
+  }
+- Reglas de seguridad: permitir lectura/escritura solo a usuarios autenticados (opcional, pero si no se usa auth, dejar en test mode con advertencia).
+
+CÓDIGO A GENERAR (ENTREGAR TODOS LOS ARCHIVOS COMPLETOS):
+1. `lib/firebase.js` - Configuración de Firebase (usar variables de entorno NEXT_PUBLIC_FIREBASE_...).
+2. `context/AppContext.js` - Contexto global para almacenar en caché los datos (patentes, choferes, unidades, plantas) y funciones CRUD.
+3. `app/page.js` - Página principal (Dashboard) con el resumen y la tabla.
+4. `components/ModalForm.js` - Modal con el formulario condicional y el autocompletado.
+5. `components/SearchBar.js` (opcional) - Barra de búsqueda para filtrar la tabla.
+6. `app/layout.js` - Layout principal con la navegación y estilos globales.
+7. `tailwind.config.js` - Configuración con colores personalizados (oscuros, acentos).
+
+INSTRUCCIONES DE DESPLIEGUE (incluir al final del código):
+- Crear repositorio en GitHub.
+- Subir el código.
+- Crear proyecto en Vercel y vincular con GitHub.
+- Configurar variables de entorno en Vercel.
+- Configurar Firebase (crear proyecto, habilitar Firestore, copiar credenciales).
+
+IMPORTANTE: Tener en cuenta los LÍMITES GRATUITOS. No usar funciones serverless pesadas. Toda la lógica debe correr en el cliente (CSR) para evitar costos de ejecución en Vercel. Usar `getDocs` con caché habilitado (`{ source: 'cache' }` o manejar estado global).
+[END OF PROMPT]

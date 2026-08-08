@@ -1,0 +1,50 @@
+{
+  "records": [
+    {
+      "id": "seed-1",
+      "carga": "Entrada",
+      "producto": "Piedra 10.60",
+      "fechaRemito": "2026-08-05T12:00:00.000Z",
+      "patente": "AA123BB",
+      "chofer": "Juan Perez",
+      "nroRemitoProveedor": "F-0001",
+      "nroRemitoFalpat": "0001-0001",
+      "pesoProveedor": "30 tn",
+      "pesoBalanza": "29.8 tn",
+      "planta": "Planta Norte",
+      "cliente": "",
+      "createdAt": "2026-08-05T13:00:00.000Z"
+    },
+    {
+      "id": "seed-2",
+      "carga": "Salida",
+      "producto": "Cemento Avellaneda",
+      "fechaRemito": "2026-08-06T12:00:00.000Z",
+      "patente": "AC456CC",
+      "chofer": "Maria Gomez",
+      "nroRemitoProveedor": "",
+      "nroRemitoFalpat": "0001-0002",
+      "pesoProveedor": "",
+      "pesoBalanza": "12 tn",
+      "planta": "Planta Sur",
+      "cliente": "Constructora Roca",
+      "createdAt": "2026-08-06T13:00:00.000Z"
+    },
+    {
+      "id": "seed-3",
+      "carga": "Entrada",
+      "producto": "Arena",
+      "fechaRemito": "2026-08-07T12:00:00.000Z",
+      "patente": "AD789DD",
+      "chofer": "Carlos Diaz",
+      "nroRemitoProveedor": "F-0002",
+      "nroRemitoFalpat": "0001-0003",
+      "pesoProveedor": "25 tn",
+      "pesoBalanza": "24.9 tn",
+      "planta": "Planta Norte",
+      "cliente": "",
+      "createdAt": "2026-08-07T13:00:00.000Z"
+    }
+  ],
+  "productos": ["Piedra 10.60", "Cemento Avellaneda", "Arena"]
+}
