@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-08-08. Leer esto completo antes de tocar nada._
+_Última actualización: 2026-08-09. Leer esto completo antes de tocar nada._
 
 ---
 
@@ -29,14 +29,14 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 - `npm run dev` usa `.env.local` (ignorado por git) con `GITHUB_BRANCH=dev` → trabaja contra
   la rama de prueba, NO toca producción.
-- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 1867`.
+- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2576`.
 
 ### Proceso al hacer cambios (flujo actual)
 
 1. Probá en `dev` (`.env.local` apunta a `dev`).
 2. Cuando el usuario aprueba → `git add` + `git commit` + `git push origin main`.
 3. Vercel despliega solo desde `main` (ramas: `main` = producción, `dev` = prueba).
-4. Verificar después del deploy: home, `/informes`, `/api/db` (1867 records).
+4. Verificar después del deploy: home, `/informes`, `/reportes`, `/api/db` (2576 records).
 
 ---
 
@@ -47,16 +47,26 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
   - `GET/POST /api/db` → leer / agregar registros (lee y escribe a GitHub con el token).
   - `PUT/DELETE /api/db/[id]` → editar / borrar un registro. Siempre recalcula `productos`.
 - **Clientes**:
-  - `app/page.js` → **Panel**: tabla de últimos movimientos (filtra por búsqueda, ordena por
-    columnas con flechas, editar/borrar con lápiz/tacho), columna de acciones fija a la derecha.
-  - `app/informes/page.js` → **Informes**: filtros (producto, planta, tipo entradas/salidas,
-    búsqueda libre, fechas, períodos rápidos) y resumen por producto con entradas/salidas/balance.
+  - `app/page.js` → **Panel**: top bar con botones Registrar entrada/salida + mini stats,
+    navegador de registro, tabla de movimientos con filtro por carga (Todos/Entradas/Salidas),
+    búsqueda, orden por columnas, editar/borrar, columna de acciones fija a la derecha.
+  - `app/informes/page.js` → **Informes**: generador gerencial con 6 tipos (Stock actual,
+    Entradas, Salidas, Movimientos, Comparativo E/S, Stock por planta), filtros (tipo, desde,
+    hasta, producto, planta, proveedor/cliente) que aplican a TODOS los tipos, gráfico de torta,
+    exportación Excel/PDF con encabezado + logo de empresa.
+  - `app/reportes/page.js` → **Reportes**: el informe original (filtros tipo/planta/búsqueda/
+    períodos rápidos, etiqueta Viajes), tabla por producto ordenable al hacer clic en "Producto".
   - `context/AppContext.js` → carga global de datos + estado de edición (`openEdit`, `updateRecord`).
   - `components/ModalForm.js` → alta/edición (autocompleta código por producto, unidad automática).
   - `lib/api.js` → funciones HTTP (`getRecords`, `createRecord`, `updateRecord`, `deleteRecord`).
   - `lib/utils.js` → `toMillis`, `formatDate`, `normalizeText`, `parseWeight` (SOLO suma tn), `cn`.
   - `lib/productos.js` → catálogo código → nombre → unidad.
-  - `scripts/import-entrada.mjs` → importador masivo desde Excel a una rama.
+  - `lib/company.js` → `COMPANY` (datos de empresa: name/tagline/address/phone/email/cuit/web;
+    los de contacto están VACÍOS, completar con datos reales) + `LOGO_PATH='/logo.png'`.
+  - `public/logo.png` → logo (copia de `logo/fp1.png`) usado en Sidebar e informes.
+  - `scripts/import-entrada.mjs` → importador masivo de entradas desde Excel.
+  - `scripts/import-salida.mjs` → importador de salidas desde `salida/Salida.xlsx`.
+  - Dependencias extra (client-side): `xlsx`, `jspdf`, `jspdf-autotable` para exportaciones.
 
 ### Formato de un record
 
@@ -100,13 +110,12 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 ---
 
-## 4. ESTADO ACTUAL DE LOS DATOS (2026-08-08)
+## 4. ESTADO ACTUAL DE LOS DATOS (2026-08-09)
 
-- **1867 registros**, todos `Entrada`, planta `Lujan`, fechas 02/01/2026 → 06/08/2026.
-- **11 productos** en catálogo. Proveedores: CA, SPOSITO, LCE, MESSEL, MAPEI, etc.
-- Totales: **64.766,46 tn** en registros tn (32 registros son u/bolsas/tambores).
-- `data/db.json` local == rama `main` (hash sha256 verificado).
-- Base de producción actualizada a estos 1867 registros.
+- **2576 registros** (1867 `Entrada` + 709 `Salida`), planta `Lujan`, en `dev` y en `main` (producción).
+- Las salidas se importaron desde `salida/Salida.xlsx` (711 filas → 709; las 2 descartadas BA y T).
+- `data/db.json` local == rama `main` == rama `dev` (misma data). `GET /api/db` en producción = 2576.
+- Snapshot de backup: `backup/db-backup-2026-08-09.json` (2.576 registros).
 
 ---
 
@@ -117,12 +126,12 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 - Backup principal: `data/db.json` commiteado en `main` → respaldo en **git history**
   + **GitHub** (remoto) + **Vercel**.
 - Snapshot explícito: `backup/db-backup-YYYY-MM-DD.json` (copia fechada de `data/db.json`,
-  commiteada). Hoy: `backup/db-backup-2026-08-08.json` (1.867 registros).
+  commiteada). Hoy: `backup/db-backup-2026-08-09.json` (2.576 registros). Anterior: 2026-08-08 (1.867).
 - Fuente original de la carga: `entrada/Entrada.xlsx` (también está versionado en el repo).
 - **Restaurar**: tomar el contenido de un backup y subirlo a la rama deseada vía la API de
   contenidos de GitHub (PUT a `data/db.json`) o reemplazando el archivo local + commit + push.
 - Verificación de integridad: comparar hash entre local y remoto
-  (`node` + `createHash('sha256')` sobre el contenido) o chequear `GET /api/db` (1867 records).
+  (`node` + `createHash('sha256')` sobre el contenido) o chequear `GET /api/db` (2576 records).
 
 ---
 
@@ -171,25 +180,31 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 ## 9. PENDIENTES / PRÓXIMOS PASOS
 
 - [ ] **REVISAR CON EL USUARIO las filas BA y T de Salida.xlsx** (a pedido, quedó agendado).
-      Son las únicas 2 filas NO importadas (711 del archivo → 709 en dev):
+      Son las únicas 2 filas NO importadas (711 del archivo → 709):
       - fila 593: código `BA`, sin descripción, cant 4, remito 20339, cliente ALMAJO SARGENTO.
       - fila 663: código `T`, sin descripción, cant 28.94, remito 20856, cliente GLATTI GLADYS.
       El usuario sospecha que se cargaron mal en el Excel; hay que preguntar qué son.
 - [ ] **Confirmar unidad de MS 453 (MIRA SET 453)** — se importó como `u` (2 filas: 21 u y 0.03 u).
       Si es otra unidad (tn/kg), corregir.
-- [ ] **MERGE de las salidas a main (pendiente de aprobación).** Dev ya tiene 2576 registros
-      (1867 entradas + 709 salidas). Producción sigue con 1867. **Obligatorio subir junto con
-      el fix de 1 MiB** (sección 8, punto 6), si no, main no se puede leer al superar 1 MiB.
-- [ ] **Panel: reporte del usuario de que el buscador no filtra al escribir.** El código y el
-  bundle desplegado están verificados correctos (búsquedas reales OK). Probable cache del
-  navegador; si persiste, reproducir con navegador real (no hay headless en la máquina).
-- [ ] Revocar token viejo (ver sección 7).
+- [ ] **Completar datos reales de la empresa en `lib/company.js`** (address, phone, email, cuit,
+      web) para que aparezcan en el encabezado de los informes exportados.
+- [ ] **Revocar token viejo** (ver sección 7).
 - [ ] Si llegan planillas de **Salidas** o de otras plantas, importar con el mismo script.
-- [ ] Evaluar si el usuario quiere que el Panel recupere un filtro por producto (fue removido
-      a pedido, solo queda el buscador).
 - [ ] Consistencia pendiente (a decisión del usuario): las **entradas** guardaron la columna
       REMITOS en `nroRemitoProveedor`; el usuario confirmó que el nro de remito es de FALPAT.
       Las **salidas** nuevas usan `nroRemitoFalpat`. Quedó así por ahora.
+
+### HECHO en la sesión 2026-08-09 (ya desplegado a producción)
+
+- [x] Importadas las 709 salidas a `dev` y **merge a `main`** junto con el fix de 1 MiB (blob API).
+- [x] Panel rediseñado: top bar (botones + mini stats), navegador de registro con todos los campos,
+      tabla compacta con columna sticky, y **filtro por carga (Todos/Entradas/Salidas)**.
+- [x] Sección **Informes** (generador gerencial): 6 tipos de informe, donut, Excel/PDF con logo,
+      columna Diferencia y Saldo, sumas corregidas (el "14" era el conteo de productos).
+- [x] Sección **Reportes** restaurada (el informe original) + menú con Reportes arriba de Informes.
+- [x] Filtros **Desde/Hasta ahora aplican a todos los tipos de informe** (antes solo a movimientos).
+- [x] Opciones de los selects de Informes con `bg-night-900` (mismo look que Reportes).
+- [x] Producción verificada: `https://stock-gamma-inky.vercel.app/` con 2576 records.
 
 ---
 
