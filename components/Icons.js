@@ -317,3 +317,11 @@ export function IconPrinter({ className }) {
     </svg>
   );
 }
+
+export function IconCheck({ className }) {
+  return (
+    <svg {...base({ className })} aria-hidden="true">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}

@@ -39,3 +39,8 @@ next-env.d.ts
 # secrets locales / tokens
 /github
 
+# dev server logs
+dev*.log
+dev-server*.log
+dev-server*.err.log
+

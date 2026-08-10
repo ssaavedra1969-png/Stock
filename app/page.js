@@ -10,8 +10,10 @@
 // ============================================================
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { formatDate, normalizeText, cn, toMillis } from '@/lib/utils';
+import { formatDate, normalizeText, cn, toMillis, anioMes, descripcionPeriodo } from '@/lib/utils';
 import SearchBar from '@/components/SearchBar';
+import FiltroPeriodo from '@/components/FiltroPeriodo';
+import FiltrosAplicados from '@/components/FiltrosAplicados';
 import {
   IconArrowUpRight,
   IconArrowDownLeft,
@@ -420,15 +422,26 @@ export default function Home() {
   const { records, loading, error, reload, deleteRecord, openEdit, openModal, showToast } = useApp();
   const [query, setQuery] = useState('');
   const [cargaFiltro, setCargaFiltro] = useState('Todos');
+  const [mes, setMes] = useState('');
+  const [anio, setAnio] = useState('');
   const [sort, setSort] = useState({ key: 'fechaRemito', dir: 'desc' });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [navIndex, setNavIndex] = useState(0);
 
+  // Años disponibles para el filtro de período.
+  const anios = useMemo(
+    () =>
+      [...new Set(records.map((r) => anioMes(r.fechaRemito)?.anio).filter(Boolean))].sort(
+        (a, b) => b - a
+      ),
+    [records]
+  );
+
   // Cualquier cambio de búsqueda/orden/tamaño vuelve a la primera página.
   useEffect(() => {
     setPage(1);
-  }, [query, sort, pageSize, cargaFiltro]);
+  }, [query, sort, pageSize, cargaFiltro, mes, anio]);
 
   // Mantiene el navegador dentro del rango cuando cambian los datos.
   useEffect(() => {
@@ -440,6 +453,9 @@ export default function Home() {
     const q = normalizeText(query);
     return records.filter((r) => {
       if (cargaFiltro !== 'Todos' && r.carga !== cargaFiltro) return false;
+      const ym = anioMes(r.fechaRemito);
+      if (anio && ym?.anio !== Number(anio)) return false;
+      if (mes && ym?.mes !== Number(mes)) return false;
       if (!q) return true;
       const haystack = normalizeText(
         [
@@ -453,11 +469,12 @@ export default function Home() {
           r.cliente,
           r.planta,
           r.pesoBalanza,
+          formatDate(r.fechaRemito),
         ].join(' ')
       );
       return haystack.includes(q);
     });
-  }, [records, query, cargaFiltro]);
+  }, [records, query, cargaFiltro, mes, anio]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -512,6 +529,25 @@ export default function Home() {
     }
     return { entradas, salidas, total: records.length };
   }, [records]);
+
+  // Filtros activos para mostrar qué se está viendo.
+  const filtrosAplicados = useMemo(() => {
+    const items = [];
+    if (cargaFiltro !== 'Todos') {
+      items.push(`Carga: ${cargaFiltro === 'Entrada' ? 'Entradas' : 'Salidas'}`);
+    }
+    const periodo = descripcionPeriodo(mes, anio, '', '');
+    if (periodo !== 'Todo el historial') items.push(`Período: ${periodo}`);
+    if (query) items.push(`Búsqueda: "${query}"`);
+    return items;
+  }, [cargaFiltro, mes, anio, query]);
+
+  function clearFilters() {
+    setQuery('');
+    setCargaFiltro('Todos');
+    setMes('');
+    setAnio('');
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -633,6 +669,19 @@ export default function Home() {
               <SearchBar value={query} onChange={setQuery} />
             </div>
           </div>
+          <div className="flex flex-col gap-3 border-t border-white/10 pt-4 lg:flex-row lg:items-end lg:justify-between">
+            <FiltroPeriodo
+              mes={mes}
+              anio={anio}
+              desde=""
+              hasta=""
+              anios={anios}
+              onMes={setMes}
+              onAnio={setAnio}
+              showDetalle={false}
+            />
+            <FiltrosAplicados items={filtrosAplicados} onLimpiar={filtrosAplicados.length ? clearFilters : undefined} />
+          </div>
         </div>
 
         {loading ? (
@@ -645,7 +694,9 @@ export default function Home() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-4">
-            <EmptyState filtered={Boolean(query)} />
+            <EmptyState
+              filtered={Boolean(query) || cargaFiltro !== 'Todos' || Boolean(mes) || Boolean(anio)}
+            />
           </div>
         ) : (
           <>

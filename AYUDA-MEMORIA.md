@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-08-09. Leer esto completo antes de tocar nada._
+_Última actualización: 2026-08-10. Leer esto completo antes de tocar nada._
 
 ---
 
@@ -29,7 +29,7 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 - `npm run dev` usa `.env.local` (ignorado por git) con `GITHUB_BRANCH=dev` → trabaja contra
   la rama de prueba, NO toca producción.
-- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2576`.
+- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2577` (dev) / `2576` (main).
 
 ### Proceso al hacer cambios (flujo actual)
 
@@ -110,11 +110,16 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 ---
 
-## 4. ESTADO ACTUAL DE LOS DATOS (2026-08-09)
+## 4. ESTADO ACTUAL DE LOS DATOS (2026-08-10)
 
-- **2576 registros** (1867 `Entrada` + 709 `Salida`), planta `Lujan`, en `dev` y en `main` (producción).
-- Las salidas se importaron desde `salida/Salida.xlsx` (711 filas → 709; las 2 descartadas BA y T).
-- `data/db.json` local == rama `main` == rama `dev` (misma data). `GET /api/db` en producción = 2576.
+- **2577 registros** (1867 `Entrada` + 710 `Salida`), planta `Lujan`. En `dev` (falta merge a `main`).
+- La salida 710 es la fila que decía `BA` (remito 20339, ALMAJO SARGENTO, 4 tn): el usuario confirmó
+  que es **AF (ARENA FINA)** → se importó como tal. La fila `T` (remito 20856) se **eliminó** del
+  `Salida.xlsx` y no se importa.
+- **MS 453 (MIRA SET 453)** se mide en **kg** (no `u`): corregido en catálogo (`lib/productos.js`)
+  y en los 2 registros (`21 kg` y `0.03 kg`). Se eliminaron los duplicados viejos en `u`.
+- `data/db.json` local == rama `dev`. `GET /api/db` en dev = 2577. Producción (main) sigue en 2576
+  hasta aprobar el merge.
 - Snapshot de backup: `backup/db-backup-2026-08-09.json` (2.576 registros).
 
 ---
@@ -179,13 +184,6 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 
 ## 9. PENDIENTES / PRÓXIMOS PASOS
 
-- [ ] **REVISAR CON EL USUARIO las filas BA y T de Salida.xlsx** (a pedido, quedó agendado).
-      Son las únicas 2 filas NO importadas (711 del archivo → 709):
-      - fila 593: código `BA`, sin descripción, cant 4, remito 20339, cliente ALMAJO SARGENTO.
-      - fila 663: código `T`, sin descripción, cant 28.94, remito 20856, cliente GLATTI GLADYS.
-      El usuario sospecha que se cargaron mal en el Excel; hay que preguntar qué son.
-- [ ] **Confirmar unidad de MS 453 (MIRA SET 453)** — se importó como `u` (2 filas: 21 u y 0.03 u).
-      Si es otra unidad (tn/kg), corregir.
 - [ ] **Completar datos reales de la empresa en `lib/company.js`** (address, phone, email, cuit,
       web) para que aparezcan en el encabezado de los informes exportados.
 - [ ] **Revocar token viejo** (ver sección 7).
@@ -193,6 +191,33 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 - [ ] Consistencia pendiente (a decisión del usuario): las **entradas** guardaron la columna
       REMITOS en `nroRemitoProveedor`; el usuario confirmó que el nro de remito es de FALPAT.
       Las **salidas** nuevas usan `nroRemitoFalpat`. Quedó así por ahora.
+
+### EN CURSO (sesión 2026-08-10, dev): Informes → Entradas/Salidas/Ventas separados
+
+- [x] `app/informes/page.js`: en Stock y Comparativo ahora hay **3 secciones**:
+      Entradas (donut), Salidas (donut) y **Ventas del período** (barras horizontales
+      por producto+unidad, sin mezclar tn con kg).
+- [x] La antigua "Diferencia" (entradas − salidas) se **reemplazó por Ventas del período**
+      (a pedido del usuario): en este negocio cada Salida es una venta a cliente, así que
+      Ventas = Salidas, pero se muestra como gráfico de barras distinto (color cyan/teal)
+      para no confundirse con los 2 donuts.
+- [x] Totales de stock: `entradasMovs`, `salidasMovs`/`ventasMovs`, `promedioEntrada`,
+      `promedioVenta` (solo filas `tn`; tn/movimiento) + franja resumen con movimientos y promedios.
+- [x] PDF fiel a pantalla: 2 donuts lado a lado + sección "VENTAS DEL PERÍODO" con barras
+      horizontales (rects jsPDF), leyenda máx. 7 ítems + "+ N más".
+- [x] `npm run lint` y `npm run build` OK. OJO: correr `build` con el dev server activo
+      corrompe `.next` (dev server da 500); reiniciar el dev server después.
+- [x] Promoción a producción (commit + push a `main`) en esta sesión.
+
+### RESUELTO en la sesión 2026-08-10 (dev; pendiente merge a main)
+
+- [x] Fila `T` de Salida.xlsx → **eliminada** (remito 20856, GLATTI GLADYS). No estaba en la base.
+- [x] Fila `BA` de Salida.xlsx → es **AF / ARENA FINA** (remito 20339, ALMAJO SARGENTO, 4 tn):
+      corregida en el Excel fuente y **importada** (1 registro nuevo).
+- [x] **MS 453** → unidad correcta es **kg**: catálogo + 2 registros corregidos, duplicados en `u`
+      eliminados.
+- [x] Pendiente UI: **filtro del Panel roto** + **filtro por mes/año** en Reportes e Informes con
+      etiqueta de filtros aplicados (desde/hasta como opción secundaria).
 
 ### HECHO en la sesión 2026-08-09 (ya desplegado a producción)
 
@@ -213,5 +238,5 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 1. Leer este archivo completo.
 2. `git status` y `git log --oneline -5` para ver el estado real.
 3. Levantar `npm run dev` y abrir `http://localhost:3000` (usa rama `dev`).
-4. Chequear `GET /api/db` (1867 records) en local y en producción.
+4. Chequear `GET /api/db` (2577 records en dev / 2576 en producción).
 5. NO tocar producción sin probar en `dev` primero y sin que el usuario lo apruebe.

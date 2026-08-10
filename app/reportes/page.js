@@ -7,7 +7,10 @@
 // ============================================================
 import { useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { toMillis, parseWeight, normalizeText } from '@/lib/utils';
+import { toMillis, parseWeight, normalizeText, anioMes, descripcionPeriodo } from '@/lib/utils';
+import FiltroPeriodo from '@/components/FiltroPeriodo';
+import FiltrosAplicados from '@/components/FiltrosAplicados';
+import MultiSelect from '@/components/MultiSelect';
 import {
   IconArrowUpRight,
   IconArrowDownLeft,
@@ -16,7 +19,6 @@ import {
   IconRefresh,
   IconX,
   IconSearch,
-  IconCalendar,
   IconTruck,
 } from '@/components/Icons';
 
@@ -67,12 +69,14 @@ const RANGOS = [
 
 export default function Informes() {
   const { records, productos, loading, error, reload } = useApp();
-  const [producto, setProducto] = useState('Todos');
+  const [productosSel, setProductosSel] = useState([]);
   const [tipo, setTipo] = useState('Todos');
   const [planta, setPlanta] = useState('Todas');
   const [busqueda, setBusqueda] = useState('');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+  const [mes, setMes] = useState('');
+  const [anio, setAnio] = useState('');
   const [sortKey, setSortKey] = useState('peso');
   const [sortDir, setSortDir] = useState('desc');
 
@@ -81,12 +85,20 @@ export default function Informes() {
     [records]
   );
 
+  const anios = useMemo(
+    () =>
+      [...new Set(records.map((r) => anioMes(r.fechaRemito)?.anio).filter(Boolean))].sort(
+        (a, b) => b - a
+      ),
+    [records]
+  );
+
   const filtered = useMemo(() => {
     const min = desde ? toMillis(new Date(`${desde}T00:00:00`)) : null;
     const max = hasta ? toMillis(new Date(`${hasta}T23:59:59`)) : null;
     const q = normalizeText(busqueda);
     return records.filter((r) => {
-      if (producto !== 'Todos' && r.producto !== producto) return false;
+      if (productosSel.length > 0 && !productosSel.includes(r.producto)) return false;
       if (tipo !== 'Todos' && r.carga !== tipo) return false;
       if (planta !== 'Todas' && r.planta !== planta) return false;
       if (q) {
@@ -104,11 +116,14 @@ export default function Informes() {
       }
       const ms = toMillis(r.fechaRemito);
       if (ms == null) return false;
+      const ym = anioMes(r.fechaRemito);
+      if (anio && ym?.anio !== Number(anio)) return false;
+      if (mes && ym?.mes !== Number(mes)) return false;
       if (min != null && ms < min) return false;
       if (max != null && ms > max) return false;
       return true;
     });
-  }, [records, producto, tipo, planta, busqueda, desde, hasta]);
+  }, [records, productosSel, tipo, planta, busqueda, desde, hasta, mes, anio]);
 
   const byProduct = useMemo(() => {
     const map = new Map();
@@ -156,29 +171,47 @@ export default function Informes() {
   const balanceTn = totals.entradasTn - totals.salidasTn;
 
   const hasFilters =
-    producto !== 'Todos' ||
+    productosSel.length > 0 ||
     tipo !== 'Todos' ||
     planta !== 'Todas' ||
     Boolean(busqueda) ||
     Boolean(desde) ||
-    Boolean(hasta);
+    Boolean(hasta) ||
+    Boolean(mes) ||
+    Boolean(anio);
 
   const activeFilters = [
-    producto !== 'Todos',
+    productosSel.length > 0,
     tipo !== 'Todos',
     planta !== 'Todas',
     Boolean(busqueda),
     Boolean(desde),
     Boolean(hasta),
+    Boolean(mes),
+    Boolean(anio),
   ].filter(Boolean).length;
 
+  const filtrosAplicados = useMemo(() => {
+    const items = [];
+    if (mes || anio || desde || hasta) {
+      items.push(`Período: ${descripcionPeriodo(mes, anio, desde, hasta)}`);
+    }
+    if (productosSel.length > 0) items.push(`Producto: ${productosSel.join(', ')}`);
+    if (planta !== 'Todas') items.push(`Planta: ${planta}`);
+    if (tipo !== 'Todos') items.push(`Tipo: ${tipo === 'Entrada' ? 'Entradas' : 'Salidas'}`);
+    if (busqueda) items.push(`Búsqueda: "${busqueda}"`);
+    return items;
+  }, [mes, anio, desde, hasta, productosSel, planta, tipo, busqueda]);
+
   function clearFilters() {
-    setProducto('Todos');
+    setProductosSel([]);
     setTipo('Todos');
     setPlanta('Todas');
     setBusqueda('');
     setDesde('');
     setHasta('');
+    setMes('');
+    setAnio('');
   }
 
   function toggleSort(key) {
@@ -259,21 +292,15 @@ export default function Informes() {
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <label className="label">Producto</label>
-            <select
-              value={producto}
-              onChange={(e) => setProducto(e.target.value)}
-              className="field"
-            >
-              <option value="Todos" className="bg-night-900">
-                Todos
-              </option>
-              {productos.map((p) => (
-                <option key={p} value={p} className="bg-night-900">
-                  {p}
-                </option>
-              ))}
-            </select>
+            <label className="label">Productos</label>
+            <MultiSelect
+              options={productos}
+              value={productosSel}
+              onChange={setProductosSel}
+              placeholder="Todos los productos"
+              searchPlaceholder="Buscar producto…"
+              itemLabel="productos"
+            />
           </div>
 
           <div>
@@ -328,32 +355,21 @@ export default function Informes() {
               />
             </div>
           </div>
+        </div>
 
-          <div>
-            <label className="label">
-              <IconCalendar className="mr-1 inline h-3.5 w-3.5 text-slate-500" />
-              Desde
-            </label>
-            <input
-              type="date"
-              value={desde}
-              onChange={(e) => setDesde(e.target.value)}
-              className="field"
-            />
-          </div>
-
-          <div>
-            <label className="label">
-              <IconCalendar className="mr-1 inline h-3.5 w-3.5 text-slate-500" />
-              Hasta
-            </label>
-            <input
-              type="date"
-              value={hasta}
-              onChange={(e) => setHasta(e.target.value)}
-              className="field"
-            />
-          </div>
+        {/* Período: Mes + Año (principal) y Desde/Hasta (detalle secundario) */}
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <FiltroPeriodo
+            mes={mes}
+            anio={anio}
+            desde={desde}
+            hasta={hasta}
+            anios={anios}
+            onMes={setMes}
+            onAnio={setAnio}
+            onDesde={setDesde}
+            onHasta={setHasta}
+          />
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -372,9 +388,12 @@ export default function Informes() {
           ))}
         </div>
 
-        <p className="mt-3 text-xs text-slate-500">
-          Los pesos se suman desde el campo &quot;Peso (Balanza)&quot; en toneladas (tn).
-        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+          <FiltrosAplicados items={filtrosAplicados} onLimpiar={hasFilters ? clearFilters : undefined} />
+          <p className="text-xs text-slate-500">
+            Los pesos se suman desde el campo &quot;Peso (Balanza)&quot; en toneladas (tn).
+          </p>
+        </div>
       </div>
 
       {/* Resumen compacto */}
@@ -415,7 +434,7 @@ export default function Informes() {
 
       {/* Tabla por producto */}
       <div className="card overflow-hidden !p-0">
-        <div className="flex flex-col gap-1 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="section-title">Resumen por producto</h2>
             <p className="section-sub mt-0.5">
@@ -423,6 +442,7 @@ export default function Informes() {
               seleccionado
             </p>
           </div>
+          <FiltrosAplicados items={filtrosAplicados} onLimpiar={hasFilters ? clearFilters : undefined} />
         </div>
 
         {loading ? (
