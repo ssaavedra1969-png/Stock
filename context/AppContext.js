@@ -32,6 +32,8 @@ export function AppProvider({ children }) {
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  // Tipo de carga preseleccionado al abrir el modal de alta ("Entrada" | "Salida" | null).
+  const [defaultCarga, setDefaultCarga] = useState(null);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
 
@@ -72,16 +74,19 @@ export function AppProvider({ children }) {
     loadRecords();
   }, [loadRecords]);
 
-  const openModal = useCallback(() => {
+  const openModal = useCallback((carga) => {
     setEditingRecord(null);
+    setDefaultCarga(carga || null);
     setModalOpen(true);
   }, []);
   const openEdit = useCallback((record) => {
     setEditingRecord(record);
+    setDefaultCarga(null);
     setModalOpen(true);
   }, []);
   const closeModal = useCallback(() => {
     setEditingRecord(null);
+    setDefaultCarga(null);
     setModalOpen(false);
   }, []);
 
@@ -170,6 +175,7 @@ export function AppProvider({ children }) {
       stats,
       modalOpen,
       editingRecord,
+      defaultCarga,
       openModal,
       openEdit,
       closeModal,
@@ -189,6 +195,7 @@ export function AppProvider({ children }) {
       stats,
       modalOpen,
       editingRecord,
+      defaultCarga,
       openModal,
       openEdit,
       closeModal,

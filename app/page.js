@@ -2,22 +2,19 @@
 
 // ============================================================
 // app/page.js
-// Dashboard principal de GRUPO FALPAT SRL:
-// - Tarjetas de conteo (Entradas / Salidas / Total / Último)
-// - Tabla responsiva con los últimos 20 registros (ordenable por columna)
-// - Búsqueda en tiempo real
-// - FAB "AGREGAR REGISTRO"
+// Panel principal de GRUPO FALPAT SRL (pantalla de ingreso/egreso):
+// - Botones de acceso rápido "Registrar Entrada" / "Registrar Salida".
+// - Navegador del último registro con flechas anterior/siguiente.
+// - Tabla responsiva con TODOS los registros (ordenable + paginación).
+// - Búsqueda en tiempo real.
 // ============================================================
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatDate, normalizeText, cn, toMillis } from '@/lib/utils';
-import StatsCard from '@/components/StatsCard';
 import SearchBar from '@/components/SearchBar';
 import {
   IconArrowUpRight,
   IconArrowDownLeft,
-  IconLayers,
-  IconClock,
   IconPlus,
   IconRefresh,
   IconAlert,
@@ -30,10 +27,19 @@ import {
   IconBuilding,
   IconChevronUp,
   IconChevronDown,
+  IconChevronLeft,
+  IconChevronRight,
   IconPencil,
 } from '@/components/Icons';
 
-const MAX_TABLE_ROWS = 20;
+// La tabla ya no tiene tope: se muestra todo lo cargado, con paginación.
+const PAGE_SIZE_OPTIONS = [
+  { label: '50', value: 50 },
+  { label: '100', value: 100 },
+  { label: '250', value: 250 },
+  { label: 'Todo', value: 'all' },
+];
+const DEFAULT_PAGE_SIZE = 100;
 
 const COLUMNS = [
   { key: 'producto', label: 'Producto', type: 'text' },
@@ -69,7 +75,7 @@ function SortHeader({ column, sort, onSort }) {
   const up = active && sort.dir === 'asc';
   const down = active && sort.dir === 'desc';
   return (
-    <th className="px-4 py-3">
+    <th className="px-2 py-3">
       <button
         type="button"
         onClick={() => onSort(column.key)}
@@ -180,17 +186,135 @@ function BadgeCarga({ carga }) {
   );
 }
 
-function TableRow({ record, onEdit, onDelete }) {
+function MiniStat({ label, value, accent = 'text-slate-100' }) {
+  return (
+    <div className="flex flex-col items-center rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
+      <span className={`font-mono text-sm font-bold tabular-nums ${accent}`}>{value}</span>
+    </div>
+  );
+}
+
+// Navegador del registro actual: permite recorrer con flechas el historial
+// (anterior = registro más antiguo, siguiente = más reciente).
+// Una sola línea compacta con todos los datos del registro.
+function RecordNavigator({ record, index, total, onPrev, onNext, onEdit }) {
+  if (!record) return null;
+  const isEntrada = record.carga === 'Entrada';
+  const navBtn =
+    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-slate-300 transition hover:border-falpat/40 hover:bg-falpat/10 hover:text-falpat-soft disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:bg-white/[0.03] disabled:hover:text-slate-300';
+  return (
+    <div className="card relative w-full overflow-hidden !px-4 !py-3">
+      <div
+        className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full opacity-20 blur-2xl"
+        style={{ background: isEntrada ? '#2dd4ff' : '#ffd60a' }}
+      />
+      <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2">
+        <button
+          type="button"
+          onClick={onPrev}
+          disabled={index <= 0}
+          className={navBtn}
+          title="Registro más reciente"
+          aria-label="Ir al registro más reciente"
+        >
+          <IconChevronLeft className="h-4 w-4" />
+        </button>
+
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+          <BadgeCarga carga={record.carga} />
+          <span className="font-mono tabular-nums text-slate-400">{formatDate(record.fechaRemito)}</span>
+          <span className="max-w-[180px] truncate text-sm font-bold text-slate-100">
+            {record.producto || '—'}
+          </span>
+          {record.codigoProducto && (
+            <span className="inline-flex rounded-md border border-falpat/30 bg-falpat/10 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-falpat-soft">
+              {record.codigoProducto}
+            </span>
+          )}
+          <span className="flex items-center gap-1.5 font-mono text-slate-300">
+            <IconFileText className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+            {record.nroRemitoFalpat || '—'}
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-slate-300">
+            <IconFileText className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+            {record.nroRemitoProveedor || '—'}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <IconTruck className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+            <span className="font-mono font-semibold uppercase tracking-wide text-slate-200">
+              {record.patente || '—'}
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <IconUser className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+            <span className="max-w-[110px] truncate text-slate-400" title={record.chofer}>
+              {record.chofer || '—'}
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <IconUser className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+            <span className="max-w-[130px] truncate text-slate-400" title={isEntrada ? record.proveedor : record.cliente}>
+              {isEntrada ? record.proveedor : record.cliente || '—'}
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-slate-400">
+            <IconScale className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+            {record.pesoProveedor || '—'}
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-slate-400">
+            <IconScale className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+            {record.pesoBalanza || '—'}
+          </span>
+          <span className="flex items-center gap-1.5 text-slate-400">
+            <IconBuilding className="h-3.5 w-3.5 shrink-0 text-slate-600" />
+            {record.planta || '—'}
+          </span>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className="text-[10px] tabular-nums text-slate-500">
+            {index + 1} / {total}
+          </span>
+          <button
+            type="button"
+            onClick={() => onEdit(record)}
+            className="btn-ghost !px-2 !py-1 text-[11px]"
+            title="Editar registro"
+          >
+            <IconPencil className="h-3.5 w-3.5" />
+            Editar
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={index >= total - 1}
+          className={navBtn}
+          title="Registro anterior"
+          aria-label="Ir al registro anterior"
+        >
+          <IconChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TableRow({ record, onEdit, onDelete, onSelect }) {
   const isEntrada = record.carga === 'Entrada';
   return (
-    <tr className="border-b border-white/[0.05] transition last:border-0 hover:bg-white/[0.03]">
-      <td className="px-4 py-3">
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-falpat-soft">
-          <IconBox className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-          <span className="max-w-[150px] truncate">{record.producto || '—'}</span>
+    <tr
+      onClick={() => onSelect?.(record)}
+      className="cursor-pointer border-b border-white/[0.05] transition last:border-0 hover:bg-white/[0.03]"
+    >
+      <td className="px-2 py-3">
+        <span className="block max-w-[110px] truncate text-xs font-semibold text-falpat-soft" title={record.producto}>
+          {record.producto || '—'}
         </span>
       </td>
-      <td className="whitespace-nowrap px-4 py-3">
+      <td className="whitespace-nowrap px-2 py-3">
         {record.codigoProducto ? (
           <span className="inline-flex rounded-md border border-falpat/30 bg-falpat/10 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-falpat-soft">
             {record.codigoProducto}
@@ -199,59 +323,50 @@ function TableRow({ record, onEdit, onDelete }) {
           <span className="text-slate-600">—</span>
         )}
       </td>
-      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs tabular-nums text-slate-300">
+      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs tabular-nums text-slate-300">
         {formatDate(record.fechaRemito)}
       </td>
-      <td className="px-4 py-3">
+      <td className="whitespace-nowrap px-2 py-3">
         <BadgeCarga carga={record.carga} />
       </td>
-      <td className="px-4 py-3">
-        <span className="flex items-center gap-1.5 font-mono text-xs font-semibold uppercase tracking-wide text-slate-100">
-          <IconTruck className="h-3.5 w-3.5 text-slate-500" />
-          {record.patente}
+      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs font-semibold uppercase tracking-wide text-slate-100">
+        {record.patente}
+      </td>
+      <td className="px-2 py-3">
+        <span className="block max-w-[90px] truncate text-xs text-slate-300" title={record.chofer}>
+          {record.chofer}
         </span>
       </td>
-      <td className="px-4 py-3">
-        <span className="flex items-center gap-1.5 text-xs text-slate-300">
-          <IconUser className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-          <span className="max-w-[150px] truncate">{record.chofer}</span>
+      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs text-slate-300">
+        {record.nroRemitoFalpat}
+      </td>
+      <td className="px-2 py-3">
+        <span className="block max-w-[85px] truncate font-mono text-xs text-slate-300" title={record.nroRemitoProveedor}>
+          {record.nroRemitoProveedor || '—'}
         </span>
       </td>
-      <td className="px-4 py-3">
-        <span className="flex items-center gap-1.5 font-mono text-xs text-slate-300">
-          <IconFileText className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-          {record.nroRemitoFalpat}
-        </span>
-      </td>
-      <td className="px-4 py-3">
-        <span className="flex items-center gap-1.5 font-mono text-xs text-slate-300">
-          <IconFileText className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-          <span className="max-w-[120px] truncate">{record.nroRemitoProveedor || '—'}</span>
-        </span>
-      </td>
-      <td className="px-4 py-3">
+      <td className="px-2 py-3">
         {isEntrada ? (
-          <span className="max-w-[150px] truncate text-xs font-semibold text-slate-200">
+          <span
+            className="block max-w-[100px] truncate text-xs font-semibold text-slate-200"
+            title={record.proveedor}
+          >
             {record.proveedor || '—'}
           </span>
         ) : (
-          <span className="max-w-[150px] truncate text-xs">{record.cliente || '—'}</span>
+          <span className="block max-w-[100px] truncate text-xs" title={record.cliente}>
+            {record.cliente || '—'}
+          </span>
         )}
       </td>
-      <td className="px-4 py-3 text-xs text-slate-400">{record.pesoProveedor || '—'}</td>
-      <td className="px-4 py-3">
-        <span className="flex items-center gap-1.5 font-mono text-xs text-slate-300">
-          <IconScale className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-          {record.pesoBalanza}
+      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs text-slate-400">{record.pesoProveedor || '—'}</td>
+      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs text-slate-300">{record.pesoBalanza}</td>
+      <td className="px-2 py-3">
+        <span className="block max-w-[75px] truncate text-xs text-slate-300" title={record.planta}>
+          {record.planta}
         </span>
       </td>
-      <td className="px-4 py-3">
-        <span className="flex items-center gap-1.5 text-xs text-slate-300">
-          <IconBuilding className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-          <span className="max-w-[110px] truncate">{record.planta}</span>
-        </span>
-      </td>
-      <td className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-4 py-3 text-right">
+      <td className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-2 py-3 text-right">
         <div className="flex items-center justify-end gap-1">
           <button
             type="button"
@@ -282,19 +397,19 @@ function TableSkeleton() {
     <>
       {Array.from({ length: 6 }).map((_, i) => (
         <tr key={i} className="border-b border-white/[0.05] last:border-0">
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-24" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-4 w-10" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-16" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-5 w-20" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-24" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-28" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-24" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-20" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-24" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-16" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-20" /></td>
-          <td className="px-4 py-4"><Skeleton className="h-3.5 w-16" /></td>
-          <td className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-4 py-4"><Skeleton className="h-5 w-8" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-24" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-4 w-10" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-16" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-5 w-20" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-24" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-28" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-24" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-20" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-24" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-16" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-20" /></td>
+          <td className="px-2 py-4"><Skeleton className="h-3.5 w-16" /></td>
+          <td className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-2 py-4"><Skeleton className="h-5 w-8" /></td>
         </tr>
       ))}
     </>
@@ -304,13 +419,28 @@ function TableSkeleton() {
 export default function Home() {
   const { records, loading, error, reload, deleteRecord, openEdit, openModal, showToast } = useApp();
   const [query, setQuery] = useState('');
+  const [cargaFiltro, setCargaFiltro] = useState('Todos');
   const [sort, setSort] = useState({ key: 'fechaRemito', dir: 'desc' });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [navIndex, setNavIndex] = useState(0);
+
+  // Cualquier cambio de búsqueda/orden/tamaño vuelve a la primera página.
+  useEffect(() => {
+    setPage(1);
+  }, [query, sort, pageSize, cargaFiltro]);
+
+  // Mantiene el navegador dentro del rango cuando cambian los datos.
+  useEffect(() => {
+    setNavIndex((i) => (records.length === 0 ? 0 : Math.min(i, records.length - 1)));
+  }, [records]);
 
   // Búsqueda en tiempo real
   const filtered = useMemo(() => {
     const q = normalizeText(query);
-    if (!q) return records;
     return records.filter((r) => {
+      if (cargaFiltro !== 'Todos' && r.carga !== cargaFiltro) return false;
+      if (!q) return true;
       const haystack = normalizeText(
         [
           r.producto,
@@ -327,7 +457,7 @@ export default function Home() {
       );
       return haystack.includes(q);
     });
-  }, [records, query]);
+  }, [records, query, cargaFiltro]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -344,7 +474,15 @@ export default function Home() {
     return arr;
   }, [filtered, sort]);
 
-  const visible = sorted.slice(0, MAX_TABLE_ROWS);
+  const size = pageSize === 'all' ? sorted.length : pageSize;
+  const pageCount = Math.max(1, Math.ceil(sorted.length / size));
+  const safePage = Math.min(page, pageCount);
+  const from = (safePage - 1) * size;
+  const visible = sorted.slice(from, from + size);
+  const rangeLabel =
+    sorted.length === 0
+      ? 'Sin registros'
+      : `${from + 1}–${Math.min(from + visible.length, sorted.length)} de ${sorted.length}`;
 
   function onSort(key) {
     setSort((s) => {
@@ -352,13 +490,6 @@ export default function Home() {
       return { key, dir: key === 'fechaRemito' ? 'desc' : 'asc' };
     });
   }
-
-  const statsByProduct = useMemo(() => {
-    const total = records.length;
-    const entradas = records.filter((r) => r.carga === 'Entrada').length;
-    const salidas = total - entradas;
-    return { total, entradas, salidas, ultimo: records[0] || null };
-  }, [records]);
 
   async function handleDelete(id) {
     if (!window.confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
@@ -369,7 +500,18 @@ export default function Home() {
     }
   }
 
-  const ultimo = statsByProduct.ultimo;
+  const navRecord = records[navIndex] || null;
+
+  // Resumen para las mini tarjetas del navegador.
+  const stats = useMemo(() => {
+    let entradas = 0;
+    let salidas = 0;
+    for (const r of records) {
+      if (r.carga === 'Entrada') entradas += 1;
+      else salidas += 1;
+    }
+    return { entradas, salidas, total: records.length };
+  }, [records]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -388,7 +530,7 @@ export default function Home() {
             Panel de <span className="text-gradient-falpat">Stock</span>
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <ModeBadge online={!error} />
           <button
             type="button"
@@ -398,67 +540,104 @@ export default function Home() {
             title="Recargar datos"
           >
             <IconRefresh className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-            Actualizar
+            <span className="hidden sm:inline">Actualizar</span>
           </button>
         </div>
       </div>
 
       {error && <ErrorPanel message={error} onRetry={reload} />}
 
-      {/* Tarjetas de conteo */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard
-          label="Total entradas"
-          value={loading ? '…' : statsByProduct.entradas}
-          sub="Materiales ingresados"
-          icon={<IconArrowUpRight className="h-5 w-5" />}
-          tone="cyan"
-        />
-        <StatsCard
-          label="Total salidas"
-          value={loading ? '…' : statsByProduct.salidas}
-          sub="Materiales despachados"
-          icon={<IconArrowDownLeft className="h-5 w-5" />}
-          tone="volt"
-        />
-        <StatsCard
-          label="Total movimientos"
-          value={loading ? '…' : statsByProduct.total}
-          sub="Registros almacenados"
-          icon={<IconLayers className="h-5 w-5" />}
-          tone="white"
-        />
-        <StatsCard
-          label="Último movimiento"
-          value={ultimo ? formatDate(ultimo.fechaRemito) : '—'}
-          sub={
-            ultimo
-              ? `${ultimo.carga} · ${ultimo.producto} · ${ultimo.patente}`
-              : 'Sin movimientos'
-          }
-          icon={<IconClock className="h-5 w-5" />}
-          tone="cyan"
-        />
+      {/* Barra superior: acciones (izquierda) + resumen (derecha) */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => openModal('Entrada')}
+            className="btn-primary whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+            title="Registrar una entrada de material"
+            aria-label="Registrar entrada"
+          >
+            <IconArrowUpRight className="h-3.5 w-3.5" />
+            Registrar entrada
+          </button>
+          <button
+            type="button"
+            onClick={() => openModal('Salida')}
+            className="btn-volt whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+            title="Registrar una salida de material"
+            aria-label="Registrar salida"
+          >
+            <IconArrowDownLeft className="h-3.5 w-3.5" />
+            Registrar salida
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <MiniStat label="Entradas" value={stats.entradas} accent="text-falpat-soft" />
+          <MiniStat label="Salidas" value={stats.salidas} accent="text-volt" />
+          <MiniStat label="Total" value={stats.total} />
+        </div>
       </div>
+
+      {/* Visor del registro actual */}
+      {loading ? (
+        <div className="card mx-auto w-full space-y-3 lg:max-w-4xl">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ) : (
+        <div className="mx-auto w-full lg:max-w-4xl">
+          <RecordNavigator
+            record={navRecord}
+            index={navIndex}
+            total={records.length}
+            onPrev={() => setNavIndex((i) => Math.max(0, i - 1))}
+            onNext={() => setNavIndex((i) => Math.min(records.length - 1, i + 1))}
+            onEdit={openEdit}
+          />
+        </div>
+      )}
 
       {/* Tabla de últimos registros */}
       <div className="card overflow-hidden !p-0">
         <div className="flex flex-col gap-4 border-b border-white/10 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="section-title">Últimos movimientos</h2>
+              <h2 className="section-title">Movimientos de stock</h2>
               <p className="section-sub mt-0.5">
-                Mostrando {visible.length} de {filtered.length} registro{filtered.length !== 1 ? 's' : ''} ·
-                deslizá la tabla con la barra de abajo para ver todas las columnas
+                {rangeLabel} registros · deslizá la tabla con la barra de abajo para ver todas las columnas
               </p>
             </div>
-            <SearchBar value={query} onChange={setQuery} />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-lg border border-white/10 bg-black/20 p-1" title="Filtrar por tipo de carga">
+                {[
+                  { v: 'Todos', l: 'Todos' },
+                  { v: 'Entrada', l: 'Entradas' },
+                  { v: 'Salida', l: 'Salidas' },
+                ].map((o) => (
+                  <button
+                    key={o.v}
+                    type="button"
+                    onClick={() => setCargaFiltro(o.v)}
+                    className={
+                      'flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ' +
+                      (cargaFiltro === o.v
+                        ? 'bg-falpat/20 text-falpat-soft shadow'
+                        : 'text-slate-400 hover:text-slate-200')
+                    }
+                  >
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+              <SearchBar value={query} onChange={setQuery} />
+            </div>
           </div>
         </div>
 
         {loading ? (
           <div className="table-scroll">
-            <table className="w-full min-w-[1320px] border-collapse">
+            <table className="w-full min-w-[1180px] border-collapse">
               <tbody>
                 <TableSkeleton />
               </tbody>
@@ -471,41 +650,75 @@ export default function Home() {
         ) : (
           <>
             <div className="table-scroll">
-              <table className="w-full min-w-[1320px] border-collapse text-left">
+              <table className="w-full min-w-[1180px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-white/10">
                     {COLUMNS.map((col) => (
                       <SortHeader key={col.key} column={col} sort={sort} onSort={onSort} />
                     ))}
-                    <th className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-4 py-3" />
+                    <th className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-2 py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {visible.map((record) => (
-                    <TableRow key={record.id} record={record} onEdit={openEdit} onDelete={handleDelete} />
+                    <TableRow
+                      key={record.id}
+                      record={record}
+                      onEdit={openEdit}
+                      onDelete={handleDelete}
+                      onSelect={(r) => setNavIndex(Math.max(0, records.indexOf(r)))}
+                    />
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="border-t border-white/10 bg-black/20 px-5 py-3 text-xs text-slate-500">
-              {filtered.length > MAX_TABLE_ROWS
-                ? `Se muestran los últimos ${MAX_TABLE_ROWS} registros de ${filtered.length}.`
-                : 'Vista local · los datos se sincronizan automáticamente.'}
+            <div className="flex flex-col gap-3 border-t border-white/10 bg-black/20 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-slate-500">
+                Mostrando {rangeLabel} registros · los datos se sincronizan automáticamente
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 text-xs text-slate-500">
+                  Filas por página
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                    className="field !w-auto !py-1.5 text-xs"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="btn-ghost !px-3 !py-1.5 text-xs"
+                    title="Página anterior"
+                  >
+                    Anterior
+                  </button>
+                  <span className="px-1 text-xs tabular-nums text-slate-400">
+                    Pág. {safePage} / {pageCount}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                    disabled={safePage >= pageCount}
+                    className="btn-ghost !px-3 !py-1.5 text-xs"
+                    title="Página siguiente"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
             </div>
           </>
         )}
       </div>
-
-      {/* FAB */}
-      <button
-        type="button"
-        onClick={openModal}
-        className="fab fixed bottom-6 right-4 z-50 sm:right-6 lg:bottom-8 lg:right-8"
-        aria-label="Agregar registro"
-      >
-        <IconPlus className="h-5 w-5" />
-        <span className="hidden sm:inline">Agregar registro</span>
-      </button>
     </div>
   );
 }

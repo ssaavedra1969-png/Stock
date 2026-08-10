@@ -1,14 +1,26 @@
 // ============================================================
-// scripts/import-entrada.mjs
-// Carga masiva de entradas desde un Excel (formato Entrada.xlsx)
+// scripts/import-salida.mjs
+// Carga masiva de SALIDAS desde un Excel (formato Salida.xlsx)
 // hacia la base de datos de GitHub (data/db.json) en una rama.
 //
 // Uso:
-//   node scripts/import-entrada.mjs [archivo.xlsx] [rama]
+//   node scripts/import-salida.mjs [archivo.xlsx] [rama]
 //
-// Valores por defecto:  entrada/Entrada.xlsx   rama "dev"
-// Lee GITHUB_REPO y GITHUB_TOKEN desde .env.local.
-// NO toca la rama main (producción queda intacta).
+// Valores por defecto:  entrada/Salida.xlsx   rama "dev"
+//
+// Mapeo de columnas (Salida):
+//   REMITOS            -> nroRemitoFalpat   (es el remito de FALPAT)
+//   OBSERVACION        -> cliente
+//   FECHA              -> fechaRemito
+//   CODIGO DEL PRODUCTO-> codigoProducto
+//   DESCRIPCION        -> producto
+//   CANTIDAD KG        -> pesoBalanza  (unidad del catálogo)
+//
+// Resto por defecto: carga="Salida", planta="Lujan", patente/chofer/
+// proveedor/pesoProveedor/nroRemitoProveedor vacíos.
+//
+// SEGURIDAD: se niega la escritura en "main" salvo que se defina
+// ALLOW_MAIN=1 (producción debe aprobarse siempre explícitamente).
 // ============================================================
 
 import fs from 'node:fs';
@@ -131,9 +143,13 @@ function numero(v) {
 
 // ---------- Importación ----------
 const [excelArg, branchArg] = process.argv.slice(2);
-const excel = path.resolve(ROOT, excelArg || 'entrada/Entrada.xlsx');
+const excel = path.resolve(ROOT, excelArg || 'entrada/Salida.xlsx');
 const branch = branchArg || 'dev';
 const { repo, token } = loadEnv();
+
+if (branch === 'main' && process.env.ALLOW_MAIN !== '1') {
+  throw new Error('Se negó la escritura en "main". Para forzarla, definí ALLOW_MAIN=1 (producción).');
+}
 
 console.log(`Archivo: ${excel}`);
 console.log(`Repo:    ${repo}`);
@@ -145,11 +161,8 @@ if (!fs.existsSync(excel)) {
 }
 
 const rows = await readXlsxFile(excel);
-// read-excel-file puede devolver filas directamente o una lista de hojas
-// con la forma [{ sheet, data }]. Normalizar a filas planas.
 const rowsFlat = Array.isArray(rows) && Array.isArray(rows[0]) ? rows : rows[0]?.data || rows;
 
-// Cabecera -> índice de columna
 const headerRow = rowsFlat[0].map((h) => texto(h).toUpperCase());
 const colIndex = (name) => headerRow.findIndex((h) => h === name);
 const cols = {
@@ -168,21 +181,25 @@ console.log('Columnas detectadas:', Object.fromEntries(Object.entries(cols).map(
 // Parsear filas
 const records = [];
 const descartadas = [];
+const catalogCodes = new Set(CATALOGO_PRODUCTOS.map((p) => p.codigo).filter(Boolean));
 for (let i = 1; i < rowsFlat.length; i++) {
   const r = rowsFlat[i];
   const remito = texto(r[cols.remitos]);
   const fechaRaw = r[cols.fecha];
   const codigo = texto(r[cols.codigo]).toUpperCase();
   const descripcion = texto(r[cols.descripcion]);
-  const proveedor = texto(r[cols.observacion]);
+  const cliente = texto(r[cols.observacion]);
   const cantidad = numero(r[cols.cantidad]);
 
-  if (!remito && fechaRaw == null && !descripcion) continue; // fila vacía
+  if (!remito && fechaRaw == null && !descripcion && !cliente) continue; // fila vacía
+
+  if (!descripcion) {
+    descartadas.push(`fila ${i + 1}: sin descripción (código "${codigo}")`);
+    continue;
+  }
 
   let fecha = '';
   if (fechaRaw instanceof Date) {
-    // La fecha del Excel es un día calendario (medianoche UTC): usar
-    // componentes UTC para no correr un día atrás en zonas -03:00.
     const utc = fechaRaw.toISOString().slice(0, 10);
     const [y, m, d] = utc.split('-');
     fecha = `${y}-${m}-${d}`;
@@ -204,10 +221,6 @@ for (let i = 1; i < rowsFlat.length; i++) {
     continue;
   }
 
-  if (!descripcion) {
-    descartadas.push(`fila ${i + 1}: falta descripción`);
-    continue;
-  }
   if (!Number.isFinite(cantidad)) {
     descartadas.push(`fila ${i + 1}: cantidad inválida (${JSON.stringify(r[cols.cantidad])})`);
     continue;
@@ -218,19 +231,19 @@ for (let i = 1; i < rowsFlat.length; i++) {
 
   records.push({
     id: idNuevo(),
-    carga: 'Entrada',
+    carga: 'Salida',
     producto: descripcion,
     codigoProducto: codigo,
     fechaRemito: aISO(fecha),
     patente: '',
     chofer: '',
-    nroRemitoProveedor: remito,
-    nroRemitoFalpat: '',
+    nroRemitoProveedor: '',
+    nroRemitoFalpat: remito,
     pesoProveedor: '',
     pesoBalanza: peso,
     planta: 'Lujan',
-    proveedor,
-    cliente: '',
+    proveedor: '',
+    cliente,
     createdAt: new Date().toISOString(),
   });
 }
@@ -238,7 +251,7 @@ for (let i = 1; i < rowsFlat.length; i++) {
 if (records.length === 0) throw new Error('No se encontraron registros para importar.');
 
 console.log(`\nRegistros a importar: ${records.length}`);
-console.log(`Descartados: ${descartadas.length}`);
+console.log(`Descartadas: ${descartadas.length}`);
 for (const d of descartadas.slice(0, 10)) console.log('  ⚠ ' + d);
 
 // Resumen por producto
@@ -258,12 +271,11 @@ await asegurarRama(repo, token, branch);
 
 const { sha, db } = await readDb(repo, token, branch);
 
-// Los registros previos "seed-*" son datos de prueba: no se conservan.
 const sinSeed = (rec) => !String(rec.id || '').startsWith('seed-');
 const base = (db.records || []).filter(sinSeed);
 
 const clave = (rec) =>
-  `${rec.fechaRemito}|${rec.producto}|${rec.nroRemitoProveedor}|${rec.pesoBalanza}|${rec.proveedor}`;
+  `${rec.fechaRemito}|${rec.producto}|${rec.nroRemitoFalpat}|${rec.pesoBalanza}|${rec.cliente}`;
 
 const existentes = new Set(base.map(clave));
 const nuevos = records.filter((rec) => !existentes.has(clave(rec)));
@@ -288,7 +300,7 @@ for (let i = 0; i < nuevos.length; i += TAM) {
     branch,
     { records: [...lote, ...dbActual.records], productos: productosFinales },
     shaActual,
-    `Importar entradas (${i + 1}-${i + lote.length} de ${nuevos.length}) ${primera}→${ultima}`
+    `Importar salidas (${i + 1}-${i + lote.length} de ${nuevos.length}) ${primera}→${ultima}`
   );
   shaActual = resultado;
   dbActual = { records: [...lote, ...dbActual.records], productos: productosFinales };

@@ -170,6 +170,16 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 
 ## 9. PENDIENTES / PRÓXIMOS PASOS
 
+- [ ] **REVISAR CON EL USUARIO las filas BA y T de Salida.xlsx** (a pedido, quedó agendado).
+      Son las únicas 2 filas NO importadas (711 del archivo → 709 en dev):
+      - fila 593: código `BA`, sin descripción, cant 4, remito 20339, cliente ALMAJO SARGENTO.
+      - fila 663: código `T`, sin descripción, cant 28.94, remito 20856, cliente GLATTI GLADYS.
+      El usuario sospecha que se cargaron mal en el Excel; hay que preguntar qué son.
+- [ ] **Confirmar unidad de MS 453 (MIRA SET 453)** — se importó como `u` (2 filas: 21 u y 0.03 u).
+      Si es otra unidad (tn/kg), corregir.
+- [ ] **MERGE de las salidas a main (pendiente de aprobación).** Dev ya tiene 2576 registros
+      (1867 entradas + 709 salidas). Producción sigue con 1867. **Obligatorio subir junto con
+      el fix de 1 MiB** (sección 8, punto 6), si no, main no se puede leer al superar 1 MiB.
 - [ ] **Panel: reporte del usuario de que el buscador no filtra al escribir.** El código y el
   bundle desplegado están verificados correctos (búsquedas reales OK). Probable cache del
   navegador; si persiste, reproducir con navegador real (no hay headless en la máquina).
@@ -177,6 +187,9 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 - [ ] Si llegan planillas de **Salidas** o de otras plantas, importar con el mismo script.
 - [ ] Evaluar si el usuario quiere que el Panel recupere un filtro por producto (fue removido
       a pedido, solo queda el buscador).
+- [ ] Consistencia pendiente (a decisión del usuario): las **entradas** guardaron la columna
+      REMITOS en `nroRemitoProveedor`; el usuario confirmó que el nro de remito es de FALPAT.
+      Las **salidas** nuevas usan `nroRemitoFalpat`. Quedó así por ahora.
 
 ---
 

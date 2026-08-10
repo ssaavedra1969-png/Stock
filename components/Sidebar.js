@@ -6,9 +6,11 @@
 // con el logo "GRUPO FALPAT SRL".
 // ============================================================
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { LogoMark, IconLayout, IconLayers } from './Icons';
+import { IconLayout, IconLayers, IconPieChart } from './Icons';
+import { LOGO_PATH } from '@/lib/company';
 
 function Brand({ onClick }) {
   return (
@@ -18,7 +20,16 @@ function Brand({ onClick }) {
       className="flex items-center gap-3 text-left focus:outline-none"
       aria-label="GRUPO FALPAT SRL"
     >
-      <LogoMark className="h-11 w-11 shrink-0" />
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-white shadow-lg">
+        <Image
+          src={LOGO_PATH}
+          alt="Logo GRUPO FALPAT SRL"
+          width={44}
+          height={44}
+          className="h-10 w-10 object-contain"
+          priority
+        />
+      </span>
       <span className="leading-tight">
         <span className="block text-sm font-extrabold uppercase tracking-widest text-slate-50">
           Grupo <span className="text-gradient-falpat">Falpat</span>
@@ -88,6 +99,7 @@ export default function Sidebar() {
               Menú
             </p>
             <NavItem icon={<IconLayout className="h-[18px] w-[18px]" />} label="Panel" href="/" />
+            <NavItem icon={<IconPieChart className="h-[18px] w-[18px]" />} label="Reportes" href="/reportes" />
             <NavItem icon={<IconLayers className="h-[18px] w-[18px]" />} label="Informes" href="/informes" />
           </nav>
 
