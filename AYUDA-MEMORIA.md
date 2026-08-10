@@ -121,7 +121,7 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 - **MS 453 (MIRA SET 453)** se mide en **kg** (no `u`): corregido en catálogo (`lib/productos.js`)
   y en los 2 registros (`21 kg` y `0.03 kg`). Se eliminaron los duplicados viejos en `u`.
 - `data/db.json` local == rama `dev` == `main` (2587). `GET /api/db` dev y producción = 2587.
-- Snapshot de backup: `backup/db-backup-2026-08-09.json` (2.576 registros).
+- Snapshot de backup: `backup/db-backup-2026-08-10.json` (2587 registros).
 
 ---
 
