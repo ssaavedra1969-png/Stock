@@ -201,26 +201,24 @@ export default function Informes() {
     return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   }, [records]);
 
-  // Base respetando producto/planta/contraparte (sin fecha).
-  const baseForReport = useMemo(() => {
+  // Base respetando producto/planta/contraparte y período (desde/hasta).
+  const baseRecords = useMemo(() => {
     let arr = records;
     if (producto) arr = arr.filter((r) => r.codigoProducto === producto || r.producto === producto);
     if (planta) arr = arr.filter((r) => r.planta === planta);
     if (contraparte) arr = arr.filter((r) => r.proveedor === contraparte || r.cliente === contraparte);
-    return arr;
-  }, [records, producto, planta, contraparte]);
-
-  // Base con filtro de período (para los reportes de movimiento).
-  const periodRecords = useMemo(() => {
-    let arr = baseForReport;
-    if (desde) arr = arr.filter((r) => (toMillis(r.fechaRemito) || 0) >= toMillis(desde));
+    if (desde) {
+      const min = toMillis(desde);
+      arr = arr.filter((r) => (toMillis(r.fechaRemito) || 0) >= min);
+    }
     if (hasta) {
       const end = new Date(hasta);
       end.setHours(23, 59, 59, 999);
-      arr = arr.filter((r) => (toMillis(r.fechaRemito) || 0) <= end.getTime());
+      const max = end.getTime();
+      arr = arr.filter((r) => (toMillis(r.fechaRemito) || 0) <= max);
     }
     return arr;
-  }, [baseForReport, desde, hasta]);
+  }, [records, producto, planta, contraparte, desde, hasta]);
 
   // Saldo histórico por producto (usado como columna "Saldo").
   const saldoMap = useMemo(() => buildSaldoMap(records), [records]);
@@ -228,7 +226,7 @@ export default function Informes() {
   // ----- Stock: agrega entradas/salidas por producto+unidad -----
   const stockRows = useMemo(() => {
     const map = new Map();
-    for (const r of baseForReport) {
+    for (const r of baseRecords) {
       const { num, unit } = pesoDetalle(r.pesoBalanza);
       const key = `${r.codigoProducto || r.producto || 'SIN CÓDIGO'}§${unit}`;
       if (!map.has(key)) {
@@ -249,7 +247,7 @@ export default function Informes() {
     return [...map.values()]
       .map((it) => ({ ...it, stock: it.entradas - it.salidas }))
       .sort((a, b) => Math.abs(b.stock) - Math.abs(a.stock));
-  }, [baseForReport]);
+  }, [baseRecords]);
 
   // ----- Comparativo: igual que stock + % salido -----
   const comparativoRows = useMemo(
@@ -264,7 +262,7 @@ export default function Informes() {
   // ----- Stock por planta -----
   const plantaRows = useMemo(() => {
     const map = new Map();
-    for (const r of baseForReport) {
+    for (const r of baseRecords) {
       const p = r.planta || 'Sin planta';
       if (!map.has(p)) {
         map.set(p, { planta: p, entradas: 0, salidas: 0, stock: 0, productos: new Set(), movs: 0 });
@@ -279,18 +277,18 @@ export default function Informes() {
     return [...map.values()]
       .map((it) => ({ ...it, stock: it.entradas - it.salidas, nProductos: it.productos.size }))
       .sort((a, b) => b.stock - a.stock);
-  }, [baseForReport]);
+  }, [baseRecords]);
 
   // ----- Movimientos (entradas / salidas / todos) -----
   const movRows = useMemo(() => {
     if (!MOVIMIENTO_TIPOS.has(tipo)) return [];
-    let arr = periodRecords;
+    let arr = baseRecords;
     if (tipo === 'entradas') arr = arr.filter((r) => r.carga === 'Entrada');
     if (tipo === 'salidas') arr = arr.filter((r) => r.carga === 'Salida');
     return arr
       .map((r) => ({ ...r, saldo: saldoMap.get(r.id) }))
       .sort((a, b) => (toMillis(a.fechaRemito) || 0) - (toMillis(b.fechaRemito) || 0));
-  }, [periodRecords, tipo, saldoMap]);
+  }, [baseRecords, tipo, saldoMap]);
 
   // ----- Totales -----
   const totals = useMemo(() => {
@@ -352,11 +350,9 @@ export default function Informes() {
   // ----- Etiquetas del informe -----
   const reportTitle = TIPOS.find((t) => t.value === tipo)?.label || 'Informe';
   const esMovimiento = MOVIMIENTO_TIPOS.has(tipo);
-  const periodoLabel = esMovimiento
-    ? desde || hasta
-      ? `Período: ${desde ? formatDate(desde) : 'inicio'} al ${hasta ? formatDate(hasta) : 'hoy'}`
-      : 'Período: todo el historial'
-    : `Corte al ${formatDate(new Date())} · todo el historial`;
+  const periodoLabel = desde || hasta
+    ? `Período: ${desde ? formatDate(desde) : 'inicio'} al ${hasta ? formatDate(hasta) : 'hoy'}`
+    : 'Período: todo el historial';
   const filterLabel = useMemo(() => {
     const parts = [periodoLabel];
     if (producto) parts.push(`Producto: ${producto}`);
