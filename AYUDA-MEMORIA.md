@@ -29,14 +29,14 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 - `npm run dev` usa `.env.local` (ignorado por git) con `GITHUB_BRANCH=dev` → trabaja contra
   la rama de prueba, NO toca producción.
-- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2577` (dev) / `2576` (main).
+- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2587` (dev y main).
 
 ### Proceso al hacer cambios (flujo actual)
 
 1. Probá en `dev` (`.env.local` apunta a `dev`).
 2. Cuando el usuario aprueba → `git add` + `git commit` + `git push origin main`.
 3. Vercel despliega solo desde `main` (ramas: `main` = producción, `dev` = prueba).
-4. Verificar después del deploy: home, `/informes`, `/reportes`, `/api/db` (2576 records).
+ 4. Verificar después del deploy: home, `/informes`, `/reportes`, `/api/db` (2587 records).
 
 ---
 
@@ -112,14 +112,15 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 ## 4. ESTADO ACTUAL DE LOS DATOS (2026-08-10)
 
-- **2577 registros** (1867 `Entrada` + 710 `Salida`), planta `Lujan`. En `dev` (falta merge a `main`).
+- **2587 registros** (1877 `Entrada` + 710 `Salida`), planta `Lujan`. Ya **promovido a `main`**.
+- El 2026-08-10 se importaron **10 entradas nuevas** desde `entrada/Entrada.xlsx` (fechas
+  2026-08-07 y 2026-08-08) → 2587 en dev y en producción.
 - La salida 710 es la fila que decía `BA` (remito 20339, ALMAJO SARGENTO, 4 tn): el usuario confirmó
   que es **AF (ARENA FINA)** → se importó como tal. La fila `T` (remito 20856) se **eliminó** del
   `Salida.xlsx` y no se importa.
 - **MS 453 (MIRA SET 453)** se mide en **kg** (no `u`): corregido en catálogo (`lib/productos.js`)
   y en los 2 registros (`21 kg` y `0.03 kg`). Se eliminaron los duplicados viejos en `u`.
-- `data/db.json` local == rama `dev`. `GET /api/db` en dev = 2577. Producción (main) sigue en 2576
-  hasta aprobar el merge.
+- `data/db.json` local == rama `dev` == `main` (2587). `GET /api/db` dev y producción = 2587.
 - Snapshot de backup: `backup/db-backup-2026-08-09.json` (2.576 registros).
 
 ---
