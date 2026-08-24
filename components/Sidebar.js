@@ -9,7 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { IconLayout, IconLayers, IconPieChart } from './Icons';
+import { IconLayout, IconLayers, IconPieChart, IconUpload } from './Icons';
 import { LOGO_PATH } from '@/lib/company';
 
 function Brand({ onClick }) {
@@ -101,6 +101,7 @@ export default function Sidebar() {
             <NavItem icon={<IconLayout className="h-[18px] w-[18px]" />} label="Panel" href="/" />
             <NavItem icon={<IconPieChart className="h-[18px] w-[18px]" />} label="Reportes" href="/reportes" />
             <NavItem icon={<IconLayers className="h-[18px] w-[18px]" />} label="Informes" href="/informes" />
+            <NavItem icon={<IconUpload className="h-[18px] w-[18px]" />} label="Incorporar" href="/incorporar" />
           </nav>
 
           <div className="mt-8">

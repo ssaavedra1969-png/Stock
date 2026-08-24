@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-08-10. Leer esto completo antes de tocar nada._
+_Última actualización: 2026-08-24. Leer esto completo antes de tocar nada._
 
 ---
 
@@ -29,7 +29,7 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 - `npm run dev` usa `.env.local` (ignorado por git) con `GITHUB_BRANCH=dev` → trabaja contra
   la rama de prueba, NO toca producción.
-- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2587` (dev y main).
+- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2646` (dev y main).
 
 ### Proceso al hacer cambios (flujo actual)
 
@@ -50,10 +50,22 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
   - `app/page.js` → **Panel**: top bar con botones Registrar entrada/salida + mini stats,
     navegador de registro, tabla de movimientos con filtro por carga (Todos/Entradas/Salidas),
     búsqueda, orden por columnas, editar/borrar, columna de acciones fija a la derecha.
-  - `app/informes/page.js` → **Informes**: generador gerencial con 6 tipos (Stock actual,
-    Entradas, Salidas, Movimientos, Comparativo E/S, Stock por planta), filtros (tipo, desde,
-    hasta, producto, planta, proveedor/cliente) que aplican a TODOS los tipos, gráfico de torta,
-    exportación Excel/PDF con encabezado + logo de empresa.
+  - `app/informes/page.js` → **Informes**: generador gerencial. Tipos: **Informe General**
+    (default, 5 secciones numeradas: 01 Ventas, 02 Entradas, 03 Stock a la fecha por material
+    —acumulado histórico independiente del período, ordenado por nombre—, 04 Evolución mensual
+    12 meses, 05 Alertas de stock) + detalle operativo (Entradas, Salidas, Movimientos,
+    Stock por planta). Los tipos "Stock actual" y "Comparativo E/S" fueron REEMPLAZADOS por el
+    Informe General (decisión del usuario). Estética dashboard oscura estilo Glamour's Control:
+    panel glass, stat-cards con línea superior degradada por color, tipografía Plus Jakarta Sans
+    (`.font-display` en globals.css), tablas oscuras mono, badges. Exportación Excel/PDF: PDF del
+    General = carátula + una página por sección con encabezado propio (logo + título de sección +
+    período); Excel del General = libro con 5 hojas. PDF/Excel de detalles = formato claro.
+  - `app/incorporar/page.js` + `lib/importar.js` → **Incorporar**: carga masiva desde las
+    plantillas Excel (Entradas/Salidas) con validación fila por fila, preview y confirmación.
+  - `app/api/db/import/route.js` → API de importación masiva (lotes, dedupe, recalcula productos).
+  - `scripts/generar-plantillas.mjs` → regenera `public/plantillas/Plantilla-Entradas.xlsx` y
+    `Plantilla-Salidas.xlsx` (se descargan desde /incorporar).
+  - `public/plantillas/*.xlsx` → plantillas versionadas que usa la app (NO borrarlas del repo).
   - `app/reportes/page.js` → **Reportes**: el informe original (filtros tipo/planta/búsqueda/
     períodos rápidos, etiqueta Viajes), tabla por producto ordenable al hacer clic en "Producto".
   - `context/AppContext.js` → carga global de datos + estado de edición (`openEdit`, `updateRecord`).
@@ -110,17 +122,21 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 ---
 
-## 4. ESTADO ACTUAL DE LOS DATOS (2026-08-10)
+## 4. ESTADO ACTUAL DE LOS DATOS (2026-08-24)
 
-- **2587 registros** (1877 `Entrada` + 710 `Salida`), planta `Lujan`. Ya **promovido a `main`**.
-- El 2026-08-10 se importaron **10 entradas nuevas** desde `entrada/Entrada.xlsx` (fechas
-  2026-08-07 y 2026-08-08) → 2587 en dev y en producción.
+- **2646 registros** (1936 `Entrada` + 710 `Salida`), planta `Lujan`, última fecha **2026-08-17**.
+- El 2026-08-24 el usuario importó **59 entradas nuevas** él mismo con el módulo
+  **/incorporar** (plantilla Excel) → 2587 → 2646 en `dev`. Mismo día: **promoción a `main`**
+  (código + datos), verificado contra `/api/db`.
+- Sanity check global: Σentradas 85.257,12 tn − Σsalidas 61.468,69 tn = **STOCK TOTAL
+  23.788,43 tn**. Hay **4 productos con stock negativo** (los muestra la sección 05 Alertas):
+  MIRA SET 453 −21,03 kg; ESTABILIZADO GRANULOMETRICO 0/20 −155,46 tn; PIEDRA 10-30 −520,67 tn;
+  ESTABILIZADO 0-100 X TN −2.638,50 tn. Causa probable: faltan registrar entradas históricas.
 - La salida 710 es la fila que decía `BA` (remito 20339, ALMAJO SARGENTO, 4 tn): el usuario confirmó
   que es **AF (ARENA FINA)** → se importó como tal. La fila `T` (remito 20856) se **eliminó** del
   `Salida.xlsx` y no se importa.
 - **MS 453 (MIRA SET 453)** se mide en **kg** (no `u`): corregido en catálogo (`lib/productos.js`)
   y en los 2 registros (`21 kg` y `0.03 kg`). Se eliminaron los duplicados viejos en `u`.
-- `data/db.json` local == rama `dev` == `main` (2587). `GET /api/db` dev y producción = 2587.
 - Snapshot de backup: `backup/db-backup-2026-08-10.json` (2587 registros).
 
 ---
@@ -180,6 +196,10 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 4. **Encoding** — usar siempre UTF-8 sin BOM en los `.js` (PowerShell `Set-Content`
    puede meter BOM y corromper acentos; verificar primeros bytes del archivo).
 5. **No correr `build` con el dev server activo** (ver punto 1).
+6. **PowerShell corrompe tildes en archivos UTF-8**: `Add-Content`/`Set-Content` escriben ANSI.
+   Si hay que escribir desde PowerShell, usar
+   `[IO.File]::WriteAllText($ruta,$texto,[Text.UTF8Encoding]::new($false))`; la herramienta de
+   edición de la IA escribe UTF-8 correcto (preferirla siempre). Síntoma: "C�digo", "�ltimo".
 
 ---
 
@@ -193,32 +213,33 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
       REMITOS en `nroRemitoProveedor`; el usuario confirmó que el nro de remito es de FALPAT.
       Las **salidas** nuevas usan `nroRemitoFalpat`. Quedó así por ahora.
 
-### EN CURSO (sesión 2026-08-10, dev): Informes → Entradas/Salidas/Ventas separados
+### EN CURSO → HECHO (sesión 2026-08-24): Incorporar + Informe General + estética dashboard
 
-- [x] `app/informes/page.js`: en Stock y Comparativo ahora hay **3 secciones**:
-      Entradas (donut), Salidas (donut) y **Ventas del período** (barras horizontales
-      por producto+unidad, sin mezclar tn con kg).
-- [x] La antigua "Diferencia" (entradas − salidas) se **reemplazó por Ventas del período**
-      (a pedido del usuario): en este negocio cada Salida es una venta a cliente, así que
-      Ventas = Salidas, pero se muestra como gráfico de barras distinto (color cyan/teal)
-      para no confundirse con los 2 donuts.
-- [x] Totales de stock: `entradasMovs`, `salidasMovs`/`ventasMovs`, `promedioEntrada`,
-      `promedioVenta` (solo filas `tn`; tn/movimiento) + franja resumen con movimientos y promedios.
-- [x] PDF fiel a pantalla: 2 donuts lado a lado + sección "VENTAS DEL PERÍODO" con barras
-      horizontales (rects jsPDF), leyenda máx. 7 ítems + "+ N más".
-- [x] `npm run lint` y `npm run build` OK. OJO: correr `build` con el dev server activo
-      corrompe `.next` (dev server da 500); reiniciar el dev server después.
-- [x] Promoción a producción (commit + push a `main`) en esta sesión.
+- [x] **Módulo /incorporar**: descarga de plantillas Excel (`public/plantillas/`), carga con
+      preview/validación y API masiva `POST /api/db/import`. El usuario ya importó 59 entradas.
+- [x] **Informe General** (tipo default): reemplaza a "Stock actual" y "Comparativo E/S".
+      Secciones: 01 Ventas, 02 Entradas, 03 Stock a la fecha por material (histórico,
+      independiente del período, orden alfabético por nombre — pedido explícito del usuario),
+      04 Evolución mensual 12 meses, 05 Alertas de stock (NEGATIVO/SIN STOCK).
+- [x] **Estética dashboard oscura** estilo Glamour's Control (referencia del usuario:
+      glamours-control.vercel.app/reportes): panel glass `bg-night-900/70` + blur, stat-cards
+      con línea superior degradada, chips numerados con glow por color de sección
+      (SECCION_COLORS), tablas oscuras mono, badges tintados, `.font-display` = Plus Jakarta Sans.
+      Aplica a TODOS los tipos de informe en pantalla; el PDF sigue claro/imprimible.
+- [x] PDF General: carátula (chips globales + índice CONTENIDO) + una página por sección con
+      encabezado propio en cada hoja (logo + título sección colorizado + período). Excel General:
+      libro de 5 hojas (Ventas/Entradas/Stock/Evolucion/Alertas).
+- [x] Fixes durante la sesión: pie de tabla autoTable perdía `colSpan` (números caían en columnas
+      angostas y se partían en 2 líneas) → mapear foot con `{ content, colSpan }`; anchos Peso/Saldo
+      medidos con jsPDF real (19/21mm); corrupción UTF-8 al escribir JSX con PowerShell
+      (ver gotcha 6 abajo); stock de la sección 03 ordenado por nombre.
+- [x] lint/build OK. Promoción a producción (código + datos dev→main) ejecutada.
 
-### RESUELTO en la sesión 2026-08-10 (dev; pendiente merge a main)
+### RESUELTO sesiones anteriores (ya en main)
 
-- [x] Fila `T` de Salida.xlsx → **eliminada** (remito 20856, GLATTI GLADYS). No estaba en la base.
-- [x] Fila `BA` de Salida.xlsx → es **AF / ARENA FINA** (remito 20339, ALMAJO SARGENTO, 4 tn):
-      corregida en el Excel fuente y **importada** (1 registro nuevo).
-- [x] **MS 453** → unidad correcta es **kg**: catálogo + 2 registros corregidos, duplicados en `u`
-      eliminados.
-- [x] Pendiente UI: **filtro del Panel roto** + **filtro por mes/año** en Reportes e Informes con
-      etiqueta de filtros aplicados (desde/hasta como opción secundaria).
+- [x] Fila `T` de Salida.xlsx eliminada; fila `BA` importada como AF/ARENA FINA.
+- [x] MS 453 en kg: catálogo + registros corregidos, duplicados en `u` eliminados.
+- [x] Informes 2026-08-10 (secciones E/S/Ventas) quedó SUPERADO por el Informe General.
 
 ### HECHO en la sesión 2026-08-09 (ya desplegado a producción)
 

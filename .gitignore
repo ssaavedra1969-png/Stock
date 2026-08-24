@@ -44,3 +44,12 @@ dev*.log
 dev-server*.log
 dev-server*.err.log
 
+
+# archivos de trabajo local del usuario (no versionar)
+/logo/
+/entrada/~$*
+/entrada/plantillas/
+/entrada/TEST*.xlsx
+/entrada/stock ESTEBAN_0*.xlsx
+/entrada/Entrada_01.xlsx
+/entrada/Salida_01.xlsx
