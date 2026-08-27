@@ -65,15 +65,14 @@ function hojaEjemplo(tipo) {
   // CENTRO DE DISTRIBUCION = Campana | Lujan.
   const filas = esEntrada
     ? [
-        [2680818, 'SPOSITO', celdaFecha(2026, 8, 3), 'AF', 'ARENA FINA', 32.5, 'Lujan'],
-        [96962, 'MESSEL', celdaFecha(2026, 8, 4), 'P620', 'PIEDRA 6-20', 28.14, 'Campana'],
-        [15755, 'CPF AVELLANEDA', celdaFecha(2026, 8, 4), 'C', 'CPF 40 AVELLANEDA', 36, 'Campana'],
-        [20411, 'SPOSITO', celdaFecha(2026, 8, 5), 'MS 453', 'MIRA SET 453 (ADITIVO)', 21, 'Lujan'],
+        [105203, 'SPOSITO', celdaFecha(2026, 8, 18), 'AF', 'ARENA FINA', 35.22, 'Lujan'],
+        [110998, 'LCE', celdaFecha(2026, 8, 18), 'P06', 'PIEDRA 0-6', 35.06, 'Lujan'],
+        [163070, 'CA', celdaFecha(2026, 8, 18), 'P620', 'PIEDRA 6-20', 35.34, 'Lujan'],
       ]
     : [
-        [20301, 'PIGNANELLI', celdaFecha(2026, 8, 3), 'P620', 'PIEDRA 6-20', 37.38, 'Campana'],
-        [20302, 'OJEDA DIEGO', celdaFecha(2026, 8, 5), 'AF', 'ARENA FINA', 2.5, 'Lujan'],
-        [20303, 'CONSTRUCTORA ANDINA SA', celdaFecha(2026, 8, 6), 'P1030', 'PIEDRA 10-30', 21.7, 'Lujan'],
+        ['', 'ALVARO', celdaFecha(2026, 6, 2), 'P06', 'PIEDRA 0-6', 536.24, 'Lujan'],
+        [19771, 'ALMAJO IBICUY', celdaFecha(2026, 6, 1), 'E100', 'ESTABILIZADO 0-100 X TN', 33.18, 'Lujan'],
+        ['', 'ALVARO', celdaFecha(2026, 6, 1), 'AF', 'ARENA FINA', 818.44, 'Lujan'],
       ];
   const ws = XLSX.utils.aoa_to_sheet([HEADERS]);
   filas.forEach((fila, i) => {
