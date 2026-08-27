@@ -160,7 +160,7 @@ if (!fs.existsSync(excel)) {
   throw new Error(`No existe el archivo: ${excel}`);
 }
 
-const rows = await readXlsxFile(excel);
+const rows = await readXlsxFile(excel, { sheet: 'CARGA' });
 const rowsFlat = Array.isArray(rows) && Array.isArray(rows[0]) ? rows : rows[0]?.data || rows;
 
 const headerRow = rowsFlat[0].map((h) => texto(h).toUpperCase());

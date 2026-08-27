@@ -144,7 +144,7 @@ if (!fs.existsSync(excel)) {
   throw new Error(`No existe el archivo: ${excel}`);
 }
 
-const rows = await readXlsxFile(excel);
+const rows = await readXlsxFile(excel, { sheet: 'CARGA' });
 // read-excel-file puede devolver filas directamente o una lista de hojas
 // con la forma [{ sheet, data }]. Normalizar a filas planas.
 const rowsFlat = Array.isArray(rows) && Array.isArray(rows[0]) ? rows : rows[0]?.data || rows;
