@@ -135,8 +135,10 @@ function hojaAyuda(tipo) {
 
 function generar(tipo, outDir) {
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, hojaCarga(), 'CARGA');
+  // La hoja EJEMPLO queda primero: es la que se ve al abrir, con los
+  // ejemplos de carga. CARGA es la que el usuario llena.
   XLSX.utils.book_append_sheet(wb, hojaEjemplo(tipo), 'EJEMPLO');
+  XLSX.utils.book_append_sheet(wb, hojaCarga(), 'CARGA');
   XLSX.utils.book_append_sheet(wb, hojaAyuda(tipo), 'AYUDA');
   const nombre = `Plantilla-${tipo}s.xlsx`;
   const out = path.join(outDir, nombre);
