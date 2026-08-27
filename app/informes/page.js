@@ -462,27 +462,14 @@ export default function Informes() {
     return arr;
   }, [records, productosSel, planta, contraparte, desde, hasta, mes, anio]);
 
-  // Base SIN filtros de fecha (solo producto/planta/contraparte): usada por el
-  // stock a la fecha y la evolución mensual del Informe General.
-  const baseSinFechas = useMemo(() => {
-    let arr = records;
-    if (productosSel.length > 0) {
-      arr = arr.filter(
-        (r) => productosSel.includes(r.codigoProducto) || productosSel.includes(r.producto)
-      );
-    }
-    if (planta) arr = arr.filter((r) => r.planta === planta);
-    if (contraparte) arr = arr.filter((r) => r.proveedor === contraparte || r.cliente === contraparte);
-    return arr;
-  }, [records, productosSel, planta, contraparte]);
-
   // Saldo histórico por producto (usado como columna "Saldo").
   const saldoMap = useMemo(() => buildSaldoMap(records), [records]);
 
   // ----- Stock: agrega entradas/salidas por producto+unidad -----
   // Movimientos = período filtrado. Stock Total = acumulado histórico (Σentradas - Σsalidas),
-  // calculado sobre baseSinFechas (respeta filtros de producto/planta/contraparte, ignora fechas).
-  const acumuladoMap = useMemo(() => buildAcumuladoMap(baseSinFechas), [baseSinFechas]);
+  // calculado sobre TODO el historial cargado (records): el Stock a la fecha del Informe
+  // General y la Evolución mensual usan la base completa sin filtros.
+  const acumuladoMap = useMemo(() => buildAcumuladoMap(records), [records]);
   const stockRows = useMemo(() => {
     const map = new Map();
     for (const r of baseRecords) {
@@ -655,10 +642,10 @@ export default function Informes() {
     const proveedores = new Set(entradasBase.map((r) => r.proveedor).filter(Boolean)).size;
     const promEnt = movsEnt ? tnEnt / movsEnt : 0;
 
-    // --- Sección 03: STOCK A LA FECHA (por material, acumulado histórico) ---
+    // --- Sección 03: STOCK A LA FECHA (por material, TODO el historial) ---
     const catalogo = new Map();
     const ultimo = new Map();
-    for (const r of baseSinFechas) {
+    for (const r of records) {
       const { unit } = pesoDetalle(r.pesoBalanza);
       const key = `${r.codigoProducto || r.producto || 'SIN CÓDIGO'}§${unit}`;
       if (!catalogo.has(key)) {
@@ -690,9 +677,9 @@ export default function Informes() {
     const negativos = stockFechaRows.filter((r) => r.stock < -0.0001);
     const ceros = stockFechaRows.filter((r) => Math.abs(r.stock) <= 0.0001);
 
-    // --- Sección 04: EVOLUCIÓN MENSUAL (últimos 12 meses) ---
+    // --- Sección 04: EVOLUCIÓN MENSUAL (últimos 12 meses, TODO el historial) ---
     let maxMs = 0;
-    for (const r of baseSinFechas) maxMs = Math.max(maxMs, toMillis(r.fechaRemito) || 0);
+    for (const r of records) maxMs = Math.max(maxMs, toMillis(r.fechaRemito) || 0);
     const ancla = maxMs ? new Date(maxMs) : new Date();
     const meses = [];
     for (let i = 11; i >= 0; i--) {
@@ -706,7 +693,7 @@ export default function Informes() {
       });
     }
     const idxMes = new Map(meses.map((mm, i) => [`${mm.y}-${String(mm.m).padStart(2, '0')}`, i]));
-    for (const r of baseSinFechas) {
+    for (const r of records) {
       const ym = anioMes(r.fechaRemito);
       if (!ym) continue;
       const i = idxMes.get(`${ym.anio}-${String(ym.mes).padStart(2, '0')}`);
@@ -733,7 +720,7 @@ export default function Informes() {
       evo: { meses, pico, promE: promEvoE, promS: promEvoS },
       alertas: { rows: alertasRows },
     };
-  }, [tipo, stockRows, baseRecords, baseSinFechas, acumuladoMap, pieEntradas, pieSalidas]);
+  }, [tipo, stockRows, baseRecords, acumuladoMap, pieEntradas, pieSalidas, records]);
 
   // ----- Etiquetas del informe -----
   const reportTitle = TIPOS.find((t) => t.value === tipo)?.label || 'Informe';
@@ -1252,7 +1239,7 @@ export default function Informes() {
         doc.setFontSize(6.5);
         doc.setTextColor(100, 116, 139);
         doc.text(
-          pdfSafe('Nota: el stock a la fecha (sección 03) es el acumulado histórico de toda la base y no depende del período seleccionado.'),
+          pdfSafe('Nota: el stock a la fecha (sección 03) y la evolución mensual (sección 04) usan el historial completo cargado, sin filtros. Ventas (01) y Entradas (02) sí responden a los filtros de arriba.'),
           margin,
           cursorY
         );
@@ -1292,7 +1279,7 @@ export default function Informes() {
         );
 
         // ===== 03 STOCK A LA FECHA =====
-        nuevaPaginaSeccion('03', 'STOCK A LA FECHA — POR MATERIAL', 'Acumulado histórico · independiente del período seleccionado', 'stock');
+        nuevaPaginaSeccion('03', 'STOCK A LA FECHA — POR MATERIAL', 'Acumulado de todo el historial · sin filtros', 'stock');
         chips([
           ['Materiales', String(g.stock.n)],
           ['Stock total (tn)', fmtNum(g.stock.totalTn)],
@@ -2041,7 +2028,7 @@ function GeneralBody({ g }) {
       <SectionShell
         num="03"
         titulo="Stock a la fecha — por material"
-        sub="Acumulado histórico de toda la base · independiente del período seleccionado · ordenado por nombre"
+        sub="Todo el historial cargado (sin filtros) · ordenado por nombre"
         colorKey="stock"
       >
         <ChipsRow
