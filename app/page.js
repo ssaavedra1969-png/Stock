@@ -55,7 +55,7 @@ const COLUMNS = [
   { key: 'proveedorCliente', label: 'Proveedor / Cliente', type: 'text' },
   { key: 'pesoProveedor', label: 'Peso Proveedor', type: 'number' },
   { key: 'pesoBalanza', label: 'Peso Balanza', type: 'number' },
-  { key: 'planta', label: 'Planta', type: 'text' },
+  { key: 'planta', label: 'CD', type: 'text' },
 ];
 
 // Valor numérico de un peso con unidad ("35.4 tn", "1000 u", "").

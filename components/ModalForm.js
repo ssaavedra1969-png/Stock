@@ -536,18 +536,22 @@ export default function ModalForm() {
                 )}
 
                 <Field
-                  label="Planta"
+                  label="Centro de Distribución"
                   icon={<IconBuilding className="h-4 w-4 text-slate-500" />}
                   required
                   error={errors.planta}
                 >
-                  <Autocomplete
-                    options={uniqueValues.planta}
+                  <select
                     value={form.planta}
                     onChange={setField('planta')}
-                    error={errors.planta}
-                    placeholder="Nombre de la planta"
-                  />
+                    className={cn('field', errors.planta && 'field-error')}
+                  >
+                    <option value="" disabled>
+                      Seleccioná…
+                    </option>
+                    <option value="Campana">Campana</option>
+                    <option value="Lujan">Lujan</option>
+                  </select>
                 </Field>
               </div>
             </Section>
