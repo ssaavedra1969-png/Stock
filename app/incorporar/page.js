@@ -365,6 +365,7 @@ export default function IncorporarPage() {
                       <th className="px-3 py-2 font-semibold">Cód.</th>
                       <th className="px-3 py-2 font-semibold">Producto</th>
                       <th className="px-3 py-2 font-semibold">{tipo === 'Entrada' ? 'Proveedor' : 'Cliente'}</th>
+                      <th className="px-3 py-2 font-semibold">CD</th>
                       <th className="px-3 py-2 text-right font-semibold">Cantidad</th>
                     </tr>
                   </thead>
@@ -376,6 +377,7 @@ export default function IncorporarPage() {
                         <td className="px-3 py-1.5 font-mono text-xs text-falpat-soft">{r.codigoProducto || '—'}</td>
                         <td className="px-3 py-1.5 text-slate-300">{r.producto}</td>
                         <td className="px-3 py-1.5 text-slate-400">{tipo === 'Entrada' ? r.proveedor : r.cliente}</td>
+                        <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs text-slate-300">{r.planta || 'Lujan'}</td>
                         <td className="whitespace-nowrap px-3 py-1.5 text-right font-mono tabular-nums text-slate-200">{r.pesoBalanza}</td>
                       </tr>
                     ))}

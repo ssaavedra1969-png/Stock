@@ -20,6 +20,7 @@ import { CATALOGO_PRODUCTOS } from '../lib/productos.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'public', 'plantillas');
+const OUT_DIR_ENTRADA = path.join(ROOT, 'entrada', 'plantillas');
 
 const HEADERS = [
   'REMITOS',
@@ -28,9 +29,18 @@ const HEADERS = [
   'CODIGO DEL PRODUCTO',
   'DESCRIPCION',
   'CANTIDAD KG',
+  'CENTRO DE DISTRIBUCION',
 ];
 
-const COL_WIDTHS = [{ wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 20 }, { wch: 34 }, { wch: 14 }];
+const COL_WIDTHS = [
+  { wch: 12 },
+  { wch: 24 },
+  { wch: 14 },
+  { wch: 20 },
+  { wch: 34 },
+  { wch: 14 },
+  { wch: 22 },
+];
 
 // Serial de Excel (dias desde 1899-12-30) para una fecha calendario.
 // Se guarda como numero entero con formato dd/mm/yyyy, igual que hacen
@@ -52,17 +62,18 @@ function hojaEjemplo(tipo) {
   const esEntrada = tipo === 'Entrada';
   // En Entradas OBSERVACION = proveedor y REMITOS = remito del proveedor.
   // En Salidas OBSERVACION = cliente y REMITOS = remito de FALPAT.
+  // CENTRO DE DISTRIBUCION = Campana | Lujan.
   const filas = esEntrada
     ? [
-        [2680818, 'SPOSITO', celdaFecha(2026, 8, 3), 'AF', 'ARENA FINA', 32.5],
-        [96962, 'MESSEL', celdaFecha(2026, 8, 4), 'P620', 'PIEDRA 6-20', 28.14],
-        [15755, 'CPF AVELLANEDA', celdaFecha(2026, 8, 4), 'C', 'CPF 40 AVELLANEDA', 36],
-        [20411, 'SPOSITO', celdaFecha(2026, 8, 5), 'MS 453', 'MIRA SET 453 (ADITIVO)', 21],
+        [2680818, 'SPOSITO', celdaFecha(2026, 8, 3), 'AF', 'ARENA FINA', 32.5, 'Lujan'],
+        [96962, 'MESSEL', celdaFecha(2026, 8, 4), 'P620', 'PIEDRA 6-20', 28.14, 'Campana'],
+        [15755, 'CPF AVELLANEDA', celdaFecha(2026, 8, 4), 'C', 'CPF 40 AVELLANEDA', 36, 'Campana'],
+        [20411, 'SPOSITO', celdaFecha(2026, 8, 5), 'MS 453', 'MIRA SET 453 (ADITIVO)', 21, 'Lujan'],
       ]
     : [
-        [20301, 'PIGNANELLI', celdaFecha(2026, 8, 3), 'P620', 'PIEDRA 6-20', 37.38],
-        [20302, 'OJEDA DIEGO', celdaFecha(2026, 8, 5), 'AF', 'ARENA FINA', 2.5],
-        [20303, 'CONSTRUCTORA ANDINA SA', celdaFecha(2026, 8, 6), 'P1030', 'PIEDRA 10-30', 21.7],
+        [20301, 'PIGNANELLI', celdaFecha(2026, 8, 3), 'P620', 'PIEDRA 6-20', 37.38, 'Campana'],
+        [20302, 'OJEDA DIEGO', celdaFecha(2026, 8, 5), 'AF', 'ARENA FINA', 2.5, 'Lujan'],
+        [20303, 'CONSTRUCTORA ANDINA SA', celdaFecha(2026, 8, 6), 'P1030', 'PIEDRA 10-30', 21.7, 'Lujan'],
       ];
   const ws = XLSX.utils.aoa_to_sheet([HEADERS]);
   filas.forEach((fila, i) => {
@@ -100,6 +111,7 @@ function hojaAyuda(tipo) {
     ['  CODIGO DEL PRODUCTO  ', 'Código del catálogo (ver tabla abajo). Va en mayúsculas.'],
     ['  DESCRIPCION          ', 'Nombre del producto (debe coincidir con el código).'],
     ['  CANTIDAD KG          ', `Número sin texto ni "tn". ${esEntrada ? '' : ''}Ver unidades por producto más abajo.`],
+    ['  CENTRO DE DISTRIBUCION', 'Centro de distribución del movimiento. SOLO: Campana o Lujan. Dejalo vacío si es Lujan.'],
     [''],
     ['UNIDADES POR PRODUCTO (qué número va en CANTIDAD KG):'],
     ...CATALOGO_PRODUCTOS.filter((p) => p.codigo).map((p) => [
@@ -110,7 +122,8 @@ function hojaAyuda(tipo) {
     [''],
     ['REGLAS IMPORTANTES:'],
     ['  - No borrar ni renombrar las columnas; no dejar filas vacías entre datos.'],
-    [`  - Cada fila se guarda como un movimiento de tipo ${tipo.toUpperCase()} de planta Lujan.`],
+    ['  - CENTRO DE DISTRIBUCION acepta solo "Campana" o "Lujan" (si se deja vacío se carga Lujan).'],
+    [`  - Cada fila se guarda como un movimiento de tipo ${tipo.toUpperCase()}.`],
     ['  - El sistema ignora automáticamente las filas repetidas (ya cargadas).'],
     ['  - Si una fila tiene errores, el sistema te avisa antes de importar nada.'],
     [''],
@@ -121,19 +134,22 @@ function hojaAyuda(tipo) {
   return ws;
 }
 
-function generar(tipo) {
+function generar(tipo, outDir) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, hojaCarga(), 'CARGA');
   XLSX.utils.book_append_sheet(wb, hojaEjemplo(tipo), 'EJEMPLO');
   XLSX.utils.book_append_sheet(wb, hojaAyuda(tipo), 'AYUDA');
   const nombre = `Plantilla-${tipo}s.xlsx`;
-  const out = path.join(OUT_DIR, nombre);
+  const out = path.join(outDir, nombre);
   XLSX.writeFile(wb, out);
-  return out;
+  return path.relative(ROOT, out);
 }
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
+fs.mkdirSync(OUT_DIR_ENTRADA, { recursive: true });
 for (const tipo of ['Entrada', 'Salida']) {
-  console.log('✔', path.relative(ROOT, generar(tipo)));
+  console.log('✔', generar(tipo, OUT_DIR));
+  console.log('✔', generar(tipo, OUT_DIR_ENTRADA));
 }
 console.log('\nListo. Descargables desde /plantillas/Plantilla-Entradas.xlsx y /plantillas/Plantilla-Salidas.xlsx');
+console.log('Copias locales en entrada/plantillas/');

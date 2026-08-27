@@ -31,7 +31,7 @@ export default function StatsCard({ label, value, sub, icon, tone = 'cyan' }) {
     >
       <div
         className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-20 blur-2xl"
-        style={{ background: tone === 'volt' ? '#ffd60a' : '#2dd4ff' }}
+        style={{ background: tone === 'volt' ? '#d4af37' : '#3b82f6' }}
       />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

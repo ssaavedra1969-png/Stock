@@ -1710,9 +1710,9 @@ function ResumenChip({ label, value, accent = false, tone }) {
     tone === 'emerald'
       ? 'linear-gradient(90deg,#10b981,#34d399)'
       : tone === 'volt'
-        ? 'linear-gradient(90deg,#ffd60a,#fbbf24)'
+        ? 'linear-gradient(90deg,#d4af37,#f0d060)'
         : accent
-          ? 'linear-gradient(90deg,#2dd4ff,#818cf8)'
+          ? 'linear-gradient(90deg,#3b82f6,#818cf8)'
           : 'linear-gradient(90deg,rgba(255,255,255,0.35),transparent)';
   return (
     <div className="relative min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06]">
@@ -1819,7 +1819,7 @@ function SectionShell({ num, titulo, sub, colorKey, children }) {
   );
 }
 
-function ChipsRow({ stats, color = '#2dd4ff' }) {
+function ChipsRow({ stats, color = '#3b82f6' }) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {stats.map(([label, value]) => (

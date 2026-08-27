@@ -209,7 +209,7 @@ function RecordNavigator({ record, index, total, onPrev, onNext, onEdit }) {
     <div className="card relative w-full overflow-hidden !px-4 !py-3">
       <div
         className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full opacity-20 blur-2xl"
-        style={{ background: isEntrada ? '#2dd4ff' : '#ffd60a' }}
+        style={{ background: isEntrada ? '#3b82f6' : '#d4af37' }}
       />
       <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2">
         <button

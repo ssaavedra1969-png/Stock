@@ -24,9 +24,9 @@ export function LogoMark({ className }) {
     <svg viewBox="0 0 32 32" className={className} fill="none" aria-hidden="true">
       <defs>
         <linearGradient id="falpat-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#67e8f9" />
-          <stop offset="0.5" stopColor="#2dd4ff" />
-          <stop offset="1" stopColor="#ffd60a" />
+          <stop stopColor="#60a5fa" />
+          <stop offset="0.5" stopColor="#3b82f6" />
+          <stop offset="1" stopColor="#d4af37" />
         </linearGradient>
       </defs>
       <path
@@ -40,7 +40,7 @@ export function LogoMark({ className }) {
         d="M11 23V9h10v2.8h-6.8v3.2h5.6v2.8h-5.6V23H11z"
         fill="url(#falpat-grad)"
       />
-      <circle cx="24.5" cy="7.5" r="2" fill="#ffd60a" />
+      <circle cx="24.5" cy="7.5" r="2" fill="#d4af37" />
     </svg>
   );
 }

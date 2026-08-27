@@ -9,25 +9,31 @@ module.exports = {
     extend: {
       colors: {
         night: {
-          950: '#030509',
-          900: '#050b16',
-          850: '#08111f',
-          800: '#0b1830',
-          700: '#11203f',
-          600: '#17305c',
+          950: '#02040a',
+          900: '#05080f',
+          850: '#0a0e17',
+          800: '#0c101a',
+          700: '#121826',
+          600: '#1b2440',
         },
         falpat: {
-          DEFAULT: '#2dd4ff',
-          dim: '#0ea5e9',
-          soft: '#67e8f9',
+          DEFAULT: '#3b82f6',
+          dim: '#2563eb',
+          soft: '#60a5fa',
         },
         volt: {
-          DEFAULT: '#ffd60a',
-          dim: '#eab308',
+          DEFAULT: '#d4af37',
+          dim: '#b8912a',
         },
+        // Acentos extras del look Glamour's
+        indigo: {
+          DEFAULT: '#6366f1',
+        },
+        gold: '#d4af37',
       },
       fontFamily: {
         sans: [
+          '"Plus Jakarta Sans"',
           'Inter',
           'system-ui',
           '-apple-system',
@@ -47,9 +53,10 @@ module.exports = {
         ],
       },
       boxShadow: {
-        fab: '0 0 0 1px rgba(45, 212, 255, 0.35), 0 12px 34px -8px rgba(45, 212, 255, 0.5)',
-        'fab-volt': '0 0 0 1px rgba(255, 214, 10, 0.35), 0 12px 34px -8px rgba(255, 214, 10, 0.45)',
-        glow: '0 0 24px -6px rgba(45, 212, 255, 0.45)',
+        fab: '0 0 0 1px rgba(59, 130, 246, 0.35), 0 12px 34px -8px rgba(59, 130, 246, 0.5)',
+        'fab-volt': '0 0 0 1px rgba(212, 175, 55, 0.35), 0 12px 34px -8px rgba(212, 175, 55, 0.45)',
+        glow: '0 0 24px -6px rgba(59, 130, 246, 0.45)',
+        card: '0 8px 32px rgba(0, 0, 0, 0.4)',
       },
       keyframes: {
         fadeIn: {
