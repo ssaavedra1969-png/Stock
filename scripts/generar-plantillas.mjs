@@ -47,19 +47,37 @@ function serialExcel(y, m, d) {
   return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86400000);
 }
 
-// Configura las columnas verticales de TABLA (con encabezado y ancho)
+// Configura la hoja como TABLA de Excel (encabezado con color, autofiltro)
 // para una hoja CARGA/EJEMPLO.
-function configurarCeldasHoja(ws, conDim) {
+function configurarCeldasHoja(ws) {
   ws.columns = HEADERS.map((h, i) => ({
     header: h,
     key: String(i),
     width: COL_WIDTHS[i],
   }));
-  ws.getRow(1).font = { bold: true };
-  ws.getRow(1).height = 28;
-  ws.getRow(1).alignment = { vertical: 'middle', wrapText: true };
-  if (conDim) {
-    ws.getCell('D1').dataValidation = null;
+  const header = ws.getRow(1);
+  header.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+  header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } };
+  header.height = 28;
+  header.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: HEADERS.length },
+  };
+}
+
+// Bordes de tabla sobre las filas de datos (2..ultimaFila).
+function aplicarBordesTabla(ws, ultimaFila) {
+  const borde = {
+    top: { style: 'thin', color: { argb: 'FFD0D7E5' } },
+    left: { style: 'thin', color: { argb: 'FFD0D7E5' } },
+    bottom: { style: 'thin', color: { argb: 'FFD0D7E5' } },
+    right: { style: 'thin', color: { argb: 'FFD0D7E5' } },
+  };
+  for (let r = 2; r <= ultimaFila; r++) {
+    for (let c = 1; c <= HEADERS.length; c++) {
+      ws.getCell(r, c).border = borde;
+    }
   }
 }
 
@@ -109,7 +127,7 @@ function hojaEjemplo(wb, tipo) {
         ['', 'ALVARO', '2026-06-01', 'AF', 'ARENA FINA', 818.44, 'Lujan'],
       ];
   const ws = wb.addWorksheet('EJEMPLO');
-  configurarCeldasHoja(ws, false);
+  configurarCeldasHoja(ws);
   filas.forEach((fila) => {
     const f = [...fila];
     const [yy, mm, dd] = f[2].split('-').map(Number);
@@ -121,29 +139,36 @@ function hojaEjemplo(wb, tipo) {
   });
   aplicarAutocompletado(ws, ws.rowCount);
   aplicarCD(ws, ws.rowCount);
+  aplicarBordesTabla(ws, ws.rowCount);
   return ws;
 }
 
 // Hoja CARGA: el usuario llena las filas.
 function hojaCarga(wb) {
   const ws = wb.addWorksheet('CARGA');
-  configurarCeldasHoja(ws, false);
+  configurarCeldasHoja(ws);
   // Filas de sobra para cargar (100 en total con encabezado).
   aplicarAutocompletado(ws, 100);
   aplicarCD(ws, 100);
+  aplicarBordesTabla(ws, 100);
   return ws;
 }
 
-// Hoja auxiliar oculta con el catálogo producto.
+// Hoja del catálogo de productos (visible: de acá salen el desplegable de
+// CODIGO DEL PRODUCTO y el autocompletado de DESCRIPCION en las otras hojas).
 function hojaCatalogo(wb) {
   const ws = wb.addWorksheet('CATALOGO');
-  ws.state = 'hidden';
   ws.addRow(['CODIGO', 'DESCRIPCION', 'UNIDAD']);
-  ws.getRow(1).font = { bold: true };
+  const header = ws.getRow(1);
+  header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } };
+  header.alignment = { vertical: 'middle' };
   CATALOGO_CON_CODIGO.forEach((p) => ws.addRow([p.codigo, p.nombre, p.unidad]));
   ws.getColumn(1).width = 12;
   ws.getColumn(2).width = 40;
   ws.getColumn(3).width = 12;
+  // Autofiltro sobre todo el catálogo.
+  ws.autoFilter = { from: 'A1', to: `C${CATALOGO_CON_CODIGO.length + 1}` };
   return ws;
 }
 
