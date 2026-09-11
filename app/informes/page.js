@@ -26,7 +26,19 @@ import {
   IconFileSpreadsheet,
   IconPrinter,
   IconPieChart,
+  IconArrowUpRight,
+  IconArrowDownLeft,
+  IconBox,
+  IconLayers,
+  IconScale,
+  IconCalendar,
 } from '@/components/Icons';
+import {
+  ChartCard,
+  GlamDoughnut,
+  GlamBars,
+  GlamLine,
+} from '@/components/Charts';
 
 const PIE_COLORS = [
   '#0891b2',
@@ -249,142 +261,6 @@ function hexToRgb(hex) {
 // Con profundidad: sombra proyectada, gradiente radial por
 // segmento (relieve) y bordes redondeados.
 // ------------------------------------------------------------
-function DonutChart({ data, size = 190, thickness = 30, centerTop, centerBottom, dark = false }) {
-  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
-  if (!data.length) {
-    return (
-      <div
-        className={`flex items-center justify-center rounded-2xl border border-dashed text-sm ${
-          dark ? 'border-white/15 text-slate-500' : 'border-slate-300 text-slate-400'
-        }`}
-        style={{ width: size, height: size }}
-      >
-        Sin datos
-      </div>
-    );
-  }
-  const r = (size - thickness) / 2 - 3;
-  const c = size / 2;
-  const rInner = r - thickness / 2;
-  const rOuter = r + thickness / 2;
-  let offset = 0;
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-        <defs>
-          <filter id={`ds-${uid}`} x="-25%" y="-25%" width="150%" height="150%">
-            <feDropShadow dx="0" dy="2.5" stdDeviation="3" floodColor="#000000" floodOpacity={dark ? 0.55 : 0.3} />
-          </filter>
-          {data.map((d, i) => (
-            <radialGradient
-              key={i}
-              id={`dg-${uid}-${i}`}
-              gradientUnits="userSpaceOnUse"
-              cx={c}
-              cy={c}
-              r={rOuter}
-            >
-              <stop offset={`${((rInner / rOuter) * 100).toFixed(1)}%`} stopColor="#ffffff" stopOpacity="0.55" />
-              <stop offset="45%" stopColor="#ffffff" stopOpacity="0" />
-              <stop offset="68%" stopColor="#000000" stopOpacity="0" />
-              <stop offset="100%" stopColor="#000000" stopOpacity="0.28" />
-            </radialGradient>
-          ))}
-        </defs>
-        <g filter={`url(#ds-${uid})`}>
-          <circle cx={c} cy={c} r={r} fill="none" stroke={dark ? 'rgba(255,255,255,0.08)' : '#eef2f7'} strokeWidth={thickness} />
-          {data.map((d, i) => {
-            const shown = Math.max(d.pct - 1.6, 0.7);
-            const dash = `${shown} ${100 - shown}`;
-            const dashOffset = -(offset + Math.max((d.pct - shown) / 2, 0));
-            const seg = (
-              <g key={i}>
-                <circle
-                  cx={c}
-                  cy={c}
-                  r={r}
-                  fill="none"
-                  stroke={d.color}
-                  strokeWidth={thickness}
-                  pathLength={100}
-                  strokeDasharray={dash}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                  transform={`rotate(-90 ${c} ${c})`}
-                />
-                <circle
-                  cx={c}
-                  cy={c}
-                  r={r}
-                  fill="none"
-                  stroke={`url(#dg-${uid}-${i})`}
-                  strokeWidth={thickness}
-                  pathLength={100}
-                  strokeDasharray={dash}
-                  strokeDashoffset={dashOffset}
-                  strokeLinecap="round"
-                  transform={`rotate(-90 ${c} ${c})`}
-                />
-              </g>
-            );
-            offset += d.pct;
-            return seg;
-          })}
-        </g>
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className={`text-[10px] font-semibold uppercase tracking-wider ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{centerTop}</span>
-        <span className={`font-mono text-lg font-bold ${dark ? 'text-white' : 'text-slate-900'}`}>{centerBottom}</span>
-      </div>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------
-// Página
-// ------------------------------------------------------------
-function PiePanel({ title, data, centerTop, centerBottom, dark = false }) {
-  return (
-    <div
-      className={
-        dark
-          ? 'flex flex-col rounded-xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur'
-          : 'flex flex-col rounded-2xl border border-slate-200 bg-slate-50/60 p-4 shadow-[0_14px_34px_-18px_rgba(2,6,23,0.35)]'
-      }
-    >
-      <h3
-        className={`mb-3 text-center text-[11px] font-bold uppercase tracking-wider ${
-          dark ? 'font-mono text-slate-400' : 'text-slate-500'
-        }`}
-      >
-        {title}
-      </h3>
-      <div className="flex flex-col items-center gap-4">
-        <DonutChart data={data} centerTop={centerTop} centerBottom={centerBottom} dark={dark} />
-        <div className="w-full space-y-1.5">
-          {data.length === 0 ? (
-            <p className={`py-2 text-center text-xs ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Sin datos</p>
-          ) : (
-            data.map((d, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs">
-                <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: d.color }} />
-                <span className={`min-w-0 flex-1 truncate ${dark ? 'text-slate-300' : 'text-slate-700'}`} title={d.label}>
-                  {d.label}
-                </span>
-                <span className={`whitespace-nowrap font-mono font-semibold tabular-nums ${dark ? 'text-white' : 'text-slate-900'}`}>
-                  {d.unit ? fmtNum(d.value, d.unit) : fmtNum(d.value)}
-                </span>
-                <span className="w-12 text-right font-mono tabular-nums text-slate-500">
-                  {d.pct.toFixed(1)}%
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function Informes() {
 
@@ -1647,31 +1523,38 @@ export default function Informes() {
             </div>
 
             {/* Gráfico de distribución */}
-            <div className="flex flex-col gap-6 px-6 py-6 lg:flex-row lg:items-center">
-              <div className="flex flex-col items-center gap-3">
-                <DonutChart data={pieData} centerTop={donutCenterTop} centerBottom={donutCenterBottom} dark />
-                <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                  <IconPieChart className="h-3.5 w-3.5" />
-                  {tipo === 'por-planta' ? 'Distribución por planta' : 'Distribución por producto'}
-                </p>
-              </div>
-              <div className="min-w-0 flex-1 space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                {pieData.length === 0 ? (
-                  <p className="text-sm text-slate-500">No hay datos suficientes para el gráfico.</p>
-                ) : (
-                  pieData.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: d.color }} />
-                      <span className="min-w-0 flex-1 truncate text-slate-300" title={d.label}>
-                        {d.label}
-                      </span>
-                      <span className="whitespace-nowrap font-mono text-xs font-semibold tabular-nums text-white">
-                        {d.unit ? fmtNum(d.value, d.unit) : fmtNum(d.value)}
-                      </span>
-                      <span className="w-12 text-right font-mono text-xs tabular-nums text-slate-500">{d.pct.toFixed(1)}%</span>
-                    </div>
-                  ))
-                )}
+            <div className="grid gap-4 px-6 py-6 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
+              <ChartCard title={tipo === 'por-planta' ? 'Distribución por planta' : 'Distribución por producto'} icon={IconPieChart}>
+                <GlamDoughnut
+                  labels={pieData.map((d) => d.label)}
+                  data={pieData.map((d) => d.value)}
+                  colors={pieData.map((d) => d.color)}
+                  centerTop={donutCenterTop}
+                  centerBottom={donutCenterBottom}
+                />
+              </ChartCard>
+              <div className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur">
+                <h3 className="mb-3 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Distribución
+                </h3>
+                <div className="min-w-0 flex-1 space-y-2 overflow-y-auto">
+                  {pieData.length === 0 ? (
+                    <p className="text-sm text-slate-500">No hay datos suficientes para el gráfico.</p>
+                  ) : (
+                    pieData.map((d, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: d.color }} />
+                        <span className="min-w-0 flex-1 truncate text-slate-300" title={d.label}>
+                          {d.label}
+                        </span>
+                        <span className="whitespace-nowrap font-mono text-xs font-semibold tabular-nums text-white">
+                          {d.unit ? fmtNum(d.value, d.unit) : fmtNum(d.value)}
+                        </span>
+                        <span className="w-12 text-right font-mono text-xs tabular-nums text-slate-500">{d.pct.toFixed(1)}%</span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1878,47 +1761,6 @@ function MiniTable({ head, rows, rightFrom = 3 }) {
   );
 }
 
-function EvoBars({ meses }) {
-  const max = Math.max(...meses.map((m) => Math.max(m.e, m.s)), 1);
-  return (
-    <div className="rounded-xl border border-white/10 bg-black/20 p-5">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-emerald-400" /> Entradas
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-sky-400" /> Salidas (ventas)
-        </span>
-      </div>
-      <div className="mt-4 flex h-44 items-end gap-1.5">
-        {meses.map((m) => (
-          <div key={m.label} className="group flex h-full min-w-0 flex-1 flex-col justify-end">
-            <div className="flex h-full items-end justify-center gap-1">
-              <div
-                className="w-full max-w-[16px] rounded-t bg-emerald-400 transition-all group-hover:bg-emerald-300"
-                style={{ height: `${Math.max((m.e / max) * 100, m.e > 0 ? 1.5 : 0)}%`, boxShadow: '0 0 14px -4px rgba(52,211,153,0.6)' }}
-                title={`Entradas ${m.label}: ${fmtNum(m.e)} tn`}
-              />
-              <div
-                className="w-full max-w-[16px] rounded-t bg-sky-400 transition-all group-hover:bg-sky-300"
-                style={{ height: `${Math.max((m.s / max) * 100, m.s > 0 ? 1.5 : 0)}%`, boxShadow: '0 0 14px -4px rgba(56,189,248,0.6)' }}
-                title={`Salidas ${m.label}: ${fmtNum(m.s)} tn`}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-2 flex gap-1.5">
-        {meses.map((m) => (
-          <div key={m.label} className="min-w-0 flex-1 truncate text-center font-mono text-[9px] font-semibold uppercase tracking-wide text-slate-600">
-            {m.label}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function AlertasTable({ rows }) {
   if (!rows.length) {
     return (
@@ -1994,7 +1836,40 @@ function GeneralBody({ g }) {
             ['Promedio por venta', `${fmtNum(g.ventas.promedio)} tn`],
           ]}
         />
-        <PiePanel title="Distribución de ventas" data={g.ventas.pie} centerTop="Ventas" centerBottom={fmtNum(g.ventas.totalTn)} />
+        <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
+          <ChartCard title="Distribución de ventas por producto" icon={IconArrowUpRight}>
+            <GlamDoughnut
+              labels={g.ventas.pie.map((d) => d.label)}
+              data={g.ventas.pie.map((d) => d.value)}
+              colors={g.ventas.pie.map((d) => d.color)}
+              centerTop="Ventas totales"
+              centerBottom={fmtNum(g.ventas.totalTn)}
+            />
+          </ChartCard>
+          <div className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur">
+            <h3 className="mb-3 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Distribución de ventas
+            </h3>
+            <div className="w-full space-y-2 overflow-y-auto">
+              {g.ventas.pie.length === 0 ? (
+                <p className="py-2 text-center text-xs text-slate-500">Sin datos</p>
+              ) : (
+                g.ventas.pie.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: d.color }} />
+                    <span className="min-w-0 flex-1 truncate text-slate-300" title={d.label}>
+                      {d.label}
+                    </span>
+                    <span className="whitespace-nowrap font-mono font-semibold tabular-nums text-white">
+                      {d.unit ? fmtNum(d.value, d.unit) : fmtNum(d.value)}
+                    </span>
+                    <span className="w-12 text-right font-mono tabular-nums text-slate-500">{d.pct.toFixed(1)}%</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
         <MiniTable
           head={['Producto', 'Código', 'Unidad', 'Vendido', 'Movs', '% total']}
           rows={g.ventas.rows.slice(0, 15).map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.cant), String(r.movs), `${r.pct.toFixed(1)}%`])}
@@ -2017,7 +1892,40 @@ function GeneralBody({ g }) {
             ['Promedio por ingreso', `${fmtNum(g.entradas.promedio)} tn`],
           ]}
         />
-        <PiePanel title="Distribución de entradas" data={g.entradas.pie} centerTop="Entradas" centerBottom={fmtNum(g.entradas.totalTn)} />
+        <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
+          <ChartCard title="Distribución de entradas por producto" icon={IconArrowDownLeft}>
+            <GlamDoughnut
+              labels={g.entradas.pie.map((d) => d.label)}
+              data={g.entradas.pie.map((d) => d.value)}
+              colors={g.entradas.pie.map((d) => d.color)}
+              centerTop="Entradas totales"
+              centerBottom={fmtNum(g.entradas.totalTn)}
+            />
+          </ChartCard>
+          <div className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur">
+            <h3 className="mb-3 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Distribución de entradas
+            </h3>
+            <div className="w-full space-y-2 overflow-y-auto">
+              {g.entradas.pie.length === 0 ? (
+                <p className="py-2 text-center text-xs text-slate-500">Sin datos</p>
+              ) : (
+                g.entradas.pie.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: d.color }} />
+                    <span className="min-w-0 flex-1 truncate text-slate-300" title={d.label}>
+                      {d.label}
+                    </span>
+                    <span className="whitespace-nowrap font-mono font-semibold tabular-nums text-white">
+                      {d.unit ? fmtNum(d.value, d.unit) : fmtNum(d.value)}
+                    </span>
+                    <span className="w-12 text-right font-mono tabular-nums text-slate-500">{d.pct.toFixed(1)}%</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
         <MiniTable
           head={['Producto', 'Código', 'Unidad', 'Recibido', 'Movs', '% total']}
           rows={g.entradas.rows.slice(0, 15).map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.cant), String(r.movs), `${r.pct.toFixed(1)}%`])}
@@ -2040,7 +1948,40 @@ function GeneralBody({ g }) {
             ['Sin existencias', String(g.stock.ceros)],
           ]}
         />
-        <PiePanel title="Composición del stock actual" data={g.stock.pie} centerTop="Stock actual" centerBottom={fmtNum(g.stock.totalTn)} />
+        <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
+          <ChartCard title="Composición del stock actual" icon={IconBox}>
+            <GlamDoughnut
+              labels={g.stock.pie.map((d) => d.label)}
+              data={g.stock.pie.map((d) => d.value)}
+              colors={g.stock.pie.map((d) => d.color)}
+              centerTop="Stock actual"
+              centerBottom={fmtNum(g.stock.totalTn)}
+            />
+          </ChartCard>
+          <div className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur">
+            <h3 className="mb-3 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Composición del stock
+            </h3>
+            <div className="w-full space-y-2 overflow-y-auto">
+              {g.stock.pie.length === 0 ? (
+                <p className="py-2 text-center text-xs text-slate-500">Sin datos</p>
+              ) : (
+                g.stock.pie.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: d.color }} />
+                    <span className="min-w-0 flex-1 truncate text-slate-300" title={d.label}>
+                      {d.label}
+                    </span>
+                    <span className="whitespace-nowrap font-mono font-semibold tabular-nums text-white">
+                      {d.unit ? fmtNum(d.value, d.unit) : fmtNum(d.value)}
+                    </span>
+                    <span className="w-12 text-right font-mono tabular-nums text-slate-500">{d.pct.toFixed(1)}%</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
         <MiniTable
           head={['Producto', 'Código', 'Unidad', 'Entradas hist.', 'Salidas hist.', 'Stock actual', 'Último mov.']}
           rows={g.stock.rows.slice(0, 20).map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.e), fmtNum(r.s), fmtNum(r.stock), r.ultimo])}
@@ -2064,7 +2005,33 @@ function GeneralBody({ g }) {
             ['Salidas del mes pico', `${fmtNum(g.evo.pico?.s || 0)} tn`],
           ]}
         />
-        <EvoBars meses={g.evo.meses} />
+        <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+          <ChartCard title="Entradas vs Salidas por mes" icon={IconLayers}>
+            <GlamBars
+              labels={g.evo.meses.map((m) => m.label)}
+              datasets={[
+                {
+                  label: 'Entradas',
+                  data: g.evo.meses.map((m) => m.e),
+                  backgroundColor: 'rgba(16,185,129,0.85)',
+                },
+                {
+                  label: 'Salidas',
+                  data: g.evo.meses.map((m) => m.s),
+                  backgroundColor: 'rgba(56,189,248,0.85)',
+                },
+              ]}
+            />
+          </ChartCard>
+          <ChartCard title="Evolución de salidas (ventas)" icon={IconScale}>
+            <GlamLine
+              labels={g.evo.meses.map((m) => m.label)}
+              data={g.evo.meses.map((m) => m.s)}
+              color="#d4af37"
+              rgb="212,175,55"
+            />
+          </ChartCard>
+        </div>
       </SectionShell>
 
       {/* ===== 05 ALERTAS DE STOCK ===== */}

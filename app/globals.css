@@ -24,7 +24,6 @@ body {
 body {
   @apply font-sans text-slate-200 antialiased;
   background-color: #02040a;
-  background: radial-gradient(circle at 10% 20%, #0f172a 0%, #02040a 100%);
   background-attachment: fixed;
 }
 

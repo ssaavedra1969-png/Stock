@@ -20,11 +20,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body className="min-h-screen">
-        <div className="industrial-grid" aria-hidden="true" />
-        <div className="ambient-orb orb-1" aria-hidden="true" />
-        <div className="ambient-orb orb-2" aria-hidden="true" />
-        <div className="ambient-orb orb-3" aria-hidden="true" />
-        <div className="noise-overlay" aria-hidden="true" />
         <AppProvider>
           <div className="relative z-10 flex min-h-screen">
             <Sidebar />
