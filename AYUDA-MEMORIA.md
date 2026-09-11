@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-08-24. Leer esto completo antes de tocar nada._
+_Última actualización: 2026-09-11. Leer esto completo antes de tocar nada._
 
 ---
 
@@ -29,14 +29,14 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 - `npm run dev` usa `.env.local` (ignorado por git) con `GITHUB_BRANCH=dev` → trabaja contra
   la rama de prueba, NO toca producción.
-- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2646` (dev y main).
+- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2908` (dev y main).
 
 ### Proceso al hacer cambios (flujo actual)
 
 1. Probá en `dev` (`.env.local` apunta a `dev`).
 2. Cuando el usuario aprueba → `git add` + `git commit` + `git push origin main`.
 3. Vercel despliega solo desde `main` (ramas: `main` = producción, `dev` = prueba).
- 4. Verificar después del deploy: home, `/informes`, `/reportes`, `/api/db` (2587 records).
+ 4. Verificar después del deploy: home, `/informes`, `/reportes`, `/api/db` (2908 records).
 
 ---
 
@@ -122,22 +122,43 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 
 ---
 
-## 4. ESTADO ACTUAL DE LOS DATOS (2026-08-24)
+## 4. ESTADO ACTUAL DE LOS DATOS (2026-09-11)
 
-- **2646 registros** (1936 `Entrada` + 710 `Salida`), planta `Lujan`, última fecha **2026-08-17**.
-- El 2026-08-24 el usuario importó **59 entradas nuevas** él mismo con el módulo
-  **/incorporar** (plantilla Excel) → 2587 → 2646 en `dev`. Mismo día: **promoción a `main`**
-  (código + datos), verificado contra `/api/db`.
-- Sanity check global: Σentradas 85.257,12 tn − Σsalidas 61.468,69 tn = **STOCK TOTAL
-  23.788,43 tn**. Hay **4 productos con stock negativo** (los muestra la sección 05 Alertas):
-  MIRA SET 453 −21,03 kg; ESTABILIZADO GRANULOMETRICO 0/20 −155,46 tn; PIEDRA 10-30 −520,67 tn;
-  ESTABILIZADO 0-100 X TN −2.638,50 tn. Causa probable: faltan registrar entradas históricas.
-- La salida 710 es la fila que decía `BA` (remito 20339, ALMAJO SARGENTO, 4 tn): el usuario confirmó
-  que es **AF (ARENA FINA)** → se importó como tal. La fila `T` (remito 20856) se **eliminó** del
-  `Salida.xlsx` y no se importa.
-- **MS 453 (MIRA SET 453)** se mide en **kg** (no `u`): corregido en catálogo (`lib/productos.js`)
-  y en los 2 registros (`21 kg` y `0.03 kg`). Se eliminaron los duplicados viejos en `u`.
-- Snapshot de backup: `backup/db-backup-2026-08-10.json` (2587 registros).
+- El 2026-09-11 se **reconstruyó `data/db.json` desde cero** con
+  `scripts/reconstruir-db.mjs` usando las plantillas completas
+  `entrada/plantillas/Plantilla-Entradas_05.xlsx` (2124 filas) y
+  `Plantilla-Salidas_05.xlsx` (784 filas). Antes del borrado se respaldó la base previa en
+  `backup/db-backup-2026-09-11.json` (2733 registros).
+- **2908 registros** (2124 `Entrada` + 784 `Salida`), planta `Lujan`, rango de fechas
+  **2026-01-01 → 2026-09-09**.
+- Resumen por producto verificado contra los Excel (conteos y sumas idénticos, 0 descartes):
+
+  | Código | Producto | Unidad | Stock (E−S) |
+  |--------|----------|--------|-------------|
+  | AF | ARENA FINA | tn | **+2.686,80** |
+  | C | CPF 40 AVELLANEDA | tn | **+504,25** |
+  | E020 | ESTABILIZADO GRANULOMETRICO 0/20 | tn | **−155,46** |
+  | E100 | ESTABILIZADO 0-100 X TN | tn | **−2.638,50** |
+  | MFB | MAPEFILL E BASGS 25KG | bolsas | +70,00 |
+  | MS 453 | MIRA SET 453 (ADITIVO) | kg | **−30,08** |
+  | P06 | PIEDRA 0-6 | tn | **+1.581,65** |
+  | P1030 | PIEDRA 10-30 | tn | **−997,25** |
+  | P612 | PIEDRA 6-12 | tn | **+703,62** |
+  | P620 | PIEDRA 6-20 | tn | **+1.401,19** |
+  | RDC | RDC DRUMS 200 KG | tambores | +1,00 |
+  | S45 | SELLADOR (MAPEFLEX…) | u | +100,00 |
+  | W | W351R | u | +19.154,98 |
+  | W5 | W500R | u | +3,00 |
+
+- Sanity check global: Σ entradas **73.794,83 tn** − Σ salidas **70.708,53 tn** = **STOCK TOTAL
+  3.086,30 tn**. **4 productos con stock negativo** (sección 05 Alertas): MIRA SET 453 −30,08 kg;
+  ESTABILIZADO GRANULOMETRICO 0/20 −155,46 tn; PIEDRA 10-30 −997,25 tn; ESTABILIZADO 0-100 X TN
+  −2.638,50 tn. Causa probable: faltan registrar entradas históricas.
+- **Decisión del usuario (2026-09-11):** al recargar desde las plantillas _05 se **descartaron los
+  registros que NO estaban en los archivos** — 12 entradas PIEDRA 10-30 (prov. CAMPANA, ago 2026,
+  ~385 tn) y 2 entradas MS 453 (prov. ALVARO). Por eso P1030 y MS 453 hoy tienen stock negativo.
+- El formato de registro resultante es el del importador `lib/importar.js` (sin
+  patente/chofer/pesoProveedor, que la plantilla CARGA no trae).
 
 ---
 
@@ -148,12 +169,14 @@ npm run build      # build de producción (NO correr con `npm run dev` activo)
 - Backup principal: `data/db.json` commiteado en `main` → respaldo en **git history**
   + **GitHub** (remoto) + **Vercel**.
 - Snapshot explícito: `backup/db-backup-YYYY-MM-DD.json` (copia fechada de `data/db.json`,
-  commiteada). Hoy: `backup/db-backup-2026-08-09.json` (2.576 registros). Anterior: 2026-08-08 (1.867).
-- Fuente original de la carga: `entrada/Entrada.xlsx` (también está versionado en el repo).
+  commiteada). Hoy: `backup/db-backup-2026-09-11.json` (2.733 registros, la base previa a la
+  reconstrucción). Anterior: 2026-08-10 (2.587).
+- Fuente original de la carga: `entrada/Entrada.xlsx` (también está versionado en el repo) y las
+  plantillas `entrada/plantillas/Plantilla-{Entradas,Salidas}_05.xlsx`.
 - **Restaurar**: tomar el contenido de un backup y subirlo a la rama deseada vía la API de
   contenidos de GitHub (PUT a `data/db.json`) o reemplazando el archivo local + commit + push.
 - Verificación de integridad: comparar hash entre local y remoto
-  (`node` + `createHash('sha256')` sobre el contenido) o chequear `GET /api/db` (2576 records).
+  (`node` + `createHash('sha256')` sobre el contenido) o chequear `GET /api/db` (2908 records).
 
 ---
 
@@ -213,6 +236,21 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
       REMITOS en `nroRemitoProveedor`; el usuario confirmó que el nro de remito es de FALPAT.
       Las **salidas** nuevas usan `nroRemitoFalpat`. Quedó así por ahora.
 
+### EN CURSO → HECHO (sesión 2026-09-11): Reconstrucción de la base desde plantillas _05
+
+- [x] **Reconstrucción completa de `data/db.json`** con `scripts/reconstruir-db.mjs` desde las
+      plantillas `Plantilla-Entradas_05.xlsx` (2124 filas) y `Plantilla-Salidas_05.xlsx`
+      (784 filas) → **2908 registros** (0 descartes), fechas 01/01→09/09/2026.
+- [x] Backup previo sin pérdida: `backup/db-backup-2026-09-11.json` (2733 registros).
+- [x] Decisión del usuario: **no conservar** los 14 registros que no estaban en los _05
+      (12 P1030 CAMPANA + 2 MS 453). Stock por producto verificado 1:1 contra los Excel.
+- [x] Migración de gráficos del Informe General a **Chart.js**: nuevo `components/Charts.js`
+      (ChartCard/GlamDoughnut/GlamBars/GlamLine con estética Glamour's), `chart.js` +
+      `react-chartjs-2` en package.json, refactor en `app/informes/page.js`. Se quitaron los
+      orbs/grid/noise de `layout.js` y el radial-gradient de `globals.css`. lint/build OK.
+- [ ] Commit + push a main (y sincronizar rama `dev`) de: datos reconstruidos + script + backup
+      + gráficos Chart.js + AYUDA-MEMORIA.
+
 ### EN CURSO → HECHO (sesión 2026-08-24): Incorporar + Informe General + estética dashboard
 
 - [x] **Módulo /incorporar**: descarga de plantillas Excel (`public/plantillas/`), carga con
@@ -260,5 +298,5 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 1. Leer este archivo completo.
 2. `git status` y `git log --oneline -5` para ver el estado real.
 3. Levantar `npm run dev` y abrir `http://localhost:3000` (usa rama `dev`).
-4. Chequear `GET /api/db` (2577 records en dev / 2576 en producción).
+4. Chequear `GET /api/db` (2908 records en dev y en producción).
 5. NO tocar producción sin probar en `dev` primero y sin que el usuario lo apruebe.
