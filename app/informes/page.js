@@ -103,6 +103,55 @@ function fmtNum(n, unit = '') {
   return unit ? `${v} ${unit}` : v;
 }
 
+// Filtra registros por período (mes/año + desde/hasta). Vacíos = sin restricción.
+function filtrarPeriodo(arr, { mes, anio, desde, hasta }) {
+  let out = arr;
+  if (anio || mes) {
+    out = out.filter((r) => {
+      const ym = anioMes(r.fechaRemito);
+      if (!ym) return false;
+      if (anio && ym.anio !== Number(anio)) return false;
+      if (mes && ym.mes !== Number(mes)) return false;
+      return true;
+    });
+  }
+  if (desde) {
+    const min = toMillis(desde);
+    out = out.filter((r) => (toMillis(r.fechaRemito) || 0) >= min);
+  }
+  if (hasta) {
+    const end = new Date(hasta);
+    end.setHours(23, 59, 59, 999);
+    const max = end.getTime();
+    out = out.filter((r) => (toMillis(r.fechaRemito) || 0) <= max);
+  }
+  return out;
+}
+
+// Agrega una lista de movimientos por producto+unidad (filas de las secciones 01/02).
+function agregarSeccion(rows) {
+  const map = new Map();
+  for (const r of rows) {
+    const { num, unit } = pesoDetalle(r.pesoBalanza);
+    const key = `${r.codigoProducto || r.producto || 'SIN CÓDIGO'}§${unit}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        codigo: r.codigoProducto || '—',
+        producto: r.producto || '—',
+        unit: unit || '—',
+        cant: 0,
+        movs: 0,
+      });
+    }
+    const it = map.get(key);
+    it.cant += num;
+    it.movs += 1;
+  }
+  const arr = [...map.values()].filter((r) => r.cant > 0.0001).sort((a, b) => b.cant - a.cant);
+  const total = arr.reduce((s, r) => s + r.cant, 0) || 1;
+  return arr.map((r) => ({ ...r, pct: (r.cant / total) * 100 }));
+}
+
 // Texto seguro para PDF (fuentes WinAnsi de jsPDF).
 function pdfSafe(v) {
   return String(v ?? '').replace(/—/g, '-').replace(/…/g, '...');
@@ -274,6 +323,11 @@ export default function Informes() {
   const [planta, setPlanta] = useState('');
   const [contraparte, setContraparte] = useState('');
 
+  // Filtros de período propios de cada sección del Informe General
+  // (01 Ventas / 02 Entradas), independientes del filtro global.
+  const [ventasF, setVentasF] = useState({ mes: '', anio: '', desde: '', hasta: '' });
+  const [entradasF, setEntradasF] = useState({ mes: '', anio: '', desde: '', hasta: '' });
+
   // Opciones de los filtros (valores únicos de la cache local).
   const prodOptions = useMemo(
     () =>
@@ -306,8 +360,10 @@ export default function Informes() {
     [records]
   );
 
-  // Base respetando producto/planta/contraparte y período (mes/año + desde/hasta).
-  const baseRecords = useMemo(() => {
+// Base respetando producto/planta/contraparte, sin período global: las secciones
+  // 01 (Ventas) y 02 (Entradas) del Informe General aplican su PROPIO filtro de
+  // período en la parte superior de cada sección.
+  const baseSinPeriodo = useMemo(() => {
     let arr = records;
     if (productosSel.length > 0) {
       arr = arr.filter(
@@ -316,75 +372,22 @@ export default function Informes() {
     }
     if (planta) arr = arr.filter((r) => r.planta === planta);
     if (contraparte) arr = arr.filter((r) => r.proveedor === contraparte || r.cliente === contraparte);
-    if (anio || mes) {
-      arr = arr.filter((r) => {
-        const ym = anioMes(r.fechaRemito);
-        if (!ym) return false;
-        if (anio && ym.anio !== Number(anio)) return false;
-        if (mes && ym.mes !== Number(mes)) return false;
-        return true;
-      });
-    }
-    if (desde) {
-      const min = toMillis(desde);
-      arr = arr.filter((r) => (toMillis(r.fechaRemito) || 0) >= min);
-    }
-    if (hasta) {
-      const end = new Date(hasta);
-      end.setHours(23, 59, 59, 999);
-      const max = end.getTime();
-      arr = arr.filter((r) => (toMillis(r.fechaRemito) || 0) <= max);
-    }
     return arr;
-  }, [records, productosSel, planta, contraparte, desde, hasta, mes, anio]);
+  }, [records, productosSel, planta, contraparte]);
 
-  // Saldo histórico por producto (usado como columna "Saldo").
+  // Base completa con el período global (mes/año + desde/hasta), para los informes
+  // de Entradas / Salidas / Movimientos / Stock por planta.
+  const baseRecords = useMemo(
+    () => filtrarPeriodo(baseSinPeriodo, { mes, anio, desde, hasta }),
+    [baseSinPeriodo, mes, anio, desde, hasta]
+  );
+
+// Saldo histórico por producto (usado como columna "Saldo").
   const saldoMap = useMemo(() => buildSaldoMap(records), [records]);
 
-  // ----- Stock: agrega entradas/salidas por producto+unidad -----
-  // Movimientos = período filtrado. Stock Total = acumulado histórico (Σentradas - Σsalidas),
-  // calculado sobre TODO el historial cargado (records): el Stock a la fecha del Informe
-  // General y la Evolución mensual usan la base completa sin filtros.
+  // ----- Stock acumulado histórico (Σentradas - Σsalidas sobre TODO el historial) -----
+  // Lo usan el Stock a la fecha (sección 03) y la Evolución mensual (sección 04).
   const acumuladoMap = useMemo(() => buildAcumuladoMap(records), [records]);
-  const stockRows = useMemo(() => {
-    const map = new Map();
-    for (const r of baseRecords) {
-      const { num, unit } = pesoDetalle(r.pesoBalanza);
-      const key = `${r.codigoProducto || r.producto || 'SIN CÓDIGO'}§${unit}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          codigo: r.codigoProducto || '—',
-          producto: r.producto || '—',
-          unit: unit || '—',
-          entradas: 0,
-          salidas: 0,
-          countE: 0,
-          countS: 0,
-          count: 0,
-        });
-      }
-      const it = map.get(key);
-      it.count += 1;
-      if (r.carga === 'Entrada') {
-        it.entradas += num;
-        it.countE += 1;
-      } else {
-        it.salidas += num;
-        it.countS += 1;
-      }
-    }
-    return [...map.entries()].map(([key, it]) => {
-      const h = acumuladoMap.get(key);
-      return {
-        ...it,
-        stock: it.entradas - it.salidas,
-        entradasH: h?.e || 0,
-        salidasH: h?.s || 0,
-        stockHist: (h?.e || 0) - (h?.s || 0),
-      };
-    })
-    .sort((a, b) => Math.abs(b.stockHist) - Math.abs(a.stockHist));
-  }, [baseRecords, acumuladoMap]);
 
   // ----- Stock por planta -----
   // Stock Total por planta también es acumulado histórico.
@@ -471,48 +474,23 @@ export default function Informes() {
     );
   }, [tipo, plantaRows, movRows]);
 
-  // ----- Gráficos separados: Entradas, Salidas y Ventas -----
-  const pieLabel = (r) => `${r.codigo} · ${r.producto}`;
-  const pieEntradas = useMemo(
-    () => buildPie(stockRows.filter((r) => r.entradas > 0.0001), (r) => r.entradas, pieLabel, (r) => r.unit),
-    [stockRows]
-  );
-  const pieSalidas = useMemo(
-    () => buildPie(stockRows.filter((r) => r.salidas > 0.0001), (r) => r.salidas, pieLabel, (r) => r.unit),
-    [stockRows]
-  );
-  // ==========================================================
+// ==========================================================
   // Datos del INFORME GENERAL (gerencial, 5 secciones)
   // ==========================================================
   const generalData = useMemo(() => {
     if (tipo !== 'general') return null;
 
-    const filasES = (rows, campo, campoMovs) => {
-      const conMov = rows.filter((r) => r[campo] > 0.0001);
-      const total = conMov.reduce((s, r) => s + r[campo], 0) || 1;
-      return conMov
-        .map((r) => ({
-          codigo: r.codigo,
-          producto: r.producto,
-          unit: r.unit,
-          cant: r[campo],
-          movs: r[campoMovs],
-          pct: (r[campo] / total) * 100,
-        }))
-        .sort((a, b) => b.cant - a.cant);
-    };
-
-    // --- Sección 01: VENTAS (salidas del período) ---
-    const ventasRows = filasES(stockRows, 'salidas', 'countS');
-    const salidasBase = baseRecords.filter((r) => r.carga === 'Salida');
-    const tnSal = salidasBase.reduce((s, r) => s + pesoTn(r.pesoBalanza), 0);
-    const movsSal = salidasBase.length;
-    const clientes = new Set(salidasBase.map((r) => r.cliente).filter(Boolean)).size;
+    // --- Sección 01: VENTAS (salidas del período, con su propio filtro) ---
+    const ventasBase = filtrarPeriodo(baseSinPeriodo, ventasF).filter((r) => r.carga === 'Salida');
+    const ventasRows = agregarSeccion(ventasBase);
+    const tnSal = ventasBase.reduce((s, r) => s + pesoTn(r.pesoBalanza), 0);
+    const movsSal = ventasBase.length;
+    const clientes = new Set(ventasBase.map((r) => r.cliente).filter(Boolean)).size;
     const promSal = movsSal ? tnSal / movsSal : 0;
 
-    // --- Sección 02: ENTRADAS (del período) ---
-    const entradasRows = filasES(stockRows, 'entradas', 'countE');
-    const entradasBase = baseRecords.filter((r) => r.carga === 'Entrada');
+    // --- Sección 02: ENTRADAS (del período, con su propio filtro) ---
+    const entradasBase = filtrarPeriodo(baseSinPeriodo, entradasF).filter((r) => r.carga === 'Entrada');
+    const entradasRows = agregarSeccion(entradasBase);
     const tnEnt = entradasBase.reduce((s, r) => s + pesoTn(r.pesoBalanza), 0);
     const movsEnt = entradasBase.length;
     const proveedores = new Set(entradasBase.map((r) => r.proveedor).filter(Boolean)).size;
@@ -589,14 +567,30 @@ export default function Informes() {
       ...ceros.map((r) => ({ ...r, estado: 'SIN STOCK' })),
     ];
 
-    return {
-      ventas: { rows: ventasRows, pie: pieSalidas, totalTn: tnSal, movs: movsSal, contrapartes: clientes, promedio: promSal },
-      entradas: { rows: entradasRows, pie: pieEntradas, totalTn: tnEnt, movs: movsEnt, contrapartes: proveedores, promedio: promEnt },
+return {
+      ventas: {
+        rows: ventasRows,
+        pie: buildPie(ventasRows, (r) => r.cant, (r) => `${r.codigo} · ${r.producto}`, (r) => r.unit),
+        totalTn: tnSal,
+        movs: movsSal,
+        contrapartes: clientes,
+        promedio: promSal,
+        periodo: descripcionPeriodo(ventasF.mes, ventasF.anio, ventasF.desde, ventasF.hasta),
+      },
+      entradas: {
+        rows: entradasRows,
+        pie: buildPie(entradasRows, (r) => r.cant, (r) => `${r.codigo} · ${r.producto}`, (r) => r.unit),
+        totalTn: tnEnt,
+        movs: movsEnt,
+        contrapartes: proveedores,
+        promedio: promEnt,
+        periodo: descripcionPeriodo(entradasF.mes, entradasF.anio, entradasF.desde, entradasF.hasta),
+      },
       stock: { rows: stockFechaRows, pie: stockPie, n: stockFechaRows.length, totalTn: stockTotalTn, negativos: negativos.length, ceros: ceros.length },
       evo: { meses, pico, promE: promEvoE, promS: promEvoS },
       alertas: { rows: alertasRows },
     };
-  }, [tipo, stockRows, baseRecords, acumuladoMap, pieEntradas, pieSalidas, records]);
+  }, [tipo, baseSinPeriodo, ventasF, entradasF, acumuladoMap, records]);
 
   // ----- Etiquetas del informe -----
   const reportTitle = TIPOS.find((t) => t.value === tipo)?.label || 'Informe';
@@ -699,16 +693,16 @@ export default function Informes() {
       // --- Informe General: un libro con 5 hojas ---
       if (tipo === 'general' && generalData) {
         const wb = XLSX.utils.book_new();
-        const cab = (arr, titulo) => {
+const cab = (arr, titulo, labelPeriodo) => {
           arr.push([COMPANY.name]);
           arr.push([`INFORME GENERAL — ${titulo.toUpperCase()}`]);
-          arr.push([periodoLabel]);
+          arr.push([labelPeriodo || periodoLabel]);
           arr.push([`Generado: ${hoy}`]);
           arr.push([]);
         };
-        function hoja(nombre, tituloHoja, head, rows, footTexts) {
+        function hoja(nombre, tituloHoja, head, rows, footTexts, labelPeriodo) {
           const aoa2 = [];
-          cab(aoa2, tituloHoja);
+          cab(aoa2, tituloHoja, labelPeriodo);
           aoa2.push(head);
           for (const r of rows) aoa2.push(r.map((c) => pdfSafe(c)));
           if (footTexts?.length) {
@@ -725,14 +719,16 @@ export default function Informes() {
           'Ventas (salidas)',
           ['Producto', 'Código', 'Unidad', 'Vendido', 'Movimientos', '% del total'],
           generalData.ventas.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.cant), r.movs, `${r.pct.toFixed(1)}%`]),
-          [`Total: ${fmtNum(generalData.ventas.totalTn)} tn · ${generalData.ventas.movs} remitos · ${generalData.ventas.contrapartes} clientes`]
+          [`Total: ${fmtNum(generalData.ventas.totalTn)} tn · ${generalData.ventas.movs} remitos · ${generalData.ventas.contrapartes} clientes`],
+          `Período sección 01 · ${generalData.ventas.periodo}`
         );
         hoja(
           'Entradas',
           'Entradas de materiales',
           ['Producto', 'Código', 'Unidad', 'Recibido', 'Movimientos', '% del total'],
           generalData.entradas.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.cant), r.movs, `${r.pct.toFixed(1)}%`]),
-          [`Total: ${fmtNum(generalData.entradas.totalTn)} tn · ${generalData.entradas.movs} remitos · ${generalData.entradas.contrapartes} proveedores`]
+          [`Total: ${fmtNum(generalData.entradas.totalTn)} tn · ${generalData.entradas.movs} remitos · ${generalData.entradas.contrapartes} proveedores`],
+          `Período sección 02 · ${generalData.entradas.periodo}`
         );
         hoja(
           'Stock',
@@ -1115,13 +1111,13 @@ export default function Informes() {
         doc.setFontSize(6.5);
         doc.setTextColor(100, 116, 139);
         doc.text(
-          pdfSafe('Nota: el stock a la fecha (sección 03) y la evolución mensual (sección 04) usan el historial completo cargado, sin filtros. Ventas (01) y Entradas (02) sí responden a los filtros de arriba.'),
+          pdfSafe('Nota: cada sección 01 (Ventas) y 02 (Entradas) tiene su propio filtro de período en su parte superior. El stock a la fecha (03) y la evolución mensual (04) siempre usan el historial completo cargado, sin filtros.'),
           margin,
           cursorY
         );
 
-        // ===== 01 VENTAS =====
-        nuevaPaginaSeccion('01', 'VENTAS — SALIDAS DEL PERÍODO', `${g.ventas.movs} remitos · ${g.ventas.contrapartes} clientes`, 'ventas');
+// ===== 01 VENTAS =====
+        nuevaPaginaSeccion('01', 'VENTAS — SALIDAS DEL PERÍODO', `${g.ventas.periodo} · ${g.ventas.movs} remitos · ${g.ventas.contrapartes} clientes`, 'ventas');
         chips([
           ['Vendido (tn)', fmtNum(g.ventas.totalTn)],
           ['Remitos de salida', String(g.ventas.movs)],
@@ -1137,8 +1133,8 @@ export default function Informes() {
           'SECCIÓN 01 · VENTAS'
         );
 
-        // ===== 02 ENTRADAS =====
-        nuevaPaginaSeccion('02', 'ENTRADAS DE MATERIALES', `${g.entradas.movs} remitos · ${g.entradas.contrapartes} proveedores`, 'entradas');
+// ===== 02 ENTRADAS =====
+        nuevaPaginaSeccion('02', 'ENTRADAS DE MATERIALES', `${g.entradas.periodo} · ${g.entradas.movs} remitos · ${g.entradas.contrapartes} proveedores`, 'entradas');
         chips([
           ['Recibido (tn)', fmtNum(g.entradas.totalTn)],
           ['Remitos de entrada', String(g.entradas.movs)],
@@ -1500,7 +1496,14 @@ export default function Informes() {
         </div>
 
         {tipo === 'general' && generalData ? (
-          <GeneralBody g={generalData} />
+          <GeneralBody
+            g={generalData}
+            ventasF={ventasF}
+            setVentasF={setVentasF}
+            entradasF={entradasF}
+            setEntradasF={setEntradasF}
+            anios={anios}
+          />
         ) : (
           <>
             {/* Resumen — stat cards */}
@@ -1817,16 +1820,56 @@ function AlertasTable({ rows }) {
   );
 }
 
-function GeneralBody({ g }) {
+// Panel de filtros de período propio de cada sección del Informe General.
+function SeccionFiltro({ estado, onChange, anios }) {
+  const activo = Boolean(estado.mes || estado.anio || estado.desde || estado.hasta);
+  return (
+    <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          Filtros de la sección
+          {activo && (
+            <span className="ml-2 font-semibold normal-case tracking-normal text-falpat">
+              · {descripcionPeriodo(estado.mes, estado.anio, estado.desde, estado.hasta)}
+            </span>
+          )}
+        </p>
+        {activo && (
+          <button
+            type="button"
+            onClick={() => onChange({ mes: '', anio: '', desde: '', hasta: '' })}
+            className="text-[11px] font-semibold text-falpat hover:underline"
+          >
+            Limpiar filtro
+          </button>
+        )}
+      </div>
+      <FiltroPeriodo
+        mes={estado.mes}
+        anio={estado.anio}
+        desde={estado.desde}
+        hasta={estado.hasta}
+        anios={anios}
+        onMes={(m) => onChange({ ...estado, mes: m })}
+        onAnio={(a) => onChange({ ...estado, anio: a })}
+        onDesde={(d) => onChange({ ...estado, desde: d })}
+        onHasta={(h) => onChange({ ...estado, hasta: h })}
+      />
+    </div>
+  );
+}
+
+function GeneralBody({ g, ventasF, setVentasF, entradasF, setEntradasF, anios }) {
   return (
     <div className="space-y-5 px-4 py-5 sm:px-6">
       {/* ===== 01 VENTAS ===== */}
       <SectionShell
         num="01"
         titulo="Ventas — Salidas del período"
-        sub={`${g.ventas.movs} remitos · ${g.ventas.contrapartes} clientes · promedio ${fmtNum(g.ventas.promedio)} tn por venta`}
+        sub={`${g.ventas.periodo} · ${g.ventas.movs} remitos · ${g.ventas.contrapartes} clientes · promedio ${fmtNum(g.ventas.promedio)} tn por venta`}
         colorKey="ventas"
       >
+        <SeccionFiltro estado={ventasF} onChange={setVentasF} anios={anios} />
         <ChipsRow
           color={SECCION_COLORS.ventas.hex}
           stats={[
@@ -1880,9 +1923,10 @@ function GeneralBody({ g }) {
       <SectionShell
         num="02"
         titulo="Entradas de materiales"
-        sub={`${g.entradas.movs} remitos · ${g.entradas.contrapartes} proveedores · promedio ${fmtNum(g.entradas.promedio)} tn por ingreso`}
+        sub={`${g.entradas.periodo} · ${g.entradas.movs} remitos · ${g.entradas.contrapartes} proveedores · promedio ${fmtNum(g.entradas.promedio)} tn por ingreso`}
         colorKey="entradas"
       >
+        <SeccionFiltro estado={entradasF} onChange={setEntradasF} anios={anios} />
         <ChipsRow
           color={SECCION_COLORS.entradas.hex}
           stats={[

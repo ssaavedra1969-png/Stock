@@ -9,10 +9,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { IconLayout, IconLayers, IconPieChart, IconUpload } from './Icons';
+import { IconLayout, IconLayers, IconPieChart, IconUpload, IconChevronLeft, IconChevronRight } from './Icons';
 import { LOGO_PATH } from '@/lib/company';
 
-function Brand({ onClick }) {
+function Brand({ onClick, collapsed }) {
   return (
     <button
       type="button"
@@ -30,30 +30,35 @@ function Brand({ onClick }) {
           priority
         />
       </span>
-      <span className="leading-tight">
-        <span className="block text-sm font-extrabold uppercase tracking-widest text-slate-50">
-          Grupo <span className="text-gradient-falpat">Falpat</span>
+      {!collapsed && (
+        <span className="leading-tight">
+          <span className="block text-sm font-extrabold uppercase tracking-widest text-slate-50">
+            Grupo <span className="text-gradient-falpat">Falpat</span>
+          </span>
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+            SRL · Control de Stock
+          </span>
         </span>
-        <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-          SRL · Control de Stock
-        </span>
-      </span>
+      )}
     </button>
   );
 }
 
-function NavItem({ icon, label, href }) {
+function NavItem({ icon, label, href, collapsed }) {
   const pathname = usePathname();
   const active = pathname === href;
   return (
     <Link
       href={href}
+      title={collapsed ? label : undefined}
       aria-current={active ? 'page' : undefined}
+      aria-label={label}
       className={
-        'group relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/[0.04] px-3.5 py-2.5 text-sm font-semibold transition ' +
+        'group relative flex items-center overflow-hidden rounded-xl border border-white/[0.04] px-3.5 py-2.5 text-sm font-semibold transition ' +
+        (collapsed ? 'justify-center px-2.5 ' : 'gap-3 ') +
         (active
-          ? 'translate-x-2 bg-gradient-to-br from-falpat/15 to-indigo/5 text-falpat-soft shadow-[inset_0_1px_rgba(255,255,255,0.09),-12px_14px_26px_rgba(0,0,0,0.5)]'
-          : 'border-white/[0.04] bg-white/[0.02] text-slate-400 shadow-[0_2px_6px_rgba(0,0,0,0.28)] hover:translate-x-2 hover:-rotate-y-6 hover:border-falpat/25 hover:bg-white/[0.05] hover:text-slate-100')
+          ? 'translate-x-0 bg-gradient-to-br from-falpat/15 to-indigo/5 text-falpat-soft shadow-[inset_0_1px_rgba(255,255,255,0.09),-12px_14px_26px_rgba(0,0,0,0.5)]'
+          : 'border-white/[0.04] bg-white/[0.02] text-slate-400 shadow-[0_2px_6px_rgba(0,0,0,0.28)] hover:translate-x-0 hover:border-falpat/25 hover:bg-white/[0.05] hover:text-slate-100')
       }
     >
       {active && (
@@ -62,8 +67,8 @@ function NavItem({ icon, label, href }) {
       <span className="relative shrink-0 transition group-hover:scale-110 group-hover:text-falpat-soft">
         {icon}
       </span>
-      <span className="relative uppercase tracking-wider">{label}</span>
-      {active && (
+      {!collapsed && <span className="relative uppercase tracking-wider">{label}</span>}
+      {!collapsed && active && (
         <span className="relative ml-auto h-1.5 w-1.5 rounded-full bg-falpat shadow-glow" />
       )}
     </Link>
@@ -91,36 +96,63 @@ function QuickStats() {
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ collapsed = false, onToggle }) {
   return (
     <>
       {/* ====== Sidebar desktop (lg+) ====== */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-white/[0.06] bg-[#080c14]/85 backdrop-blur-2xl lg:flex">
-        <div className="flex h-full flex-col px-5 py-6">
-          <Brand onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-white/[0.06] bg-[#080c14]/85 backdrop-blur-2xl transition-[width] duration-300 lg:flex ${
+          collapsed ? 'w-20' : 'w-64'
+        }`}
+      >
+        <div className={`flex h-full flex-col pt-6 ${collapsed ? 'px-3' : 'px-5'}`}>
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <Brand onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} collapsed={collapsed} />
+            </div>
+            <button
+              type="button"
+              onClick={onToggle}
+              title={collapsed ? 'Expandir menú' : 'Contraer menú (pantalla completa)'}
+              aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-400 transition hover:border-falpat/30 hover:bg-white/[0.06] hover:text-falpat-soft"
+            >
+              {collapsed ? (
+                <IconChevronRight className="h-4 w-4" />
+              ) : (
+                <IconChevronLeft className="h-4 w-4" />
+              )}
+            </button>
+          </div>
 
-          <nav className="mt-8 space-y-1.5">
-            <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
-              Menú
-            </p>
-            <NavItem icon={<IconLayout className="h-[18px] w-[18px]" />} label="Panel" href="/" />
-            <NavItem icon={<IconPieChart className="h-[18px] w-[18px]" />} label="Reportes" href="/reportes" />
-            <NavItem icon={<IconLayers className="h-[18px] w-[18px]" />} label="Informes" href="/informes" />
-            <NavItem icon={<IconUpload className="h-[18px] w-[18px]" />} label="Incorporar" href="/incorporar" />
+          <nav className={`space-y-1.5 ${collapsed ? 'mt-8' : 'mt-8'}`}>
+            {!collapsed && (
+              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                Menú
+              </p>
+            )}
+            <NavItem icon={<IconLayout className="h-[18px] w-[18px]" />} label="Panel" href="/" collapsed={collapsed} />
+            <NavItem icon={<IconPieChart className="h-[18px] w-[18px]" />} label="Reportes" href="/reportes" collapsed={collapsed} />
+            <NavItem icon={<IconLayers className="h-[18px] w-[18px]" />} label="Informes" href="/informes" collapsed={collapsed} />
+            <NavItem icon={<IconUpload className="h-[18px] w-[18px]" />} label="Incorporar" href="/incorporar" collapsed={collapsed} />
           </nav>
 
-          <div className="mt-8">
-            <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
-              Resumen
-            </p>
-            <QuickStats />
-          </div>
+          {!collapsed && (
+            <div className="mt-8">
+              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                Resumen
+              </p>
+              <QuickStats />
+            </div>
+          )}
 
-          <div className="mt-auto">
-            <p className="text-center text-[10px] uppercase tracking-wider text-slate-600">
-              v1.0 · GitHub + Vercel
-            </p>
-          </div>
+          {!collapsed && (
+            <div className="mt-auto">
+              <p className="text-center text-[10px] uppercase tracking-wider text-slate-600">
+                v1.0 · GitHub + Vercel
+              </p>
+            </div>
+          )}
         </div>
       </aside>
 
