@@ -248,8 +248,10 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
       (ChartCard/GlamDoughnut/GlamBars/GlamLine con estética Glamour's), `chart.js` +
       `react-chartjs-2` en package.json, refactor en `app/informes/page.js`. Se quitaron los
       orbs/grid/noise de `layout.js` y el radial-gradient de `globals.css`. lint/build OK.
-- [ ] Commit + push a main (y sincronizar rama `dev`) de: datos reconstruidos + script + backup
-      + gráficos Chart.js + AYUDA-MEMORIA.
+- [x] Commit + push a main y sincronización de `dev`. **Ojo (2026-09-11):** la sesión que se
+      colgó había pusheado a `main` 4 commits con imports erróneos (ALVARO como *entrada*,
+      P1030-CAMPANA, MS 453, ALMAJO 01/09). Se resolvió con merge `-X ours`: prevaleció la
+      reconstrucción desde plantillas _05. **Vercel quedó con 2908 registros (2124 E + 784 S).**
 
 ### EN CURSO → HECHO (sesión 2026-08-24): Incorporar + Informe General + estética dashboard
 
