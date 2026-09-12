@@ -53,3 +53,5 @@ dev-server*.err.log
 /entrada/stock ESTEBAN_0*.xlsx
 /entrada/Entrada_01.xlsx
 /entrada/Salida_01.xlsx
+.vercel
+.env*

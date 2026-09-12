@@ -598,12 +598,15 @@ return {
 
   const donutCenterTop = tipo === 'por-planta' ? 'Stock (tn)' : 'Total (tn)';
   const donutCenterBottom = tipo === 'por-planta' ? fmtNum(totals.stock) : fmtNum(totals.tn);
-  const periodoLabel = useMemo(() => {
+const periodoLabel = useMemo(() => {
+    if (tipo === 'general') {
+      return 'Período: por sección (01 Ventas · 02 Entradas)';
+    }
     if (mes || anio || desde || hasta) {
       return `Período: ${descripcionPeriodo(mes, anio, desde, hasta)}`;
     }
     return 'Período: todo el historial';
-  }, [mes, anio, desde, hasta]);
+  }, [tipo, mes, anio, desde, hasta]);
   const filterLabel = useMemo(() => {
     const parts = [periodoLabel];
     if (productosSel.length > 0) parts.push(`Producto: ${productosSel.join(', ')}`);
@@ -614,12 +617,19 @@ return {
 
   const filtrosAplicados = useMemo(() => {
     const items = [];
-    if (mes || anio || desde || hasta) items.push(`Período: ${descripcionPeriodo(mes, anio, desde, hasta)}`);
+    if (tipo === 'general') {
+      const vActivo = Boolean(ventasF.mes || ventasF.anio || ventasF.desde || ventasF.hasta);
+      const eActivo = Boolean(entradasF.mes || entradasF.anio || entradasF.desde || entradasF.hasta);
+      if (vActivo) items.push(`Ventas (01): ${descripcionPeriodo(ventasF.mes, ventasF.anio, ventasF.desde, ventasF.hasta)}`);
+      if (eActivo) items.push(`Entradas (02): ${descripcionPeriodo(entradasF.mes, entradasF.anio, entradasF.desde, entradasF.hasta)}`);
+    } else if (mes || anio || desde || hasta) {
+      items.push(`Período: ${descripcionPeriodo(mes, anio, desde, hasta)}`);
+    }
     if (productosSel.length > 0) items.push(`Producto: ${productosSel.join(', ')}`);
     if (planta) items.push(`Planta: ${planta}`);
     if (contraparte) items.push(`Origen/Destino: ${contraparte}`);
     return items;
-  }, [mes, anio, desde, hasta, productosSel, planta, contraparte]);
+  }, [tipo, mes, anio, desde, hasta, ventasF, entradasF, productosSel, planta, contraparte]);
 
   function clearFilters() {
     setProductosSel([]);
@@ -629,6 +639,8 @@ return {
     setHasta('');
     setMes('');
     setAnio('');
+    setVentasF({ mes: '', anio: '', desde: '', hasta: '' });
+    setEntradasF({ mes: '', anio: '', desde: '', hasta: '' });
   }
 
   // ==========================================================
@@ -1441,20 +1453,37 @@ const cab = (arr, titulo, labelPeriodo) => {
           </label>
         </div>
 
-        {/* Período: Mes + Año (principal) y Desde/Hasta (detalle secundario) */}
-        <div className="border-t border-white/10 pt-4">
-          <FiltroPeriodo
-            mes={mes}
-            anio={anio}
-            desde={desde}
-            hasta={hasta}
-            anios={anios}
-            onMes={setMes}
-            onAnio={setAnio}
-            onDesde={setDesde}
-            onHasta={setHasta}
-          />
-        </div>
+{/* Período: en Informe General se filtra por sección (01/02); en el resto,
+            Mes + Año (principal) y Desde/Hasta (detalle secundario). */}
+        {tipo === 'general' ? (
+          <div className="border-t border-white/10 pt-4">
+            <p className="flex items-start gap-2.5 text-[13px] leading-snug text-slate-400">
+              <IconCalendar className="mt-0.5 h-4 w-4 shrink-0 text-falpat" />
+              <span>
+                El período del <strong className="text-slate-200">Informe General</strong> se filtra{' '}
+                <strong className="text-slate-200">dentro de cada sección</strong>:&nbsp;01 Ventas y
+                02 Entradas tienen su propio filtro de&nbsp;
+                <span className="font-semibold text-slate-200">Mes/Año</span> y{' '}
+                <span className="font-semibold text-slate-200">Desde → Hasta</span> en la parte
+                superior de cada una.
+              </span>
+            </p>
+          </div>
+        ) : (
+          <div className="border-t border-white/10 pt-4">
+            <FiltroPeriodo
+              mes={mes}
+              anio={anio}
+              desde={desde}
+              hasta={hasta}
+              anios={anios}
+              onMes={setMes}
+              onAnio={setAnio}
+              onDesde={setDesde}
+              onHasta={setHasta}
+            />
+          </div>
+        )}
       </div>
 
       {/* ===== Informe (panel oscuro) ===== */}
