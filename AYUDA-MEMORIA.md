@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-09-11. Leer esto completo antes de tocar nada._
+_Última actualización: 2026-09-12. Leer esto completo antes de tocar nada._
 
 ---
 
@@ -223,6 +223,11 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
    Si hay que escribir desde PowerShell, usar
    `[IO.File]::WriteAllText($ruta,$texto,[Text.UTF8Encoding]::new($false))`; la herramienta de
    edición de la IA escribe UTF-8 correcto (preferirla siempre). Síntoma: "C�digo", "�ltimo".
+7. **Preview de Vercel con SSO/deployment protection**: `vercel deploy --yes --json` genera URLs
+   `*.sandro1969.vercel.app` que piden login de Vercel. Un script/curl recibe la página de login con
+   HTTP 200, así `GET /api/db` "devuelve" un HTML que se lee como `records: 0` (no es que no haya
+   datos). La **producción** no tiene protección. Para revisar cambios pendientes: `npm run dev`
+   local (sin login) o abrir la preview logueado con la cuenta Vercel del usuario.
 
 ---
 
@@ -235,6 +240,27 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 - [ ] Consistencia pendiente (a decisión del usuario): las **entradas** guardaron la columna
       REMITOS en `nroRemitoProveedor`; el usuario confirmó que el nro de remito es de FALPAT.
       Las **salidas** nuevas usan `nroRemitoFalpat`. Quedó así por ahora.
+
+### EN CURSO → HECHO (sesión 2026-09-12): Filtros de período por sección + sidebar colapsable + rediseño del bloque de filtros
+
+- [x] **Filtros de período propios por sección en el Informe General**: las secciones 01 (Ventas)
+      y 02 (Entradas) tienen cada una su filtro Mes/Año + Desde→Hasta (`SeccionFiltro`), independiente
+      del filtro global. Helpers en `app/informes/page.js`: `filtrarPeriodo`, `agregarSeccion`,
+      `descripcionPeriodo`.
+- [x] **Sidebar colapsable**: nuevo `components/AppShell.js` (estado local `sidebarCollapsed`),
+      `app/layout.js` lo usa, `components/Sidebar.js` con toggle (w-20/w-64, chevrons, oculta
+      labels/QuickStats al colapsar) para ver la app en pantalla completa.
+- [x] **Rediseño del bloque "Filtros del informe"** (para no duplicar el período): en el tipo
+      **General** se oculta el filtro global Mes/Año/Desde→Hasta y se muestra un aviso (IconCalendar)
+      de que el período se filtra dentro de cada sección 01/02; el encabezado dice
+      "Período: por sección (01 Ventas · 02 Entradas)"; los chips de "Filtros aplicados" muestran los
+      períodos activos por sección; "Limpiar" global resetea también `ventasF`/`entradasF`. En el resto
+      de tipos el bloque de período global queda igual.
+- [x] Commits: `eb9eb82` (filtros por sección + sidebar, aprobado y **en producción** al mediodía) y
+      `9be1588` (rediseño del bloque de filtros, trabajado en la rama `mejora-filtros-seccion`,
+      aprobado al final del día → merge fast-forward a `main`). **Vercel prod verificado**: `/api/db`
+      2908 records, `/informes` 200.
+- [x] `.gitignore`: agregados `.vercel` y `.env*` (el `vercel link` rellena `.env.local`).
 
 ### EN CURSO → HECHO (sesión 2026-09-11): Reconstrucción de la base desde plantillas _05
 
