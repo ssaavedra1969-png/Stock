@@ -44,11 +44,10 @@ export function AppProvider({ children }) {
   const procesarTickets = useCallback(async (files) => {
     setTickets({ procesando: true, resultado: null, error: '' });
     try {
-      const fd = new FormData();
-      for (const f of files) fd.append('files', f, f.name);
-      const res = await fetch('/api/tickets', { method: 'POST', body: fd });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || `Error ${res.status} al procesar.`);
+      // El OCR corre en el propio navegador (pdf.js + tesseract.js): no
+      // depende de un servidor con Python/Tesseract instalado.
+      const { procesarArchivos } = await import('@/lib/tickets/ocr.mjs');
+      const data = await procesarArchivos(files);
       setTickets({ procesando: false, resultado: data, error: '' });
       return data;
     } catch (err) {

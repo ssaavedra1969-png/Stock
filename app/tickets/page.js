@@ -78,6 +78,9 @@ export default function TicketsPage() {
   const [incorporando, setIncorporando] = useState(false);
   const [centro, setCentro] = useState('');
   const [carga, setCarga] = useState('');
+  const [carpeta, setCarpeta] = useState(null); // { handle, nombre } — carpeta STOCK
+  const [eligiendoCarpeta, setEligiendoCarpeta] = useState(false);
+  const [clavesPlanilla, setClavesPlanilla] = useState(null); // Set "Proveedor|Remito" del historial
 
   const procesando = tickets.procesando;
   const resultado = tickets.resultado;
@@ -85,8 +88,18 @@ export default function TicketsPage() {
 
   const registros = useMemo(() => {
     const lista = huboEdiciones ? registrosEditados : resultado?.registros || [];
-    return ordenarPorFecha(lista);
-  }, [resultado, registrosEditados, huboEdiciones]);
+    const claves = clavesPlanilla;
+    const conEstado = claves
+      ? lista.map((r) => ({
+          ...r,
+          Estado: claves.has(`${r.Proveedor || ''}|${r['N Remito'] || ''}`) ? 'DUPLICADO' : 'NUEVO',
+        }))
+      : lista;
+    return ordenarPorFecha(conEstado);
+  }, [resultado, registrosEditados, huboEdiciones, clavesPlanilla]);
+
+  const nNuevos = useMemo(() => registros.filter((r) => r.Estado !== 'DUPLICADO').length, [registros]);
+  const nDuplicados = registros.length - nNuevos;
 
   const alertas = useMemo(() => {
     if (!resultado) return [];
@@ -142,6 +155,35 @@ export default function TicketsPage() {
     setCentro('');
     setCarga('');
     if (inputRef.current) inputRef.current.value = '';
+  }
+
+  async function elegirCarpeta() {
+    setEligiendoCarpeta(true);
+    try {
+      const { soportaCarpetas, elegirCarpetaServidor, prepararCarpeta } = await import(
+        '@/lib/tickets/archivo.mjs'
+      );
+      if (!soportaCarpetas()) {
+        showToast('Este navegador no permite elegir carpetas. Usá Chrome o Edge.', 'error');
+        return;
+      }
+      const handle = await elegirCarpetaServidor();
+      // Validamos que sea la carpeta STOCK (contiene Entrada, Salida y procesados).
+      const { entrada, salida, procesados, esStock } = await prepararCarpeta(handle);
+      if (!esStock) {
+        throw new Error(
+          `Elegiste "${handle.name}", pero no es la carpeta STOCK: no contiene Entrada, Salida y procesados juntas. Elegí la carpeta STOCK (la que tiene las tres subcarpetas).`
+        );
+      }
+      setCarpeta({ handle, nombre: handle.name });
+      const { rows } = await leerPlanillaDeCarpeta(handle);
+      setClavesPlanilla(clavesDeFilas(rows && rows.length ? rows : [CAMPOS]));
+      showToast(`Carpeta STOCK lista: ${handle.name} · todo automático (histórico + mover PDFs)`);
+    } catch (err) {
+      if (err?.name !== 'AbortError') showToast(err.message || 'No se pudo abrir la carpeta', 'error');
+    } finally {
+      setEligiendoCarpeta(false);
+    }
   }
 
   async function procesar() {
@@ -203,23 +245,29 @@ export default function TicketsPage() {
       showToast('Seleccioná el Centro y la Carga antes de incorporar', 'error');
       return;
     }
+    if (!carpeta?.handle) {
+      showToast('Elegí la carpeta STOCK antes de incorporar', 'error');
+      return;
+    }
     setIncorporando(true);
     try {
+      const { incorporarEnCarpeta, leerPlanillaDeCarpeta, clavesDeFilas } = await import('@/lib/tickets/archivo.mjs');
       const registrosConMeta = registros.map((r) => ({ ...r, Centro: centro, Carga: carga }));
+      const data = await incorporarEnCarpeta(carpeta.handle, registrosConMeta);
 
-      // Este módulo NO toca los datos de la app: sólo archiva los PDF en
-      // "procesados" y acumula los registros en el Excel histórico (Salida).
-      const commitRes = await fetch('/api/tickets/commit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registros: registrosConMeta }),
-      });
-      const commitData = await commitRes.json().catch(() => ({}));
-      if (!commitRes.ok) throw new Error(commitData?.error || 'Error al archivar los PDF.');
+      // Refrescar las claves del historial para la próxima tanda.
+      const { rows } = await leerPlanillaDeCarpeta(carpeta.handle);
+      setClavesPlanilla(clavesDeFilas(rows && rows.length ? rows : [CAMPOS]));
 
-      showToast(
-        `${commitData.movidos?.length ?? 0} PDF archivado(s) · Stock Histórico: ${commitData.total ?? '?'} fila(s)`
-      );
+      let msg = `${data.agregados} fila(s) agregada(s) · Total: ${data.total}`;
+      if (data.duplicados) msg += ` · ${data.duplicados} repetida(s)`;
+      if (data.movidos.length) {
+        msg += ` · ${data.movidos.length} PDF archivado(s)`;
+        if (data.errores.length) msg += ` (${data.errores.length} con error)`;
+      } else {
+        msg += ' · acordate de mover los PDF a procesados';
+      }
+      showToast(msg);
       limpiar();
     } catch (err) {
       showToast(err.message || 'Error al incorporar', 'error');
@@ -236,17 +284,6 @@ export default function TicketsPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="section-title !text-lg">Tickets de pesaje</h1>
         <div className="flex items-center gap-2">
-          {hayResultado && (
-            <button
-              type="button"
-              onClick={incorporar}
-              disabled={registros.length === 0 || incorporando}
-              className="btn-primary"
-            >
-              <IconCheck className="h-4 w-4" />
-              {incorporando ? 'Incorporando…' : `Incorporar ${registros.length} registro${registros.length === 1 ? '' : 's'}`}
-            </button>
-          )}
           {(files.length > 0 || hayResultado) && (
             <button type="button" onClick={limpiar} className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={procesando}>
               <IconRefresh className="h-3.5 w-3.5" />
@@ -256,8 +293,12 @@ export default function TicketsPage() {
         </div>
       </div>
 
-      {/* Selector de archivos compacto */}
-      <div className="card !p-3 space-y-2">
+      {/* Paso 1 — Cargar los tickets */}
+      <Paso
+        n="1"
+        titulo="Cargá los tickets"
+        ayuda="Arrastrá los PDF de pesaje o elegí los archivos. Se leen solos con OCR (puede tardar unos segundos)."
+      >
         <div
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
           onDragLeave={() => setArrastrando(false)}
@@ -290,10 +331,6 @@ export default function TicketsPage() {
           </span>
         </div>
 
-          <p className="text-[11px] leading-relaxed text-slate-500">
-            1. Seleccioná uno o varios PDF — se procesan automáticamente. 2. Revisá, editá o eliminá registros en la tabla. 3. Incorporá para cargar a la base de datos.
-          </p>
-
         {files.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {files.map((f, i) => (
@@ -323,10 +360,14 @@ export default function TicketsPage() {
             <span>{errorMsg}</span>
           </div>
         )}
-      </div>
+      </Paso>
 
-      {/* Centro y Carga — obligatorios para generar una carga nueva */}
-      <div className="card !p-3">
+      {/* Paso 2 — Revisar y completar */}
+      <Paso
+        n="2"
+        titulo="Revisá y completá"
+        ayuda="Elegí el Centro y la Carga, y revisá que los datos leídos sean correctos. Podés editar, eliminar o mirar el PDF de cada fila."
+      >
         <div className="flex flex-wrap items-end gap-4">
           <label className="block w-44">
             <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -364,15 +405,14 @@ export default function TicketsPage() {
               : <span className="text-amber-400">Obligatorio para incorporar</span>}
           </p>
         </div>
-      </div>
 
-      {/* Resultado */}
-      {hayResultado && (
-        <div className="card !p-3 space-y-3">
+        {/* Resultado */}
+        {hayResultado && (
+          <div className="space-y-3 border-t border-white/5 pt-3">
           <div className="grid grid-cols-5 gap-1.5">
             <Stat label="Archivos" value={resultado.total ?? 0} cls="text-slate-100" />
-            <Stat label="Nuevos" value={resultado.nuevos ?? 0} cls="text-emerald-400" />
-            <Stat label="Duplicados" value={resultado.duplicados ?? 0} cls="text-amber-400" />
+            <Stat label="Nuevos" value={nNuevos} cls="text-emerald-400" />
+            <Stat label="Duplicados" value={nDuplicados} cls="text-amber-400" />
             <Stat label="Similares" value={resultado.similares ?? 0} cls="text-falpat-soft" />
             <Stat label="Errores" value={(resultado.errores || []).length} cls={(resultado.errores || []).length ? 'text-red-400' : 'text-slate-400'} />
           </div>
@@ -550,10 +590,85 @@ export default function TicketsPage() {
               <span>No se pudo extraer ningún registro.</span>
             </div>
           )}
+          </div>
+        )}
+      </Paso>
+
+      {/* Paso 3 — Guardar en el servidor */}
+      <Paso
+        n="3"
+        titulo="Guardá el histórico"
+        ayuda="Elegí la carpeta STOCK (la que contiene Entrada, Salida y procesados). Se guarda el historial en Salida\Stock-Historico.xlsx y los PDF pasen solos de Entrada a procesados."
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={elegirCarpeta}
+            disabled={eligiendoCarpeta}
+            className="btn-ghost !px-3 !py-1.5 !text-xs"
+          >
+            <IconUpload className="h-3.5 w-3.5" />
+            {eligiendoCarpeta ? 'Abriendo…' : carpeta ? 'Cambiar STOCK' : 'Elegir carpeta STOCK'}
+          </button>
+          <span className="text-[11px] text-slate-400">
+            {carpeta ? (
+              <>
+                STOCK: <span className="font-mono text-slate-200">{carpeta.nombre}</span>
+                {clavesPlanilla ? ` · ${clavesPlanilla.size} registro(s) en el historial` : ''} ·
+                todo automático
+              </>
+            ) : (
+              <>
+                Elegí la carpeta <span className="font-mono text-slate-300">STOCK</span> (la que tiene{' '}
+                <span className="font-mono text-slate-300">Entrada</span>,{' '}
+                <span className="font-mono text-slate-300">Salida</span> y{' '}
+                <span className="font-mono text-slate-300">procesados</span>). Chrome o Edge.
+              </>
+            )}
+          </span>
         </div>
-      )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={incorporar}
+            disabled={registros.length === 0 || incorporando || !carpeta || !centro || !carga}
+            className="btn-primary"
+          >
+            <IconCheck className="h-4 w-4" />
+            {incorporando
+              ? 'Incorporando…'
+              : registros.length > 0
+                ? `Incorporar ${registros.length} registro${registros.length === 1 ? '' : 's'}`
+                : 'Incorporar'}
+          </button>
+          <span className="text-[11px]">
+            {(!centro || !carga) && <span className="text-amber-400">Falta elegir Centro y Carga. </span>}
+            {!carpeta && <span className="text-amber-400">Falta elegir STOCK. </span>}
+            {registros.length === 0 && <span className="text-slate-500">Cargá tickets para empezar.</span>}
+          </span>
+        </div>
+      </Paso>
+
       {procesando && <ProcessingOverlay archivos={files.length} />}
     </div>
+  );
+}
+
+function Paso({ n, titulo, ayuda, children }) {
+  return (
+    <section className="card !p-3 space-y-3">
+      <header className="flex items-start gap-3">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-falpat/20 font-mono text-xs font-bold text-falpat-soft">
+          {n}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-slate-100">{titulo}</h2>
+          {ayuda && <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{ayuda}</p>}
+        </div>
+      </header>
+      {children}
+    </section>
   );
 }
 
