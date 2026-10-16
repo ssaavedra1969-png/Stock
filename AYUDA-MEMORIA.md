@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-09-12. Leer esto completo antes de tocar nada._
+_Última actualización: 2026-10-16. Leer esto completo antes de tocar nada._
 
 ---
 
@@ -240,6 +240,35 @@ node scripts/import-entrada.mjs <archivo.xlsx> <rama>
 - [ ] Consistencia pendiente (a decisión del usuario): las **entradas** guardaron la columna
       REMITOS en `nroRemitoProveedor`; el usuario confirmó que el nro de remito es de FALPAT.
       Las **salidas** nuevas usan `nroRemitoFalpat`. Quedó así por ahora.
+
+### EN CURSO → HECHO (sesión 2026-10-16): Módulo /tickets (lectura OCR de tickets de pesaje)
+
+- [x] **Nueva sección `/tickets`** (menú en Sidebar): se suben PDFs de pesaje (2 páginas:
+      remito + ticket de balanza) desde el navegador; el servidor hace OCR con **Python +
+      Tesseract** (`LECTURA/procesar_tickets.py`), muestra una **tabla editable** con los campos
+      extraídos y un botón **Incorporar**.
+- [x] **Incorporar** (este módulo) **NO toca los datos de la app** (`data/db.json`): sólo
+      (1) archiva los PDFs en `\\Admin1\compartida\Administracion\STOCK\procesados`
+      renombrados `AAAAMMDD_EMPRESA.pdf`, y (2) acumula los registros en **un único Excel
+      histórico** `\\Admin1\compartida\Administracion\STOCK\Salida\Stock-Historico.xlsx`
+      (dedupe por `Proveedor|N Remito`). Ese Excel es también la base de conocimiento.
+      **La carga del Excel a la app quedó para la 2ª etapa** (a través de /incorporar).
+- [x] Columnas del Stock-Historico (11): Fecha, Proveedor, N Remito, Razon Social, Material,
+      Neto, Peso Neto, Chofer, Pat. Chasis, **Centro** (Lujan/Campana) y **Carga**
+      (Entrada/Salida). Centro y Carga los elige el operador (obligatorios).
+- [x] **Proveedor: se detecta por el ENCABEZADO de la hoja 1** (remito), no por el nombre del
+      archivo: 1) CUIT del emisor (AVELLANEDA 30-52604779-2, LCE 30-71569497-9, SPOSITO
+      33-50674358-9), 2) nombre/razón, 3) dirección/email, 4) nombre de archivo (último
+      recurso). Se ignora el CUIT del destinatario (ARENERA CANELONES 30-71452525-1).
+- [x] OTROS arreglos OCR: fecha desde p1 y respaldo p2; Peso Neto sin sufijo Kg y con
+      separadores de miles; Neto y patentes con `NETO_OVERRIDE` / `PATENTE_OVERRIDE` por
+      `(empresa, remito)` para casos ya verificados; celda N/D clickeable para ver el PDF.
+- [x] Rutas nuevas: `app/api/tickets` (subida+OCR), `app/api/tickets/commit` (archiva + Excel),
+      `app/api/tickets/pdf` (sirve el PDF original). Requiere **Python + Tesseract** y acceso a
+      la carpeta de red → **corre SOLO en la PC del estudio**. En **Vercel** las 3 rutas
+      devuelven 501 con mensaje claro (la página/menú sí se ven). Env configurables:
+      `TICKETS_ENTRADA/PROCESADOS/SALIDA/HISTORICO/KB`, `PYTHON_BIN`, `LECTURA_DIR`.
+- [x] lint + build OK. Pendiente del usuario: probar el circuito completo desde la PC del estudio.
 
 ### EN CURSO → HECHO (sesión 2026-09-12): Filtros de período por sección + sidebar colapsable + rediseño del bloque de filtros
 

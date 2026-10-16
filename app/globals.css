@@ -148,6 +148,24 @@ body {
       focus:border-falpat/60 focus:bg-white/[0.05] focus:ring-2 focus:ring-falpat/20;
   }
 
+  /* <select>: fondo y texto de las opciones del desplegable */
+  select.field,
+  select {
+    color-scheme: dark;
+  }
+
+  select.field option,
+  select option {
+    background-color: #0b0f1a;
+    color: #e2e8f0;
+  }
+
+  select.field option:checked,
+  select option:checked {
+    background-color: #1c2538;
+    color: #ffffff;
+  }
+
   .field-error {
     @apply border-red-500/60 focus:border-red-500 focus:ring-red-500/20;
   }

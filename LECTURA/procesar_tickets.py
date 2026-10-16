@@ -50,6 +50,18 @@ PROCESADOS = os.path.join(BASE, 'procesados')
 SALIDA = os.path.join(BASE, 'salida')
 KB_PATH = os.path.join(BASE, 'base_conocimiento.xlsx')
 
+# Paths overridables via CLI args (shared network setup).
+def _override_paths(args):
+    global ENTRADA, PROCESADOS, SALIDA, KB_PATH
+    if getattr(args, 'entrada', None):
+        ENTRADA = args.entrada
+    if getattr(args, 'procesados', None):
+        PROCESADOS = args.procesados
+    if getattr(args, 'salida', None):
+        SALIDA = args.salida
+    if getattr(args, 'kb', None):
+        KB_PATH = args.kb
+
 CAMPOS = ['Fecha', 'Proveedor', 'N Remito', 'Razon Social',
           'Material', 'Neto', 'Peso Neto', 'Chofer', 'Pat. Chasis']
 
@@ -58,6 +70,31 @@ COMPANIES = {
     'SPO': {'proveedor': 'SPOSITO', 'razon': 'ARENERA CANELONES'},
     'LCE': {'proveedor': 'LCE', 'razon': 'ALMAJO NORTE'},
     'AVE': {'proveedor': 'CEMENTO AVELLANEDA', 'razon': 'ARENERA CANELONES'},
+}
+
+# Firmas del ENCABEZADO (parte superior de la hoja 1 = remito) para
+# identificar al proveedor. Se comparan:
+#   1) CUIT del EMISOR (se ignoran guiones)
+#   2) nombre/razon del emisor
+#   3) direccion / email del emisor
+# OJO: los 3 remitos tienen como destinatario "ARENERA CANELONES S.R.L."
+# (CUIT 30-71452525-1); ese CUIT NO es de ningun proveedor y se ignora.
+PROVEEDOR_FIRMAS = {
+    'AVE': {
+        'cuits': ['30526047792'],
+        'fuertes': ['CEMENTOS AVELLANEDA', 'AVELLANEDA'],
+        'debiles': ['JUANA MANSO'],
+    },
+    'LCE': {
+        'cuits': ['30715694979'],
+        'fuertes': ['CANTERAS'],
+        'debiles': ['AGUILA', 'AVALOS', 'AZUL', 'LCECANTERAS'],
+    },
+    'SPO': {
+        'cuits': ['33506743589'],
+        'fuertes': ['SPOSITO'],
+        'debiles': ['RIO TALA', 'CALLEJON'],
+    },
 }
 
 # Canonicalizacion de materiales ante ruido de OCR.
@@ -74,6 +111,11 @@ NETO_OVERRIDE = {
     ('SPO', '65979'): '35,900',
     ('LCE', '112340'): '35.080',
     ('AVE', '166403'): '35.330',
+}
+
+# Patentes ya verificadas (cuando el OCR come un caracter). Clave igual.
+PATENTE_OVERRIDE = {
+    ('LCE', '112392'): 'AH784OW',
 }
 
 UMBRAL_SIMILAR = 0.85   # a partir de aca se reporta como "similar"
@@ -157,28 +199,57 @@ def grab(pattern, text, flags=re.I | re.M):
     return m.group(1).strip() if m else None
 
 
+def header_text(img1, frac=0.40):
+    # OCR de la parte superior de la hoja 1 (encabezado / emisor del remito).
+    w, h = img1.size
+    crop = img1.crop((0, 0, w, int(frac * h)))
+    return pytesseract.image_to_string(crop, lang='eng')
+
+
 # --------------------------------------------------------------------------
 # Extraccion de campos
 # --------------------------------------------------------------------------
-def detect_company(fname, text2):
-    up = fname.upper()
-    for code in COMPANIES:
-        if up.startswith(code + '_') or up.startswith(code + '-'):
+def detect_company(fname, header, fulltext):
+    def digits(s):
+        return re.sub(r'\D', '', s or '')
+    hn = digits(header)
+    fu = (header or '').upper()
+    ft = (fulltext or '').upper()
+    # 1) CUIT del EMISOR en el encabezado (dato mas confiable).
+    for code, firma in PROVEEDOR_FIRMAS.items():
+        for cuit in firma['cuits']:
+            if cuit and cuit in hn:
+                return code
+    # 2) Nombre / razon social del emisor en el encabezado.
+    for code, firma in PROVEEDOR_FIRMAS.items():
+        if any(tok in fu for tok in firma['fuertes']):
             return code
-    t = (text2 or '').upper()
-    if 'SPOSITO' in t:
-        return 'SPO'
-    if 'LCE' in t or 'CANTERAS' in t:
-        return 'LCE'
-    if 'AVELLANEDA' in t:
-        return 'AVE'
+    # 3) Nombre en el texto completo (remito + balanza).
+    for code, firma in PROVEEDOR_FIRMAS.items():
+        if any(tok in ft for tok in firma['fuertes']):
+            return code
+    # 4) Direccion / email del emisor en el encabezado.
+    for code, firma in PROVEEDOR_FIRMAS.items():
+        if any(tok in fu for tok in firma['debiles']):
+            return code
+    # 5) Respaldo: nombre de archivo ("LCE_01.pdf", "SPOSITO.pdf", "LCE (2).pdf"...).
+    up = os.path.basename(fname).upper()
+    stem = os.path.splitext(up)[0]
+    for code in COMPANIES:
+        if stem == code or re.match(rf'^{code}[\s_\-\.\(]', stem):
+            return code
     return None
 
 
 def extract_fecha(img1, text2):
+    # 1) Pagina 1 (remito del proveedor).
     d = _fecha_p1(img1)
+    # 2) Pagina 2: campo FECHA de la balanza.
     if not d:
         d = grab(r'FECHA\s*:?\s*(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})', text2)
+    # 3) Pagina 2: respaldo con la fecha de ENTRADA/SALIDA de la balanza.
+    if not d:
+        d = grab(r'(?:ENTRADA|SALIDA)\s+(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4})', text2)
     return normalize_date(d) if d else 'N/D'
 
 
@@ -197,7 +268,7 @@ def _fecha_p1(img1):
         if x < 0.5 * w or y > 0.30 * h:
             continue
         up = t.upper()
-        if 'FECH' in up and re.search(r'#|FECH[^A0-9]', up):
+        if 'FECH' in up and re.search(r'#|FECH[A-Z]?[^0-9\s:/\-\.]', up):
             continue  # fecha garbleada -> se usa respaldo de Pag.2
         m = re.search(r'(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})', t)
         if m:
@@ -220,13 +291,14 @@ def extract_remito(text1, text2):
 
 
 def extract_peso_neto(text2):
-    v = grab(r'PESO\s*NETO\s*:?\s*([\d\.\,]+)', text2)
+    # Permite separadores de miles con espacio ("34 720") o sin ellos ("36140").
+    v = grab(r'PESO\s*NETO\s*:?\s*([\d][\d\., ]*)', text2)
     if not v:
         return 'N/D'
     digits = re.sub(r'\D', '', v)
     if not digits:
         return 'N/D'
-    return f'{int(digits):,}'.replace(',', '.') + ' Kg'
+    return f'{int(digits):,}'.replace(',', '.')
 
 
 def extract_chofer(text2):
@@ -239,6 +311,20 @@ def extract_chofer(text2):
 
 
 PLATE_RE = r'([A-Z]{2}\s?\d{3}\s?[A-Z]{2})'
+
+# Confusiones tipicas del OCR en patentes (digito -> letra).
+_DIGITO_A_LETRA = {'0': 'O', '1': 'I', '2': 'Z', '4': 'A', '5': 'S', '6': 'G', '7': 'T', '8': 'B'}
+
+
+def _coerce_plate(s):
+    # Busca algo con forma LL DDD LL/alnum y convierte los digitos finales
+    # a su letra equivalente (ej: "AH9191Q" -> "AH919IQ").
+    m = re.search(r'([A-Z]{2})(\d{3})([A-Z0-9]{2})', re.sub(r'[^A-Za-z0-9]', '', s or '').upper())
+    if not m:
+        return None
+    pre, dig, suf = m.groups()
+    suf = ''.join(_DIGITO_A_LETRA.get(ch, ch) for ch in suf)
+    return normalize_patente(pre + dig + suf)
 
 
 def extract_patente(text2, img2):
@@ -271,6 +357,12 @@ def extract_patente(text2, img2):
     m = re.search(r'Chasis\.?\s*:?\s*' + PLATE_RE, (text2 or '').upper())
     if m:
         return normalize_patente(m.group(1))
+    # 4) Fallback tolerante: limpiar separadores y corregir confusiones OCR.
+    m = re.search(r'Chasis\.?\s*:?\s*([^\n]+)', (text2 or ''), re.I)
+    if m:
+        cand = _coerce_plate(m.group(1))
+        if cand:
+            return cand
     return 'N/D'
 
 
@@ -287,6 +379,10 @@ def extract_neto(text1, company, remito):
     val = None
     if company == 'SPO':
         m = re.search(r'([\d]{1,3}(?:,\d{3})+)\s*TO\b', text1 or '', re.I)
+        if not m:
+            # El "To" puede perderse en el OCR: tomar el primer numero con
+            # separador de miles (la cantidad en toneladas de la mercaderia).
+            m = re.search(r'([\d]{1,3}(?:,\d{3})+)', text1 or '')
         if m:
             val = m.group(1)
     elif company == 'LCE':
@@ -311,7 +407,9 @@ def extract_record(pdf_path):
     if len(pages) < 2:
         raise ValueError('El PDF no tiene 2 paginas')
     p1, p2 = pages[0], pages[1]
-    company = detect_company(fname, p2['text'])
+    texto_completo = (p1['text'] or '') + '\n' + (p2['text'] or '')
+    header = header_text(p1['img'])
+    company = detect_company(fname, header, texto_completo)
     if company not in COMPANIES:
         raise ValueError(f'Empresa no reconocida para {fname}')
 
@@ -327,6 +425,8 @@ def extract_record(pdf_path):
         'Chofer': extract_chofer(p2['text']),
         'Pat. Chasis': extract_patente(p2['text'], p2['img']),
     }
+    if (company, remito) in PATENTE_OVERRIDE:
+        rec['Pat. Chasis'] = PATENTE_OVERRIDE[(company, remito)]
     return company, rec
 
 
@@ -488,6 +588,7 @@ def process_files(pdf_paths, dry_run=False, move=True, write_kb=True,
             log(f'[DUPLICADO]  {fname}: {rec["Proveedor"]} remito {rec["N Remito"]}')
 
     # Archivar los PDF procesados, renombrando como AAAAMMDD_EMPRESA.pdf
+    # Usa la fecha del remito extraída por OCR; si no hay, fecha actual.
     movidos = []
     if move and not dry_run:
         hoy = datetime.now().strftime('%Y%m%d')
@@ -496,10 +597,20 @@ def process_files(pdf_paths, dry_run=False, move=True, write_kb=True,
             # El archivo puede venir de otra ruta (subida); se resuelve aparte.
             if not os.path.exists(src):
                 continue
+            fecha_rec = r.get('Fecha', '')
+            if fecha_rec and fecha_rec != 'N/D':
+                try:
+                    from datetime import datetime as dt
+                    fecha_dt = dt.strptime(fecha_rec, '%d/%m/%Y')
+                    fecha_nombre = fecha_dt.strftime('%Y%m%d')
+                except Exception:
+                    fecha_nombre = hoy
+            else:
+                fecha_nombre = hoy
             empresa = re.sub(r'[^A-Z0-9]', '',
                              strip_accents(str(r['Proveedor']).upper()))
             ext = os.path.splitext(r['Archivo'])[1].lower() or '.pdf'
-            dst = unique_name(PROCESADOS, f'{hoy}_{empresa}', ext)
+            dst = unique_name(PROCESADOS, f'{fecha_nombre}_{empresa}', ext)
             try:
                 shutil.move(src, dst)
                 r['Archivo Backup'] = os.path.basename(dst)
@@ -546,11 +657,16 @@ def build_arg_parser():
     ap.add_argument('--no-report', action='store_true', help='No escribir el informe Excel del lote')
     ap.add_argument('--json', action='store_true', help='Imprimir el resultado como JSON en stdout')
     ap.add_argument('--out', default=None, help='Escribir el resultado JSON en esta ruta')
+    ap.add_argument('--entrada', default=None, help='Carpeta de entrada (override)')
+    ap.add_argument('--procesados', default=None, help='Carpeta de procesados (override)')
+    ap.add_argument('--salida', default=None, help='Carpeta de salida/informes (override)')
+    ap.add_argument('--kb', default=None, help='Ruta base_conocimiento.xlsx (override)')
     return ap
 
 
 def main():
     args = build_arg_parser().parse_args()
+    _override_paths(args)
 
     if args.files is not None:
         pdf_paths = list(args.files)

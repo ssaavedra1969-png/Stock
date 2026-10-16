@@ -29,6 +29,18 @@ function lecturasDir() {
   return process.env.LECTURA_DIR || path.join(process.cwd(), 'LECTURA');
 }
 
+function paths() {
+  const base = lecturasDir();
+  const salida = process.env.TICKETS_SALIDA || '\\\\Admin1\\compartida\\Administracion\\STOCK\\Salida';
+  return {
+    entrada: process.env.TICKETS_ENTRADA || '\\\\Admin1\\compartida\\Administracion\\STOCK\\Entrada',
+    procesados: process.env.TICKETS_PROCESADOS || '\\\\Admin1\\compartida\\Administracion\\STOCK\\procesados',
+    salida,
+    historico: process.env.TICKETS_HISTORICO || path.join(salida, 'Stock-Historico.xlsx'),
+    kb: process.env.TICKETS_KB || path.join(salida, 'Stock-Historico.xlsx'),
+  };
+}
+
 function pythonBin() {
   return process.env.PYTHON_BIN || 'python';
 }
@@ -38,22 +50,6 @@ function safeName(name) {
   const base = path.basename(String(name || 'ticket.pdf'));
   const clean = base.replace(/[^\w.\-() ]+/g, '_').trim() || 'ticket.pdf';
   return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
-}
-
-// Evita sobreescribir un archivo existente en la carpeta destino.
-async function uniquePath(dir, name) {
-  const stem = name.replace(/\.pdf$/i, '');
-  let candidate = path.join(dir, name);
-  let n = 1;
-  while (true) {
-    try {
-      await fs.access(candidate);
-      candidate = path.join(dir, `${stem}_${n}.pdf`);
-      n += 1;
-    } catch {
-      return candidate;
-    }
-  }
 }
 
 function runPython(args, cwd) {
@@ -70,6 +66,19 @@ function runPython(args, cwd) {
 }
 
 export async function POST(request) {
+  // El OCR corre local (Python + Tesseract) sobre la carpeta de red.
+  // En Vercel (serverless) eso no existe: se avisa en vez de fallar raro.
+  if (process.env.VERCEL) {
+    return Response.json(
+      {
+        error:
+          'El procesamiento de tickets sólo funciona en la PC del estudio ' +
+          '(necesita Python + Tesseract y acceso a la carpeta de red), no en Vercel.',
+      },
+      { status: 501 }
+    );
+  }
+
   let form;
   try {
     form = await request.formData();
@@ -89,7 +98,8 @@ export async function POST(request) {
   }
 
   const base = lecturasDir();
-  const entrada = path.join(base, 'ENTRADA');
+  const p = paths();
+  const entrada = p.entrada;
   const script = path.join(base, 'procesar_tickets.py');
 
   try {
@@ -115,7 +125,7 @@ export async function POST(request) {
         { status: 413 }
       );
     }
-    const dest = await uniquePath(entrada, safeName(file.name));
+    const dest = path.join(entrada, safeName(file.name));
     const buffer = Buffer.from(await file.arrayBuffer());
     await fs.writeFile(dest, buffer);
     guardados.push(dest);
@@ -124,7 +134,19 @@ export async function POST(request) {
   // Archivo temporal para el JSON de salida del script.
   const outFile = path.join(os.tmpdir(), `falpat_tickets_${Date.now()}.json`);
 
-  const args = [script, '--files', ...guardados, '--out', outFile, '--json'];
+  const args = [
+    script,
+    '--files', ...guardados,
+    '--out', outFile,
+    '--json',
+    '--no-move',
+    '--no-report',
+    '--no-kb',
+    '--entrada', p.entrada,
+    '--procesados', p.procesados,
+    '--salida', p.salida,
+    '--kb', p.kb,
+  ];
   const { error, stderr } = await runPython(args, base);
 
   if (error && error.code === 'ENOENT') {

@@ -37,6 +37,31 @@ export function AppProvider({ children }) {
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
 
+  // Estado global de la sección Tickets: sobrevive a la navegación entre
+  // secciones, así el OCR sigue corriendo aunque el usuario cambie de página.
+  const [tickets, setTickets] = useState({ procesando: false, resultado: null, error: '' });
+
+  const procesarTickets = useCallback(async (files) => {
+    setTickets({ procesando: true, resultado: null, error: '' });
+    try {
+      const fd = new FormData();
+      for (const f of files) fd.append('files', f, f.name);
+      const res = await fetch('/api/tickets', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `Error ${res.status} al procesar.`);
+      setTickets({ procesando: false, resultado: data, error: '' });
+      return data;
+    } catch (err) {
+      const msg = err.message || 'No se pudieron procesar los archivos.';
+      setTickets({ procesando: false, resultado: null, error: msg });
+      throw err;
+    }
+  }, []);
+
+  const limpiarTickets = useCallback(() => {
+    setTickets({ procesando: false, resultado: null, error: '' });
+  }, []);
+
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -181,6 +206,9 @@ export function AppProvider({ children }) {
       closeModal,
       toast,
       showToast,
+      tickets,
+      procesarTickets,
+      limpiarTickets,
     }),
     [
       records,
@@ -201,6 +229,9 @@ export function AppProvider({ children }) {
       closeModal,
       toast,
       showToast,
+      tickets,
+      procesarTickets,
+      limpiarTickets,
     ]
   );
 
