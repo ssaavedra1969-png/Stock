@@ -1,23 +1,6 @@
 {
   "records": [
     {
-      "id": "fa82aa91-ae78-4d58-8d7e-517f2971b0a2",
-      "createdAt": "2026-10-16T11:33:04.670Z",
-      "carga": "Entrada",
-      "producto": "PIEDRA PARTIDA 6/20",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-09T12:00:00.000Z",
-      "patente": "AH702XX",
-      "chofer": "ALONSO MIGUEL",
-      "nroRemitoProveedor": "166403",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "",
-      "pesoBalanza": "35.660 tn",
-      "planta": "Lujan",
-      "proveedor": "CEMENTO AVELLANEDA",
-      "cliente": ""
-    },
-    {
       "id": "c48115f3-a1c3-4ee5-a9f9-aa20e8a576d0",
       "createdAt": "2026-10-16T11:33:04.670Z",
       "carga": "Entrada",
@@ -49489,7 +49472,6 @@
     }
   ],
   "productos": [
-    "PIEDRA PARTIDA 6/20",
     "ARENA MODULO 1.8-1.9",
     "ARENA GRANITICA 0/6",
     "CPF 40 AVELLANEDA",
