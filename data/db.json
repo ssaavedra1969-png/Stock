@@ -1,23 +1,6 @@
 {
   "records": [
     {
-      "id": "c48115f3-a1c3-4ee5-a9f9-aa20e8a576d0",
-      "createdAt": "2026-10-16T11:33:04.670Z",
-      "carga": "Entrada",
-      "producto": "ARENA MODULO 1.8-1.9",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-10T12:00:00.000Z",
-      "patente": "AG894ER",
-      "chofer": "OCHOA ANIBAL",
-      "nroRemitoProveedor": "65979",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "",
-      "pesoBalanza": "36.160 tn",
-      "planta": "Lujan",
-      "proveedor": "SPOSITO",
-      "cliente": ""
-    },
-    {
       "id": "60e30370-0489-433a-8b9a-2b8ca58e9f75",
       "createdAt": "2026-10-16T11:33:04.670Z",
       "carga": "Entrada",
@@ -49472,7 +49455,6 @@
     }
   ],
   "productos": [
-    "ARENA MODULO 1.8-1.9",
     "ARENA GRANITICA 0/6",
     "CPF 40 AVELLANEDA",
     "ARENA FINA",
