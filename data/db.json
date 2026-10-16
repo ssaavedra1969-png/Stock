@@ -1,23 +1,6 @@
 {
   "records": [
     {
-      "id": "60e30370-0489-433a-8b9a-2b8ca58e9f75",
-      "createdAt": "2026-10-16T11:33:04.670Z",
-      "carga": "Entrada",
-      "producto": "ARENA GRANITICA 0/6",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-14T12:00:00.000Z",
-      "patente": "AH784OX",
-      "chofer": "RODRIGUEZ MATIAS",
-      "nroRemitoProveedor": "112340",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "",
-      "pesoBalanza": "34.560 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": ""
-    },
-    {
       "id": "b7b870e4-aa7e-4879-91a7-4852cb2bfccc",
       "carga": "Entrada",
       "producto": "CPF 40 AVELLANEDA",
@@ -49455,7 +49438,6 @@
     }
   ],
   "productos": [
-    "ARENA GRANITICA 0/6",
     "CPF 40 AVELLANEDA",
     "ARENA FINA",
     "PIEDRA 6-12",
