@@ -1,23 +1,6 @@
 {
   "records": [
     {
-      "id": "daeac000-13bd-4bb2-9dd7-ba3695a5c92f",
-      "createdAt": "2026-10-16T13:56:39.587Z",
-      "carga": "Entrada",
-      "producto": "ARENA GRANITICA 0/6",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-15T12:00:00.000Z",
-      "patente": "AH702XY",
-      "chofer": "PRIMITERRA TONINO",
-      "nroRemitoProveedor": "112363",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "",
-      "pesoBalanza": "36.780 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": ""
-    },
-    {
       "id": "94614fe0-2993-4287-91ed-31bdae58b54b",
       "createdAt": "2026-10-16T13:56:39.587Z",
       "carga": "Entrada",
@@ -49540,9 +49523,9 @@
     }
   ],
   "productos": [
-    "ARENA GRANITICA 0/6",
     "ARENA MODULO 1.8-1.9",
     "PIEDRA PARTIDA 6/20",
+    "ARENA GRANITICA 0/6",
     "CPF 40 AVELLANEDA",
     "ARENA FINA",
     "PIEDRA 6-12",
