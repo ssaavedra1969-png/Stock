@@ -1,23 +1,6 @@
 {
   "records": [
     {
-      "id": "2bdad73e-e0ad-4053-8f90-c2db9a9edf4d",
-      "createdAt": "2026-10-16T13:56:39.587Z",
-      "carga": "Entrada",
-      "producto": "ARENA GRANITICA 0/6",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-15T12:00:00.000Z",
-      "patente": "AH784OW",
-      "chofer": "WILBERGER JUAN",
-      "nroRemitoProveedor": "112392",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "",
-      "pesoBalanza": "36.140 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": ""
-    },
-    {
       "id": "daeac000-13bd-4bb2-9dd7-ba3695a5c92f",
       "createdAt": "2026-10-16T13:56:39.587Z",
       "carga": "Entrada",
