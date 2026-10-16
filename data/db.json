@@ -1,23 +1,6 @@
 {
   "records": [
     {
-      "id": "eb541d3d-aeab-4497-b631-719f569ba096",
-      "createdAt": "2026-10-16T13:56:39.587Z",
-      "carga": "Entrada",
-      "producto": "ARENA MODULO 1.8-1.9",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-15T12:00:00.000Z",
-      "patente": "AG266CJ",
-      "chofer": "GARCIA CRISTIAN",
-      "nroRemitoProveedor": "66006",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "",
-      "pesoBalanza": "36.480 tn",
-      "planta": "Lujan",
-      "proveedor": "SPOSITO",
-      "cliente": ""
-    },
-    {
       "id": "fa82aa91-ae78-4d58-8d7e-517f2971b0a2",
       "createdAt": "2026-10-16T11:33:04.670Z",
       "carga": "Entrada",
@@ -49506,8 +49489,8 @@
     }
   ],
   "productos": [
-    "ARENA MODULO 1.8-1.9",
     "PIEDRA PARTIDA 6/20",
+    "ARENA MODULO 1.8-1.9",
     "ARENA GRANITICA 0/6",
     "CPF 40 AVELLANEDA",
     "ARENA FINA",
