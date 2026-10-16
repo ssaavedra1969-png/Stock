@@ -9,7 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { IconLayout, IconLayers, IconPieChart, IconUpload, IconChevronLeft, IconChevronRight } from './Icons';
+import { IconLayout, IconLayers, IconPieChart, IconUpload, IconFileText, IconChevronLeft, IconChevronRight } from './Icons';
 import { LOGO_PATH } from '@/lib/company';
 
 function Brand({ onClick, collapsed }) {
@@ -135,6 +135,7 @@ export default function Sidebar({ collapsed = false, onToggle }) {
             <NavItem icon={<IconPieChart className="h-[18px] w-[18px]" />} label="Reportes" href="/reportes" collapsed={collapsed} />
             <NavItem icon={<IconLayers className="h-[18px] w-[18px]" />} label="Informes" href="/informes" collapsed={collapsed} />
             <NavItem icon={<IconUpload className="h-[18px] w-[18px]" />} label="Incorporar" href="/incorporar" collapsed={collapsed} />
+            <NavItem icon={<IconFileText className="h-[18px] w-[18px]" />} label="Tickets" href="/tickets" collapsed={collapsed} />
           </nav>
 
           {!collapsed && (

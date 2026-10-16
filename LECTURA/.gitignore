@@ -1,0 +1,7 @@
+# Archivos y carpetas de trabajo generados por el procesador (no versionar)
+ENTRADA/
+procesados/
+salida/
+base_conocimiento.xlsx
+__pycache__/
+*.pyc
