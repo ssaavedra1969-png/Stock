@@ -1,23 +1,6 @@
 {
   "records": [
     {
-      "id": "28046e75-bec6-4251-991f-e324526d1a60",
-      "createdAt": "2026-10-16T13:56:39.587Z",
-      "carga": "Entrada",
-      "producto": "CTO AVELLANEDA",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-15T12:00:00.000Z",
-      "patente": "AH919IQ",
-      "chofer": "PIACENTINI ALEJANDRO MIGUEL",
-      "nroRemitoProveedor": "2741125",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "",
-      "pesoBalanza": "35.890 tn",
-      "planta": "Lujan",
-      "proveedor": "CEMENTO AVELLANEDA",
-      "cliente": ""
-    },
-    {
       "id": "336ead3f-55ec-4bbe-9d73-467b93f36640",
       "createdAt": "2026-10-16T13:56:39.587Z",
       "carga": "Entrada",
@@ -49608,23 +49591,22 @@
     }
   ],
   "productos": [
-    "ARENA FINA",
+    "PIEDRA PARTIDA 6/20",
     "ARENA GRANITICA 0/6",
     "ARENA MODULO 1.8-1.9",
     "CPF 40 AVELLANEDA",
-    "CTO AVELLANEDA",
-    "ESTABILIZADO 0-100 X TN",
-    "ESTABILIZADO GRANULOMETRICO 0/20",
-    "MAPEFILL E BASGS 25KG",
-    "MIRA SET 453 (ADITIVO)",
-    "PIEDRA 0-6",
-    "PIEDRA 10-30",
+    "ARENA FINA",
     "PIEDRA 6-12",
     "PIEDRA 6-20",
-    "PIEDRA PARTIDA 6/20",
-    "RDC DRUMS 200 KG",
-    "SELLADOR (MAPEFLEX PU 45 FT 111 GREY 20X 600ML",
     "W351R",
-    "W500R"
+    "PIEDRA 0-6",
+    "PIEDRA 10-30",
+    "MAPEFILL E BASGS 25KG",
+    "SELLADOR (MAPEFLEX PU 45 FT 111 GREY 20X 600ML",
+    "RDC DRUMS 200 KG",
+    "W500R",
+    "ESTABILIZADO 0-100 X TN",
+    "ESTABILIZADO GRANULOMETRICO 0/20",
+    "MIRA SET 453 (ADITIVO)"
   ]
 }
