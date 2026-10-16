@@ -1,23 +1,6 @@
 {
   "records": [
     {
-      "id": "545e64ad-5504-42d4-9232-5181f6ebb0a3",
-      "createdAt": "2026-10-16T13:56:39.587Z",
-      "carga": "Entrada",
-      "producto": "ARENA GRANITICA 0/6",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-15T12:00:00.000Z",
-      "patente": "AH919KE",
-      "chofer": "LEDESMA CAMILO",
-      "nroRemitoProveedor": "112388",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "",
-      "pesoBalanza": "34.540 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": ""
-    },
-    {
       "id": "2bdad73e-e0ad-4053-8f90-c2db9a9edf4d",
       "createdAt": "2026-10-16T13:56:39.587Z",
       "carga": "Entrada",
