@@ -1,23 +1,6 @@
 {
   "records": [
     {
-      "id": "94614fe0-2993-4287-91ed-31bdae58b54b",
-      "createdAt": "2026-10-16T13:56:39.587Z",
-      "carga": "Entrada",
-      "producto": "ARENA MODULO 1.8-1.9",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-15T12:00:00.000Z",
-      "patente": "AG894ER",
-      "chofer": "OCHOA ANIBAL",
-      "nroRemitoProveedor": "66008",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "",
-      "pesoBalanza": "35.920 tn",
-      "planta": "Lujan",
-      "proveedor": "SPOSITO",
-      "cliente": ""
-    },
-    {
       "id": "eb541d3d-aeab-4497-b631-719f569ba096",
       "createdAt": "2026-10-16T13:56:39.587Z",
       "carga": "Entrada",
