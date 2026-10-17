@@ -712,8 +712,8 @@ export default function TicketsPage() {
               <tbody className="divide-y divide-white/5">
                 {alertas.map((a, i) => (
                   <tr key={i} className="hover:bg-white/5">
-                    <td className="py-1.5 text-slate-300 font-mono text-[11px]">{a.archivo}</td>
-                    <td className="py-1.5 text-slate-300 text-[11px]">{a.proveedor ?? '-'}</td>
+                    <td className="py-1.5 text-slate-300 font-mono text-[11px]">{a.Archivo ?? '-'}</td>
+                    <td className="py-1.5 text-slate-300 text-[11px]">{a.Proveedor ?? '-'}</td>
                     <td className="py-1.5 text-slate-300 text-[11px]">{a['N Remito'] ?? '-'}</td>
                     <td className="py-1.5 text-slate-300 text-[11px]">{a.Fecha ?? '-'}</td>
                     <td className="py-1.5 text-slate-300 text-[11px]">{a.Material ?? '-'}</td>
