@@ -682,62 +682,6 @@ export default function TicketsPage() {
         </div>
       </Paso>
 
-      {/* Paso 3 — Guardar en el servidor */}
-      <Paso
-        n="3"
-        titulo="Guardá el histórico"
-        ayuda="Elegí la carpeta STOCK (la que contiene Entrada, Salida y procesados). Se guarda el historial en Salida\Stock-Historico.xlsx y los PDF pasen solos de Entrada a procesados."
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={elegirCarpeta}
-            disabled={eligiendoCarpeta}
-            className="btn-ghost !px-3 !py-1.5 !text-xs"
-          >
-            <IconUpload className="h-3.5 w-3.5" />
-            {eligiendoCarpeta ? 'Abriendo…' : carpeta ? 'Cambiar STOCK' : 'Elegir carpeta STOCK'}
-          </button>
-          <span className="text-[11px] text-slate-400">
-            {carpeta ? (
-              <>
-                STOCK: <span className="font-mono text-slate-200">{carpeta.nombre}</span>
-                {clavesPlanilla ? ` · ${clavesPlanilla.size} registro(s) en el historial` : ''} ·
-                todo automático
-              </>
-            ) : (
-              <>
-                Elegí la carpeta <span className="font-mono text-slate-300">STOCK</span> (la que tiene{' '}
-                <span className="font-mono text-slate-300">Entrada</span>,{' '}
-                <span className="font-mono text-slate-300">Salida</span> y{' '}
-                <span className="font-mono text-slate-300">procesados</span>). Chrome o Edge.
-              </>
-            )}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={incorporar}
-            disabled={registros.length === 0 || incorporando || !carpeta || !centro || !carga}
-            className="btn-primary"
-          >
-            <IconCheck className="h-4 w-4" />
-            {incorporando
-              ? 'Incorporando…'
-              : registros.length > 0
-                ? `Incorporar ${registros.length} registro${registros.length === 1 ? '' : 's'}`
-                : 'Incorporar'}
-          </button>
-          <span className="text-[11px]">
-            {(!centro || !carga) && <span className="text-amber-400">Falta elegir Centro y Carga. </span>}
-            {!carpeta && <span className="text-amber-400">Falta elegir STOCK. </span>}
-            {registros.length === 0 && <span className="text-slate-500">Cargá tickets para empezar.</span>}
-          </span>
-        </div>
-      </Paso>
-
       {procesando && <ProcessingOverlay archivos={files.length} />}
 
       {alertas.length > 0 && mostrarModalDuplicados && (
