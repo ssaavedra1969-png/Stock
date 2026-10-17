@@ -160,7 +160,7 @@ export default function TicketsPage() {
   async function elegirCarpeta() {
     setEligiendoCarpeta(true);
     try {
-      const { soportaCarpetas, elegirCarpetaServidor, prepararCarpeta } = await import(
+      const { soportaCarpetas, elegirCarpetaServidor, prepararCarpeta, leerPlanillaDeCarpeta, clavesDeFilas } = await import(
         '@/lib/tickets/archivo.mjs'
       );
       if (!soportaCarpetas()) {
