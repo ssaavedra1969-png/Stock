@@ -373,8 +373,47 @@ export default function TicketsPage() {
       <Paso
         n="2"
         titulo="Revisá y completá"
-        ayuda="Elegí el Centro y la Carga, y revisá que los datos leídos sean correctos. Podés editar, eliminar o mirar el PDF de cada fila."
+        ayuda="Elegí la carpeta STORK (para detectar duplicados), el Centro y la Carga. Revisá que los datos leídos sean correctos."
       >
+        {/* Selector de STORK — necesario para detectar duplicados */}
+        <div className="space-y-2 border-t border-white/5 pt-3 mb-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={elegirCarpeta}
+              disabled={eligiendoCarpeta}
+              className="btn-ghost !px-3 !py-1.5 !text-xs"
+            >
+              <IconUpload className="h-3.5 w-3.5" />
+              {eligiendoCarpeta ? 'Abriendo…' : carpeta ? 'Cambiar STORK' : 'Elegir carpeta STORK'}
+            </button>
+            <span className="text-[11px] text-slate-400">
+              {carpeta ? (
+                <>
+                  STORK: <span className="font-mono text-slate-200">{carpeta.nombre}</span> ·
+                  {clavesPlanilla ? `${clavesPlanilla.size} registro(s) en el historial` : ''}
+                </>
+              ) : (
+                <>
+                  Obligatorio para detectar duplicados. Elegí la carpeta que tiene{' '}
+                  <span className="font-mono text-slate-300">Entrada</span>,{' '}
+                  <span className="font-mono text-slate-300">Salida</span> y{' '}
+                  <span className="font-mono text-slate-300">procesados</span>.
+                </>
+              )}
+            </span>
+          </div>
+          {!carpeta && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 p-2 text-xs text-amber-100">
+              <IconAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Sin STORK elegido, todos los registros se marcan como NUEVO y no se detectan duplicados.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Centro y Carga */}
         <div className="flex flex-wrap items-end gap-4">
           <label className="block w-44">
             <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -424,10 +463,10 @@ export default function TicketsPage() {
             <Stat label="Errores" value={(resultado.errores || []).length} cls={(resultado.errores || []).length ? 'text-red-400' : 'text-slate-400'} />
           </div>
 
-          {alertas.length > 0 && (
+          {alertas.length > 0 && !mostrarModalDuplicados && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 p-2 text-xs text-amber-100">
               <IconAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{alertas.length} remito(s) ya existían en la base.</span>
+              <span>{alertas.length} remito(s) ya existían en el historial.</span>
             </div>
           )}
 
@@ -599,6 +638,48 @@ export default function TicketsPage() {
           )}
           </div>
         )}
+      </Paso>
+
+      {/* Paso 3 — Guardar en el servidor */}
+      <Paso
+        n="3"
+        titulo="Guardá el histórico"
+        ayuda="Se guarda el historial en Salida\Stock-Historico.xlsx y los PDF pasen solos de Entrada a procesados."
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-[11px] text-slate-400">
+            {carpeta ? (
+              <>
+                STORK: <span className="font-mono text-slate-200">{carpeta.nombre}</span> · todo automático
+              </>
+            ) : (
+              <>
+                Elegí STORK en el paso 2 antes de incorporar.
+              </>
+            )}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={incorporar}
+            disabled={registros.length === 0 || incorporando || !carpeta || !centro || !carga}
+            className="btn-primary"
+          >
+            <IconCheck className="h-4 w-4" />
+            {incorporando
+              ? 'Incorporando…'
+              : registros.length > 0
+                ? `Incorporar ${registros.length} registro${registros.length === 1 ? '' : 's'}`
+                : 'Incorporar'}
+          </button>
+          <span className="text-[11px]">
+            {(!centro || !carga) && <span className="text-amber-400">Falta elegir Centro y Carga. </span>}
+            {!carpeta && <span className="text-amber-400">Falta elegir STORK en el paso 2. </span>}
+            {registros.length === 0 && <span className="text-slate-500">Cargá tickets para empezar.</span>}
+          </span>
+        </div>
       </Paso>
 
       {/* Paso 3 — Guardar en el servidor */}
