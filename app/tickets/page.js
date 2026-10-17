@@ -81,6 +81,7 @@ export default function TicketsPage() {
   const [carpeta, setCarpeta] = useState(null); // { handle, nombre } — carpeta STOCK
   const [eligiendoCarpeta, setEligiendoCarpeta] = useState(false);
   const [clavesPlanilla, setClavesPlanilla] = useState(null); // Set "Proveedor|Remito" del historial
+  const [mostrarModalDuplicados, setMostrarModalDuplicados] = useState(false);
 
   const procesando = tickets.procesando;
   const resultado = tickets.resultado;
@@ -141,6 +142,12 @@ export default function TicketsPage() {
     if (files.length === 0 || procesando) return;
     procesar();
   }, [files]);
+
+  useEffect(() => {
+    if (alertas.length > 0) {
+      setMostrarModalDuplicados(true);
+    }
+  }, [alertas]);
 
   function removeFile(index) {
     setFiles((prev) => prev.filter((_, i) => i !== index));
@@ -651,6 +658,59 @@ export default function TicketsPage() {
       </Paso>
 
       {procesando && <ProcessingOverlay archivos={files.length} />}
+
+      {alertas.length > 0 && mostrarModalDuplicados && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-night-900 border border-white/10 rounded-lg p-5 w-full max-w-2xl mx-4 shadow-2xl">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="bg-amber-500/20 rounded-full p-2 shrink-0">
+                <IconAlert className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-100 mb-1">
+                  Remito(s) ya existente(s) en el historial
+                </h2>
+                <p className="text-sm text-slate-400">
+                  Estos {alertas.length} remito(s) ya fueron cargados anteriormente. No se agregarán de nuevo.
+                </p>
+              </div>
+            </div>
+            <table className="w-full text-xs mb-4">
+              <thead>
+                <tr className="text-left border-b border-white/5 mb-1 text-slate-500 uppercase tracking-wider text-[10px]">
+                  <th className="pb-1 font-semibold">Archivo</th>
+                  <th className="pb-1 font-semibold">Proveedor</th>
+                  <th className="pb-1 font-semibold">N Remito</th>
+                  <th className="pb-1 font-semibold">Fecha</th>
+                  <th className="pb-1 font-semibold">Material</th>
+                  <th className="pb-1 font-semibold">Neto</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {alertas.map((a, i) => (
+                  <tr key={i} className="hover:bg-white/5">
+                    <td className="py-1.5 text-slate-300 font-mono text-[11px]">{a.archivo}</td>
+                    <td className="py-1.5 text-slate-300 text-[11px]">{a.proveedor ?? '-'}</td>
+                    <td className="py-1.5 text-slate-300 text-[11px]">{a['N Remito'] ?? '-'}</td>
+                    <td className="py-1.5 text-slate-300 text-[11px]">{a.Fecha ?? '-'}</td>
+                    <td className="py-1.5 text-slate-300 text-[11px]">{a.Material ?? '-'}</td>
+                    <td className="py-1.5 text-slate-300 text-[11px]">{a.Neto ?? '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setMostrarModalDuplicados(false)}
+                className="px-4 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-slate-200 text-sm font-medium transition"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
