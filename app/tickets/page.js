@@ -256,10 +256,16 @@ export default function TicketsPage() {
       showToast('Elegí la carpeta STOCK antes de incorporar', 'error');
       return;
     }
+    const nuevos = registros.filter((r) => r.Estado !== 'DUPLICADO');
+    if (nuevos.length === 0) {
+      showToast('No hay registros nuevos para incorporar (todos son duplicados)', 'error');
+      limpiar();
+      return;
+    }
     setIncorporando(true);
     try {
       const { incorporarEnCarpeta, leerPlanillaDeCarpeta, clavesDeFilas } = await import('@/lib/tickets/archivo.mjs');
-      const registrosConMeta = registros.map((r) => ({ ...r, Centro: centro, Carga: carga }));
+      const registrosConMeta = nuevos.map((r) => ({ ...r, Centro: centro, Carga: carga }));
       const data = await incorporarEnCarpeta(carpeta.handle, registrosConMeta);
 
       // Refrescar las claves del historial para la próxima tanda.
@@ -267,7 +273,8 @@ export default function TicketsPage() {
       setClavesPlanilla(clavesDeFilas(rows && rows.length ? rows : [CAMPOS]));
 
       let msg = `${data.agregados} fila(s) agregada(s) · Total: ${data.total}`;
-      if (data.duplicados) msg += ` · ${data.duplicados} repetida(s)`;
+      const ignorados = registros.length - nuevos.length;
+      if (ignorados) msg += ` · ${ignorados} duplicado(s) ignorado(s)`;
       if (data.movidos.length) {
         msg += ` · ${data.movidos.length} PDF archivado(s)`;
         if (data.errores.length) msg += ` (${data.errores.length} con error)`;
