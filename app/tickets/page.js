@@ -373,9 +373,8 @@ export default function TicketsPage() {
       <Paso
         n="2"
         titulo="Revisá y completá"
-        ayuda="Elegí la carpeta STORK (para detectar duplicados), el Centro y la Carga. Revisá que los datos leídos sean correctos."
+        ayuda="Elegí STORK y el Centro y la Carga. Revisá que los datos leídos sean correctos."
       >
-        {/* Selector de STORK — necesario para detectar duplicados */}
         <div className="space-y-2 border-t border-white/5 pt-3 mb-3">
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -395,22 +394,14 @@ export default function TicketsPage() {
                 </>
               ) : (
                 <>
-                  Obligatorio para detectar duplicados. Elegí la carpeta que tiene{' '}
+                  Elegí la carpeta <span className="font-mono text-slate-300">STORK</span> (la que tiene{' '}
                   <span className="font-mono text-slate-300">Entrada</span>,{' '}
                   <span className="font-mono text-slate-300">Salida</span> y{' '}
-                  <span className="font-mono text-slate-300">procesados</span>.
+                  <span className="font-mono text-slate-300">procesados</span>).
                 </>
               )}
             </span>
           </div>
-          {!carpeta && (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 p-2 text-xs text-amber-100">
-              <IconAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>
-                Sin STORK elegido, todos los registros se marcan como NUEVO y no se detectan duplicados.
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Centro y Carga */}
