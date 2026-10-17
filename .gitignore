@@ -56,3 +56,7 @@ dev-server*.err.log
 /entrada/*.pdf
 .vercel
 .env*
+
+# pruebas temporales (no versionar)
+/_qa/
+/eng.traineddata
