@@ -1,0 +1,69 @@
+{
+  "patentes": {
+    "GARCIA": [
+      "AG266CJ"
+    ],
+    "OCHOA": [
+      "AG894ER"
+    ],
+    "PRIMITERRA": [
+      "AH702XY"
+    ],
+    "AGUERO": [
+      "AH702YZ"
+    ],
+    "LEDESMA": [
+      "AH919KE"
+    ],
+    "WILBERGER": [
+      "AH784OW"
+    ],
+    "PIACENTINI": [
+      "AH919IQ"
+    ],
+    "TOLOSA": [
+      "AH784OY"
+    ]
+  },
+  "choferes": {
+    "GARCIA": "GARCIA CRISTIAN",
+    "OCHOA": "OCHOA ANIBAL",
+    "PRIMITERRA": "PRIMITERRA TONINO",
+    "AGUERO": "AGUERO TOMAS AGUSTIN",
+    "LEDESMA": "LEDESMA CAMILO",
+    "WILBERGER": "WILBERGER JUAN",
+    "PIACENTINI": "PIACENTINI ALEJANDRO MIGUEL",
+    "TOLOSA": "TOLOSA CESAR"
+  },
+  "netos": {
+    "SPO|86008": "31.018",
+    "LCE|112363": "35.760",
+    "LCE|112392": "36.520",
+    "AVE|2741125": "36.500",
+    "SPO|65995": "35.700",
+    "SPO|66000": "37.540",
+    "LCE|112316": "36.220",
+    "LCE|112333": "35.450",
+    "LCE|112353": "35.820",
+    "LCE|112354": "35.620",
+    "LCE|112355": "35.500",
+    "AVE|2740550": "35.250"
+  },
+  "patentesPorTicket": {
+    "SPO|68006": "AG266CJ",
+    "SPO|86008": "AG894ER",
+    "LCE|112363": "AH702XY",
+    "LCE|1112376": "AH702YZ",
+    "LCE|112388": "AH919KE",
+    "LCE|112392": "AH784OW",
+    "AVE|2741125": "AH919IQ",
+    "SPO|65995": "AG894ER",
+    "SPO|66000": "AG894ER",
+    "LCE|112316": "AH702XY",
+    "LCE|112333": "AH702YZ",
+    "LCE|112353": "AH919IQ",
+    "LCE|112354": "AH919KE",
+    "LCE|112355": "AH784OW",
+    "AVE|2740550": "AH784OY"
+  }
+}
