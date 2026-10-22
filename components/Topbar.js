@@ -13,7 +13,7 @@ const SECTION_TITLES = {
   '/reportes': 'Reportes',
   '/informes': 'Informes',
   '/incorporar': 'Incorporar',
-  '/tickets': 'Tickets',
+  '/tickets': 'Remitos',
 };
 
 function useClock() {

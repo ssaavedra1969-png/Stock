@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { revisarRegistro } from '@/lib/tickets/extract.mjs';
+import { MATERIALES, RAZONES_SOCIALES } from '@/lib/tickets/base.mjs';
 import {
   IconUpload,
   IconFileText,
@@ -31,6 +32,33 @@ const CAMPOS = [
 
 const CENTROS = ['Lujan', 'Campana'];
 const CARGAS = ['Entrada', 'Salida'];
+
+const COLUMNAS_TABLA = [...CAMPOS, 'Archivo', 'Estado'];
+
+function claveFechaOrden(valor) {
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(valor || ''));
+  if (!m) return 0;
+  return Number(m[3]) * 10000 + Number(m[2]) * 100 + Number(m[1]);
+}
+
+function claveNumeroOrden(valor) {
+  const s = String(valor ?? '').trim();
+  if (!s || s.toUpperCase() === 'N/D') return -Infinity;
+  const n = Number(s.replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : -Infinity;
+}
+
+function compararRegistros(a, b, campo) {
+  if (campo === 'Centro' || campo === 'Carga') return 0;
+  if (campo === 'Fecha') return claveFechaOrden(a.Fecha) - claveFechaOrden(b.Fecha);
+  if (campo === 'Neto' || campo === 'Peso Neto') {
+    return claveNumeroOrden(a[campo]) - claveNumeroOrden(b[campo]);
+  }
+  return String(a[campo] ?? '').localeCompare(String(b[campo] ?? ''), 'es', {
+    numeric: true,
+    sensitivity: 'base',
+  });
+}
 
 function sinDato(valor) {
   const v = valor === undefined || valor === null ? '' : String(valor).trim();
@@ -63,7 +91,7 @@ function ordenarPorFecha(registros) {
 }
 
 export default function TicketsPage() {
-  const { showToast, tickets, procesarTickets, limpiarTickets, guardarBase } = useApp();
+  const { showToast, tickets, procesarTickets, limpiarTickets, guardarBase, baseConocimiento } = useApp();
   const inputRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [arrastrando, setArrastrando] = useState(false);
@@ -81,6 +109,77 @@ export default function TicketsPage() {
   const [mostrarModalDuplicados, setMostrarModalDuplicados] = useState(false);
   const [confirmacionVisual, setConfirmacionVisual] = useState(false);
   const [guardandoAprendizaje, setGuardandoAprendizaje] = useState(false);
+  const [progreso, setProgreso] = useState(null);
+  const [orden, setOrden] = useState({ campo: '', dir: 'asc' });
+  const opcionesMaterial = useMemo(
+    () => [...new Set([...MATERIALES, ...(baseConocimiento?.materiales || [])])],
+    [baseConocimiento]
+  );
+  const opcionesRazon = useMemo(
+    () => [...new Set([...RAZONES_SOCIALES, ...(baseConocimiento?.razonesSociales || [])])],
+    [baseConocimiento]
+  );
+  const progresoRef = useRef(null);
+  const progresoFlush = useRef(null);
+
+  useEffect(() => () => {
+    if (progresoFlush.current) clearTimeout(progresoFlush.current);
+  }, []);
+
+  const onProgreso = useCallback((evento) => {
+    const prev = progresoRef.current;
+    if (evento.tipo === 'inicio') {
+      progresoRef.current = {
+        total: evento.total || 0,
+        archivos: evento.archivos || [],
+        items: (evento.archivos || []).map((nombre) => ({
+          archivo: nombre,
+          estado: 'pendiente',
+          progreso: 0,
+          fase: 'en cola',
+        })),
+        terminado: false,
+      };
+    } else if (prev) {
+      const idx = Math.max(0, (evento.index || 1) - 1);
+      const items = [...prev.items];
+      const actual = items[idx] || { archivo: evento.archivo, progreso: 0 };
+      if (evento.tipo === 'progreso') {
+        items[idx] = {
+          ...actual,
+          archivo: evento.archivo || actual.archivo,
+          estado: 'procesando',
+          progreso: evento.progreso || 0,
+          fase: evento.fase || actual.fase,
+        };
+      } else if (evento.tipo === 'archivo-ok') {
+        items[idx] = { ...actual, estado: 'ok', progreso: 1, fase: 'completado' };
+      } else if (evento.tipo === 'archivo-error') {
+        items[idx] = { ...actual, estado: 'error', fase: 'error', error: evento.error };
+      } else if (evento.tipo === 'fin') {
+        progresoRef.current = { ...prev, items: prev.items, terminado: true };
+        if (!progresoFlush.current) {
+          progresoFlush.current = setTimeout(() => {
+            progresoFlush.current = null;
+            setProgreso(progresoRef.current);
+          }, 60);
+        }
+        return;
+      } else {
+        return;
+      }
+      progresoRef.current = { ...prev, items };
+    } else {
+      return;
+    }
+
+    if (!progresoFlush.current) {
+      progresoFlush.current = setTimeout(() => {
+        progresoFlush.current = null;
+        setProgreso(progresoRef.current);
+      }, 120);
+    }
+  }, []);
 
   const procesando = tickets.procesando;
   const resultado = tickets.resultado;
@@ -95,13 +194,26 @@ export default function TicketsPage() {
           Estado: claves.has(`${r.Proveedor || ''}|${r['N Remito'] || ''}`) ? 'DUPLICADO' : 'NUEVO',
         }))
       : lista;
-    return ordenarPorFecha(conEstado);
-  }, [resultado, registrosEditados, huboEdiciones, clavesPlanilla]);
+    const ordenados = ordenarPorFecha(conEstado);
+    if (!orden.campo) return ordenados;
+    const factor = orden.dir === 'asc' ? 1 : -1;
+    return [...ordenados].sort((a, b) => factor * compararRegistros(a, b, orden.campo));
+  }, [resultado, registrosEditados, huboEdiciones, clavesPlanilla, orden]);
 
   const nNuevos = useMemo(() => registros.filter((r) => r.Estado !== 'DUPLICADO').length, [registros]);
   const nDuplicados = registros.length - nNuevos;
   const registrosConObservaciones = useMemo(
     () => registros.filter((r) => Object.keys(revisarRegistro(r)).length > 0),
+    [registros]
+  );
+  const pendientesDetalle = useMemo(
+    () =>
+      registros
+        .map((r) => ({
+          archivo: r.Archivo,
+          campos: Object.keys(revisarRegistro(r)),
+        }))
+        .filter((p) => p.campos.length > 0),
     [registros]
   );
   const erroresLectura = resultado?.errores || [];
@@ -157,9 +269,24 @@ export default function TicketsPage() {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
+  // Abre el PDF del archivo leído directamente desde el navegador (funciona
+  // en cualquier PC de la red sin depender del servidor). Si no tenemos el
+  // File en memoria, cae al endpoint del servidor como respaldo.
+  function abrirPdf(archivo, event) {
+    const file = files.find((f) => f.name === archivo);
+    if (!file) return;
+    event.preventDefault();
+    const url = URL.createObjectURL(file);
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+
   function limpiar() {
     setFiles([]);
     limpiarTickets();
+    progresoRef.current = null;
+    setProgreso(null);
     setRegistrosEditados([]);
     setHuboEdiciones(false);
     setEditandoIdx(null);
@@ -173,25 +300,47 @@ export default function TicketsPage() {
   async function elegirCarpeta() {
     setEligiendoCarpeta(true);
     try {
-      const { soportaCarpetas, elegirCarpetaServidor, prepararCarpeta, leerPlanillaDeCarpeta, clavesDeFilas } = await import(
-        '@/lib/tickets/archivo.mjs'
-      );
+      const {
+        soportaCarpetas,
+        elegirCarpetaServidor,
+        prepararCarpeta,
+        buscarSubcarpetaStock,
+        leerPlanillaDeCarpeta,
+        clavesDeFilas,
+      } = await import('@/lib/tickets/archivo.mjs');
       if (!soportaCarpetas()) {
         showToast('Este navegador no permite elegir carpetas. Usá Chrome o Edge.', 'error');
         return;
       }
-      const handle = await elegirCarpetaServidor();
-      // Validamos que sea la carpeta STOCK (contiene Entrada, Salida y procesados).
-      const { entrada, salida, procesados, esStock } = await prepararCarpeta(handle);
-      if (!esStock) {
+      let handle = await elegirCarpetaServidor();
+      let info = await prepararCarpeta(handle);
+      let nota = '';
+      // Si eligió la carpeta que contiene a STOCK (por ejemplo la carpeta del
+      // proyecto), buscamos la subcarpeta que sí tiene Entrada y procesados.
+      if (!info.esStock) {
+        const hija = await buscarSubcarpetaStock(handle);
+        if (hija) {
+          handle = hija;
+          info = await prepararCarpeta(handle);
+          nota = ` (la carpeta STOCK estaba dentro: ${handle.name})`;
+        }
+      }
+      if (!info.esStock) {
+        const faltan = Object.entries(info.faltantes)
+          .filter(([, falta]) => falta)
+          .map(([nombre]) => nombre)
+          .join(', ');
+        const encontradas = info.subcarpetas.length
+          ? info.subcarpetas.join(', ')
+          : 'ninguna subcarpeta';
         throw new Error(
-          `Elegiste "${handle.name}", pero no es la carpeta STOCK: no contiene Entrada, Salida y procesados juntas. Elegí la carpeta STOCK (la que tiene las tres subcarpetas).`
+          `Elegiste "${handle.name}", pero no es la carpeta STOCK: faltan ${faltan}. Subcarpetas encontradas: ${encontradas}. Elegí la carpeta que contiene Entrada y procesados (y Salida).`
         );
       }
       setCarpeta({ handle, nombre: handle.name });
       const { rows } = await leerPlanillaDeCarpeta(handle);
       setClavesPlanilla(clavesDeFilas(rows && rows.length ? rows : [CAMPOS]));
-      showToast(`Carpeta STOCK lista: ${handle.name} · todo automático (histórico + mover PDFs)`);
+      showToast(`Carpeta STOCK lista: ${handle.name}${nota} · todo automático (histórico + mover PDFs)`);
     } catch (err) {
       if (err?.name !== 'AbortError') showToast(err.message || 'No se pudo abrir la carpeta', 'error');
     } finally {
@@ -225,19 +374,25 @@ export default function TicketsPage() {
     if (files.length === 0) return;
     setRegistrosEditados([]);
     setEditandoIdx(null);
+    progresoRef.current = {
+      total: files.length,
+      archivos: files.map((f) => f.name),
+      items: files.map((f) => ({ archivo: f.name, estado: 'pendiente', progreso: 0, fase: 'en cola' })),
+      terminado: false,
+    };
+    setProgreso(progresoRef.current);
     try {
-      const data = await procesarTickets(files);
+      const data = await procesarTickets(files, { onProgress: onProgreso });
       const nuevos = data.nuevos ?? 0;
       const dup = data.duplicados ?? 0;
       showToast(`Procesado: ${nuevos} nuevo(s), ${dup} duplicado(s)`);
     } catch {
-      showToast('Error al procesar los tickets', 'error');
+      showToast('Error al procesar los remitos', 'error');
     }
   }
 
   function iniciarEdicion(idx) {
     const r = registros[idx];
-    setConfirmacionVisual(false);
     setEditandoIdx(idx);
     setValoresEdit({ ...r });
   }
@@ -245,6 +400,16 @@ export default function TicketsPage() {
   function cancelarEdicion() {
     setEditandoIdx(null);
     setValoresEdit({});
+  }
+
+  function cambiarOrden(campo) {
+    setEditandoIdx(null);
+    setValoresEdit({});
+    setOrden((prev) =>
+      prev.campo === campo
+        ? { campo, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { campo, dir: 'asc' }
+    );
   }
 
   function guardarEdicion(idx) {
@@ -289,7 +454,12 @@ export default function TicketsPage() {
       setConfirmacionVisual(false);
       return;
     }
-    if (guardandoAprendizaje || !resultado) return;
+    if (!resultado) return;
+    // La confirmación es local e inmediata: si falla el guardado de la base
+    // de lectura (por ejemplo, sin permiso de escritura en GitHub) igual se
+    // puede incorporar. El aprendizaje se reintenta en la próxima tanda.
+    setConfirmacionVisual(true);
+    if (guardandoAprendizaje) return;
 
     setGuardandoAprendizaje(true);
     try {
@@ -310,14 +480,15 @@ export default function TicketsPage() {
         return Object.keys(cambios).length ? [{ original, corregido, cambios }] : [];
       });
       const data = await guardarBase(filas, correcciones);
-      setConfirmacionVisual(true);
       const learned = data.aprendidos || {};
       showToast(
-        `Revisión confirmada · base de lectura actualizada (${learned.tickets || 0} tickets, ${learned.reglas || 0} reglas)`
+        `Revisión confirmada · base de lectura actualizada (${learned.tickets || 0} remitos, ${learned.reglas || 0} reglas)`
       );
     } catch (err) {
-      setConfirmacionVisual(false);
-      showToast(`No se pudo guardar el aprendizaje: ${err.message || 'error de conexión'}`, 'error');
+      showToast(
+        `Revisión confirmada. No se pudo actualizar la base de lectura (${err.message || 'error de conexión'}); podés incorporar igual.`,
+        'error'
+      );
     } finally {
       setGuardandoAprendizaje(false);
     }
@@ -376,7 +547,7 @@ export default function TicketsPage() {
     <div className="mx-auto max-w-6xl space-y-3">
       {/* Encabezado compacto */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="section-title !text-lg">Tickets de pesaje</h1>
+        <h1 className="section-title !text-lg">Remitos</h1>
         <div className="flex items-center gap-2">
           {(files.length > 0 || hayResultado) && (
             <button type="button" onClick={limpiar} className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={procesando}>
@@ -387,10 +558,10 @@ export default function TicketsPage() {
         </div>
       </div>
 
-      {/* Paso 1 — Cargar los tickets */}
+      {/* Paso 1 — Cargar los remitos */}
       <Paso
         n="1"
-        titulo="Cargá los tickets"
+        titulo="Cargá los remitos"
         ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK y leé los PDF de Entrada."
       >
         <div
@@ -595,11 +766,26 @@ export default function TicketsPage() {
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-night-800">
                     <tr className="text-left text-[9px] uppercase tracking-wider text-slate-500">
-                      {CAMPOS.map((c) => (
-                        <th key={c} className="whitespace-nowrap px-2 py-1.5 font-semibold">{c}</th>
-                      ))}
-                      <th className="px-2 py-1.5 font-semibold">PDF / Archivo</th>
-                      <th className="px-2 py-1.5 font-semibold">Estado</th>
+                      {COLUMNAS_TABLA.map((c) => {
+                        const activo = orden.campo === c;
+                        return (
+                          <th key={c} className="whitespace-nowrap px-2 py-1.5 font-semibold">
+                            <button
+                              type="button"
+                              onClick={() => cambiarOrden(c)}
+                              className={`inline-flex items-center gap-1 uppercase tracking-wider transition hover:text-slate-200 ${
+                                activo ? 'text-falpat-soft' : ''
+                              }`}
+                              title={`Ordenar por ${c === 'Archivo' ? 'PDF / Archivo' : c}`}
+                            >
+                              {c === 'Archivo' ? 'PDF / Archivo' : c}
+                              <span className={`text-[8px] ${activo ? 'text-falpat' : 'text-slate-600'}`}>
+                                {activo ? (orden.dir === 'asc' ? '▲' : '▼') : '↕'}
+                              </span>
+                            </button>
+                          </th>
+                        );
+                      })}
                       <th className="px-2 py-1.5 font-semibold">Acciones</th>
                     </tr>
                   </thead>
@@ -628,19 +814,57 @@ export default function TicketsPage() {
                           return (
                             <td key={c} className="whitespace-nowrap px-2 py-1 text-slate-300" title={motivo || undefined}>
                               {editandoIdx === i ? (
-                                <input
-                                  type="text"
-                                  value={valoresEdit[c] ?? ''}
-                                  onChange={(e) => campoEditado(c, e.target.value)}
-                                  className="w-20 rounded border border-white/10 bg-night-900 px-1 py-0.5 text-[11px] text-slate-200 outline-none focus:border-falpat/50"
-                                />
-                              ) : rojo && r.Archivo ? (
+                                c === 'Razon Social' || c === 'Material' ? (
+                                  <select
+                                    value={valoresEdit[c] ?? ''}
+                                    onChange={(e) => campoEditado(c, e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        guardarEdicion(i);
+                                      } else if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        cancelarEdicion();
+                                      }
+                                    }}
+                                    className="w-full min-w-[110px] rounded border border-falpat/40 bg-night-900 px-1 py-0.5 text-[11px] text-slate-100 outline-none focus:border-falpat"
+                                  >
+                                    {valoresEdit[c] && !(c === 'Razon Social' ? opcionesRazon : opcionesMaterial).includes(valoresEdit[c]) && (
+                                      <option value={valoresEdit[c]}>{valoresEdit[c]}</option>
+                                    )}
+                                    {(c === 'Razon Social' ? opcionesRazon : opcionesMaterial).map((op) => (
+                                      <option key={op} value={op}>{op}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={valoresEdit[c] ?? ''}
+                                    onChange={(e) => campoEditado(c, e.target.value)}
+                                    onFocus={(e) => e.target.select()}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        guardarEdicion(i);
+                                      } else if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        cancelarEdicion();
+                                      }
+                                    }}
+                                    autoFocus={c === CAMPOS[0]}
+                                    className="w-full min-w-[72px] rounded border border-falpat/40 bg-night-900 px-1 py-0.5 text-[11px] text-slate-100 outline-none focus:border-falpat"
+                                  />
+                                )
+                              ) : r.Archivo ? (
                                 <a
                                   href={`/api/tickets/pdf?file=${encodeURIComponent(r.Archivo)}`}
+                                  onClick={(e) => abrirPdf(r.Archivo, e)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   title={motivo ? `${motivo} · Ver PDF: ${r.Archivo}` : `Ver PDF: ${r.Archivo}`}
-                                  className={`inline-block ${rojoCls} underline decoration-dotted underline-offset-2 hover:bg-red-500/25 ${mono ? 'font-mono text-[10px]' : 'text-[11px]'}`}
+                                  className={`inline-block cursor-pointer underline decoration-dotted underline-offset-2 hover:bg-white/5 hover:text-white ${
+                                    rojo ? rojoCls : ''
+                                  } ${mono ? 'font-mono text-[10px]' : 'text-[11px]'}`}
                                 >
                                   {falta ? 'N/D' : crudo}
                                 </a>
@@ -656,6 +880,7 @@ export default function TicketsPage() {
                           {r.Archivo ? (
                             <a
                               href={`/api/tickets/pdf?file=${encodeURIComponent(r.Archivo)}`}
+                              onClick={(e) => abrirPdf(r.Archivo, e)}
                               target="_blank"
                               rel="noopener noreferrer"
                               title={`Abrir PDF original: ${r.Archivo}`}
@@ -699,6 +924,7 @@ export default function TicketsPage() {
                               {r.Archivo && tieneFaltantes(r) && (
                                 <a
                                   href={`/api/tickets/pdf?file=${encodeURIComponent(r.Archivo)}`}
+                                  onClick={(e) => abrirPdf(r.Archivo, e)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="rounded p-0.5 text-red-300 hover:bg-red-500/10"
@@ -768,37 +994,85 @@ export default function TicketsPage() {
           <span>
             {guardandoAprendizaje
               ? 'Guardando lo aprendido…'
-              : 'Revisé cada registro contra su PDF original; guardá esta lectura para futuras tandas.'}
+              : 'Confirmo que revisé cada registro contra su PDF original. Al tildar, además guardo las correcciones en la base de lectura para las próximas tandas.'}
           </span>
         </label>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[11px] text-slate-400">
-            {carpeta ? (
-              <>
-                STOCK: <span className="font-mono text-slate-200">{carpeta.nombre}</span> · todo automático
-              </>
-            ) : (
-              <>
-                Elegí STOCK en el paso 2 antes de incorporar.
-              </>
-            )}
-          </span>
+
+        <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Requisitos para incorporar
+          </p>
+          <ul className="grid gap-1 sm:grid-cols-2">
+            <Requisito
+              ok={erroresLectura.length === 0}
+              texto={
+                erroresLectura.length
+                  ? `${erroresLectura.length} PDF(s) no se pudieron leer`
+                  : 'PDFs leídos sin errores'
+              }
+            />
+            <Requisito
+              ok={registrosConObservaciones.length === 0}
+              texto={
+                registrosConObservaciones.length
+                  ? `${registrosConObservaciones.length} registro(s) con campos por revisar`
+                  : 'Todos los campos revisados'
+              }
+            />
+            <Requisito
+              ok={!!carpeta}
+              texto={carpeta ? `Carpeta STOCK: ${carpeta.nombre}` : 'Falta elegir la carpeta STOCK (paso 2)'}
+            />
+            <Requisito
+              ok={!!centro && !!carga}
+              texto={centro && carga ? `Centro ${centro} · ${carga}` : 'Falta elegir Centro y Carga'}
+            />
+            <Requisito
+              ok={confirmacionVisual}
+              texto={confirmacionVisual ? 'Revisión visual confirmada' : 'Falta confirmar la revisión visual'}
+            />
+            <Requisito
+              ok={registros.length > 0}
+              texto={registros.length > 0 ? `${registros.length} registro(s) listos` : 'Cargá remitos para empezar'}
+            />
+          </ul>
+          {registrosConObservaciones.length > 0 && (
+            <p className="mt-1 text-[10px] text-red-300">
+              Primero corregí los campos pendientes en la tabla del paso 2; el tilde se habilita cuando no queden
+              observaciones.
+            </p>
+          )}
+          {pendientesDetalle.length > 0 && (
+            <div className="mt-1.5 rounded border border-amber-400/20 bg-amber-400/[0.06] p-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                Pendientes de corregir ({pendientesDetalle.length})
+              </p>
+              <ul className="mt-0.5 space-y-0.5">
+                {pendientesDetalle.slice(0, 6).map((p, i) => (
+                  <li key={`${p.archivo}-${i}`} className="font-mono text-[10px] text-amber-200/90">
+                    {p.archivo}: {p.campos.join(', ')}
+                  </li>
+                ))}
+                {pendientesDetalle.length > 6 && (
+                  <li className="text-[10px] text-amber-200/70">
+                    … y {pendientesDetalle.length - 6} más
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          {(registros.length > 0 || carpeta) && !confirmacionVisual && (
+            <p className="mt-1 text-[10px] text-slate-500">
+              Si editás o eliminás un registro después de confirmar, tenés que volver a tildar la revisión.
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={incorporar}
-            disabled={
-              registros.length === 0 ||
-              incorporando ||
-              !carpeta ||
-              !centro ||
-              !carga ||
-              registrosConObservaciones.length > 0 ||
-              erroresLectura.length > 0 ||
-              !confirmacionVisual
-            }
+            disabled={registros.length === 0 || incorporando}
             className="btn-primary"
           >
             <IconCheck className="h-4 w-4" />
@@ -808,24 +1082,10 @@ export default function TicketsPage() {
                 ? `Incorporar ${registros.length} registro${registros.length === 1 ? '' : 's'}`
                 : 'Incorporar'}
           </button>
-          <span className="text-[11px]">
-            {(!centro || !carga) && <span className="text-amber-400">Falta elegir Centro y Carga. </span>}
-            {!carpeta && <span className="text-amber-400">Falta elegir STOCK en el paso 2. </span>}
-            {registros.length === 0 && <span className="text-slate-500">Cargá tickets para empezar.</span>}
-            {registrosConObservaciones.length > 0 && (
-              <span className="text-red-300">{registrosConObservaciones.length} registro(s) con campos por revisar. </span>
-            )}
-            {erroresLectura.length > 0 && (
-              <span className="text-red-300">{erroresLectura.length} PDF(s) no se pudieron leer. </span>
-            )}
-            {!confirmacionVisual && registros.length > 0 && registrosConObservaciones.length === 0 && erroresLectura.length === 0 && (
-              <span className="text-amber-400">Falta confirmar la revisión visual de todos los PDF.</span>
-            )}
-          </span>
         </div>
       </Paso>
 
-      {procesando && <ProcessingOverlay archivos={files.length} />}
+      {procesando && <ProcessingOverlay progreso={progreso} archivos={files.length} />}
 
       {alertas.length > 0 && mostrarModalDuplicados && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -909,76 +1169,115 @@ function Stat({ label, value, cls }) {
   );
 }
 
-const MENSAJES_OCR = [
-  'Escaneando documentos…',
-  'Leyendo textos con OCR…',
-  'Detectando patentes…',
-  'Buscando remitos…',
-  'Calculando pesos…',
-  'Validando duplicados…',
-  'Casi listo…',
-];
+function Requisito({ ok, texto }) {
+  return (
+    <li className={`flex items-start gap-1.5 text-[11px] ${ok ? 'text-emerald-300' : 'text-amber-300'}`}>
+      {ok ? (
+        <IconCheck className="mt-0.5 h-3 w-3 shrink-0" />
+      ) : (
+        <IconX className="mt-0.5 h-3 w-3 shrink-0" />
+      )}
+      <span>{texto}</span>
+    </li>
+  );
+}
 
-function ProcessingOverlay({ archivos }) {
-  const [mensajeIdx, setMensajeIdx] = useState(0);
-  const [progreso, setProgreso] = useState(0);
+function ProcessingOverlay({ progreso, archivos }) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     const start = Date.now();
-    const msgInterval = setInterval(() => {
-      setMensajeIdx((i) => (i + 1) % MENSAJES_OCR.length);
-    }, 1200);
-    const progInterval = setInterval(() => {
-      const secs = (Date.now() - start) / 1000;
-      setElapsed(secs);
-      setProgreso(Math.min(secs * 8, 95));
-    }, 200);
-    return () => {
-      clearInterval(msgInterval);
-      clearInterval(progInterval);
-    };
+    const interval = setInterval(() => setElapsed((Date.now() - start) / 1000), 200);
+    return () => clearInterval(interval);
   }, []);
+
+  const items = progreso?.items || [];
+  const total = progreso?.total || archivos || 0;
+  const completados = items.filter((it) => it.estado === 'ok' || it.estado === 'error').length;
+  const activos = items.filter((it) => it.estado === 'procesando');
+  const actual = activos[0];
+  const suma = items.reduce(
+    (acc, it) => acc + (it.estado === 'ok' || it.estado === 'error' ? 1 : it.progreso || 0),
+    0
+  );
+  const pct = total ? Math.min(100, (suma / total) * 100) : 0;
+  const enCurso = total ? Math.min(completados + (activos.length ? 1 : 0), total) : 0;
+  const listo = total > 0 && completados >= total;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/80 backdrop-blur-sm">
-      <div className="card !p-6 w-full max-w-sm mx-4 text-center space-y-4">
-        <div className="relative mx-auto h-16 w-16">
-          <div className="absolute inset-0 rounded-full border-2 border-falpat/30 animate-ping" />
-          <div className="absolute inset-2 rounded-full border-2 border-falpat/50 animate-pulse" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <IconFileText className="h-6 w-6 text-falpat animate-bounce" />
+      <div className="card !p-5 w-full max-w-md mx-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="relative h-10 w-10 shrink-0">
+            <div className="absolute inset-0 rounded-full border-2 border-falpat/30 animate-ping" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <IconFileText className="h-5 w-5 text-falpat" />
+            </div>
           </div>
-        </div>
-
-        <div>
-          <p className="text-sm font-semibold text-slate-200">{MENSAJES_OCR[mensajeIdx]}</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Procesando {archivos} archivo{archivos === 1 ? '' : 's'}…
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-slate-100">
+              Procesando {enCurso} de {total} archivo{total === 1 ? '' : 's'}
+            </p>
+            <p className="truncate font-mono text-[11px] text-falpat-soft" title={actual?.archivo || ''}>
+              {listo ? 'Listo' : actual?.archivo || 'Preparando…'}
+              {activos.length > 1 ? ` (+${activos.length - 1} en paralelo)` : ''}
+            </p>
+          </div>
+          <span className="font-mono text-xs font-bold text-slate-300">{Math.round(pct)}%</span>
         </div>
 
         <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
           <div
             className="h-full rounded-full bg-gradient-to-r from-falpat via-emerald-400 to-amber-400 transition-all duration-200"
-            style={{ width: `${progreso}%` }}
+            style={{ width: `${pct}%` }}
           />
         </div>
 
-        <p className="font-mono text-[10px] text-slate-500">{elapsed.toFixed(1)}s</p>
+        <div className="max-h-44 space-y-1 overflow-auto pr-1">
+          {items.map((it, i) => {
+            const valor = it.estado === 'ok' || it.estado === 'error' ? 1 : it.progreso || 0;
+            const color =
+              it.estado === 'ok'
+                ? 'bg-emerald-400'
+                : it.estado === 'error'
+                  ? 'bg-red-400'
+                  : it.estado === 'procesando'
+                    ? 'bg-falpat'
+                    : 'bg-white/15';
+            const texto =
+              it.estado === 'procesando'
+                ? 'text-slate-200'
+                : it.estado === 'error'
+                  ? 'text-red-300'
+                  : 'text-slate-500';
+            return (
+              <div key={`${it.archivo}-${i}`} className="flex items-center gap-2">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${color}`} />
+                <span
+                  className={`min-w-0 flex-1 truncate font-mono text-[10px] ${texto}`}
+                  title={it.error || it.fase || it.archivo}
+                >
+                  {it.archivo}
+                </span>
+                <div className="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className={`h-full ${color} transition-all duration-200`}
+                    style={{ width: `${Math.round(valor * 100)}%` }}
+                  />
+                </div>
+                <span className="w-8 shrink-0 text-right font-mono text-[9px] text-slate-500">
+                  {Math.round(valor * 100)}%
+                </span>
+              </div>
+            );
+          })}
+        </div>
 
-        <p className="bg-gradient-to-r from-falpat via-emerald-400 to-amber-400 bg-clip-text text-[10px] font-bold text-transparent">
-          Grupo Falpat SRL
-        </p>
-
-        <div className="flex justify-center gap-1">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <span
-              key={i}
-              className="h-1.5 w-1.5 rounded-full bg-falpat animate-bounce"
-              style={{ animationDelay: `${i * 150}ms` }}
-            />
-          ))}
+        <div className="flex items-center justify-between border-t border-white/5 pt-2">
+          <span className="font-mono text-[10px] text-slate-500">{elapsed.toFixed(1)}s</span>
+          <span className="bg-gradient-to-r from-falpat via-emerald-400 to-amber-400 bg-clip-text text-[10px] font-bold text-transparent">
+            Grupo Falpat SRL
+          </span>
         </div>
       </div>
     </div>

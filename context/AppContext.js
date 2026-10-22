@@ -56,7 +56,7 @@ export function AppProvider({ children }) {
     recordsRef.current = records;
   }, [records]);
 
-  const procesarTickets = useCallback(async (files) => {
+  const procesarTickets = useCallback(async (files, options = {}) => {
     setTickets({ procesando: true, resultado: null, error: '' });
     try {
       // El OCR corre en el propio navegador (pdf.js + tesseract.js): no
@@ -66,7 +66,7 @@ export function AppProvider({ children }) {
         import('@/lib/tickets/extract.mjs'),
       ]);
       const base = unirBase(baseRef.current, learnFromRecords(recordsRef.current));
-      const data = await procesarArchivos(files, { base });
+      const data = await procesarArchivos(files, { base, onProgress: options.onProgress });
       setTickets({ procesando: false, resultado: data, error: '' });
       return data;
     } catch (err) {

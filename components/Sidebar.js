@@ -135,7 +135,7 @@ export default function Sidebar({ collapsed = false, onToggle }) {
             <NavItem icon={<IconPieChart className="h-[18px] w-[18px]" />} label="Reportes" href="/reportes" collapsed={collapsed} />
             <NavItem icon={<IconLayers className="h-[18px] w-[18px]" />} label="Informes" href="/informes" collapsed={collapsed} />
             <NavItem icon={<IconUpload className="h-[18px] w-[18px]" />} label="Incorporar" href="/incorporar" collapsed={collapsed} />
-            <NavItem icon={<IconFileText className="h-[18px] w-[18px]" />} label="Tickets" href="/tickets" collapsed={collapsed} />
+            <NavItem icon={<IconFileText className="h-[18px] w-[18px]" />} label="Remitos" href="/tickets" collapsed={collapsed} />
           </nav>
 
           {!collapsed && (

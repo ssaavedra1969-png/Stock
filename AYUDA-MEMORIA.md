@@ -25,6 +25,8 @@ npm install
 npm run dev        # http://localhost:3000
 npm run lint       # lint
 npm run build      # build de producción (NO correr con `npm run dev` activo)
+npm run start      # arranca el build en http://localhost:3000
+npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
 ```
 
 - `npm run dev` usa `.env.local` (ignorado por git) con `GITHUB_BRANCH=dev` → trabaja contra
@@ -721,6 +723,63 @@ distinguir las dos razones sociales, conservar la observación para revisión.
   acepta abreviaturas únicamente dentro de un campo etiquetado; fuera de esos campos exige
   evidencia de `ARENERA` y `CANELONES` juntos. No se agregan automáticamente granulometrías
   dudosas al catálogo.
+
+### EN CURSO → HECHO (sesión 2026-10-22, tanda 2): edición sencilla, ver PDF, orden y tablas canónicas
+
+**Objetivo:** hacer más simple la revisión de la tabla de registros y alimentar la base de
+conocimiento con tablas canónicas de Razón Social y Material.
+
+#### Cambios de interfaz (`app/tickets/page.js`)
+
+- **Edición sencilla:** al editar una fila, `Razon Social` y `Material` se eligen de un `<select>`
+  poblado con las tablas canónicas (`MATERIALES`, `RAZONES_SOCIALES` de `lib/tickets/base.mjs` más
+  lo aprendido en `base.json`). El resto de los campos sigue siendo texto libre. Los inputs
+  autoseleccionan su contenido al enfocar; `Enter` guarda la edición y `Esc` la cancela.
+- **Clic para ver el PDF:** cualquier celda con dato es un enlace que abre el PDF original (antes
+  solo las celdas marcadas en rojo). El enlace llama a `abrirPdf()`, que busca el `File` ya leído
+  en memoria y lo abre con `URL.createObjectURL`; si no está en memoria, cae al endpoint
+  `/api/tickets/pdf` como respaldo.
+- **Ordenar por cualquier columna:** los encabezados de la tabla son botones clicables con
+  indicador `▲/▼/↕`; ordenan ascendente/descendente. `Fecha` y `Neto`/`Peso Neto` ordenan
+  numéricamente, el resto de forma alfabética natural.
+
+#### Tablas canónicas (`lib/tickets/base.mjs` + `lib/tickets/extract.mjs`)
+
+- Se exportan `RAZONES_SOCIALES` (`ALMAJO NORTE`, `ARENERA CANELONES`) y `MATERIALES` (los ocho
+  tipos conocidos) desde `base.mjs`, y se suman al objeto `BASE` como `razonesSociales` y
+  `materiales`.
+- `resolverDesdeLista(valor, lista, umbral)` compara con distancia de Levenshtein y devuelve la
+  entrada canónica más parecida marcando `exacto`, `similar` y `dudoso` (por debajo del umbral
+  0.72). `resolverEnTexto(texto, lista)` busca una entrada canónica dentro de un texto largo.
+- `extractRazonSocial` y `extractMaterial` devuelven `{ valor, leido, similar, dudoso, conflicto }`:
+  asignan siempre la clave canónica más parecida y avisan cuando no es coincidencia exacta.
+- `extractRecord` marca `_revision` cuando la razón social o el material no coinciden exacto, son
+  dudosos o hay conflicto entre hojas. `revisarRegistro` valida contra las listas exportadas
+  (`MATERIALES_OK`, `RAZONES_OK`).
+- `unirBase` ahora preserva y fusiona los arrays `razonesSociales` y `materiales` (además de las
+  claves que ya tenía la whitelist), para que no se pierdan al combinar bases.
+
+#### Producción / deploy
+
+- En Vercel el endpoint `/api/tickets/pdf` está bloqueado a propósito (devuelve 501): el servidor
+  de Vercel no ve `\\Admin1`. Con el cambio de `abrirPdf()` el PDF se abre desde el navegador
+  mientras los PDFs estén en memoria (flujo leer → revisar → incorporar en la misma sesión). Si se
+  recarga la página sin haber leído los PDFs, el enlace cae al endpoint y en Vercel falla.
+- Para usar la app en la red local desde cualquier PC: una PC corre `npm run build` y
+  `npm start -- -H 0.0.0.0` (o `next start -H 0.0.0.0 -p 3000`), y las demás entran por
+  `http://<IP-de-esa-PC>:3000`. Cada PC necesita Chrome o Edge y acceso al compartido de red;
+  nada más que instalar. El OCR corre en el navegador de cada PC.
+- Si se elige servir desde la PC del estudio, configurar en su `.env.local`
+  `TICKETS_ENTRADA` y `TICKETS_PROCESADOS` apuntando al compartido para que el respaldo del PDF
+  funcione, y abrir el puerto 3000 en el firewall.
+
+#### Verificación
+
+- `npm run lint` pasa (queda el warning preexistente de dependencias de `useEffect` en
+  `app/tickets/page.js`). `GET /tickets` responde HTTP 200.
+- Prueba unitaria de `extract.mjs`: `ALMAJ0 NORTE` se resuelve como `ALMAJO NORTE`
+  (`similar: true`, ratio ≈ 0.92); conflicto LCE entre hojas marca `dudoso/conflicto`;
+  `unirBase` conserva las listas canónicas.
 
 ## 10. TOMAR EL PROYECTO DESDE OTRA PC
 

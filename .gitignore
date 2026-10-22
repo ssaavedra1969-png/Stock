@@ -54,6 +54,9 @@ dev-server*.err.log
 /entrada/Entrada_01.xlsx
 /entrada/Salida_01.xlsx
 /entrada/*.pdf
+Entrada/
+procesados/
+Salida/
 .vercel
 .env*
 
