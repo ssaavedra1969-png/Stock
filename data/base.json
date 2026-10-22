@@ -51,6 +51,32 @@
     "LCE|112353": "AH919IQ",
     "LCE|112354": "AH919KE",
     "LCE|112355": "AH784OW",
-    "AVE|2740550": "AH784OY"
-  }
+    "AVE|2740550": "AH784OY",
+    "AVE|165420": "AH919IQ"
+  },
+  "correccionesPorTicket": {
+    "AVE|165420": {
+      "Fecha": "10/10/2026",
+      "N Remito": "165420",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "35.300",
+      "Peso Neto": "35.280",
+      "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
+      "Pat. Chasis": "AH919IQ"
+    }
+  },
+  "correccionesPorArchivo": {
+    "AVE|AVE.PDF": {
+      "Fecha": "10/10/2026",
+      "N Remito": "165420",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "35.300",
+      "Peso Neto": "35.280",
+      "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
+      "Pat. Chasis": "AH919IQ"
+    }
+  },
+  "reglasLectura": {}
 }
