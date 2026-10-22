@@ -1,0 +1,53 @@
+{
+  "patentes": {
+    "WILBERGER": [
+      "AH784OW"
+    ]
+  },
+  "choferes": {
+    "WILBERGER": "WILBERGER JUIAR MANUEL"
+  },
+  "netos": {},
+  "patentesPorTicket": {
+    "LCE|112392": "AH784OW"
+  },
+  "correccionesPorTicket": {
+    "LCE|112392": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112392",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": "35.520",
+      "Peso Neto": "36.140",
+      "Chofer": "WILBERGER JUIAR MANUEL",
+      "Pat. Chasis": "AH784OW"
+    }
+  },
+  "correccionesPorArchivo": {
+    "LCE|IMG-261019121519-001.PDF": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112392",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": "35.520",
+      "Peso Neto": "36.140",
+      "Chofer": "WILBERGER JUIAR MANUEL",
+      "Pat. Chasis": "AH784OW"
+    }
+  },
+  "reglasLectura": {},
+  "razonesSociales": [
+    "ALMAJO NORTE",
+    "ARENERA CANELONES"
+  ],
+  "materiales": [
+    "ARENA MODULO 1.8-1.9",
+    "ARENA FINA",
+    "ARENA GRANITICA 0/6",
+    "PIEDRA PARTIDA 0/6",
+    "PIEDRA PARTIDA 6/12",
+    "PIEDRA PARTIDA 6/20",
+    "PIEDRA PARTIDA 10/30",
+    "CTO AVELLANEDA"
+  ]
+}
