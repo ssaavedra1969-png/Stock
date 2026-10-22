@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { revisarRegistro } from '@/lib/tickets/extract.mjs';
 import {
   IconUpload,
   IconFileText,
@@ -31,19 +32,14 @@ const CAMPOS = [
 const CENTROS = ['Lujan', 'Campana'];
 const CARGAS = ['Entrada', 'Salida'];
 
-// Campos que deben venir sí o sí del ticket.
-const CAMPOS_CLAVE = ['Fecha', 'N Remito', 'Material', 'Neto', 'Peso Neto', 'Chofer', 'Pat. Chasis'];
-
 function sinDato(valor) {
   const v = valor === undefined || valor === null ? '' : String(valor).trim();
   return v === '' || v.toUpperCase() === 'N/D';
 }
 
 function tieneFaltantes(registro) {
-  return CAMPOS_CLAVE.some((c) => sinDato(registro[c]));
+  return Object.keys(revisarRegistro(registro)).length > 0;
 }
-
-const PREVIEW_MAX = 200;
 
 function fmtBytes(n) {
   if (!Number.isFinite(n)) return '';
@@ -67,7 +63,7 @@ function ordenarPorFecha(registros) {
 }
 
 export default function TicketsPage() {
-  const { showToast, tickets, procesarTickets, limpiarTickets } = useApp();
+  const { showToast, tickets, procesarTickets, limpiarTickets, guardarBase } = useApp();
   const inputRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [arrastrando, setArrastrando] = useState(false);
@@ -80,8 +76,11 @@ export default function TicketsPage() {
   const [carga, setCarga] = useState('');
   const [carpeta, setCarpeta] = useState(null); // { handle, nombre } — carpeta STOCK
   const [eligiendoCarpeta, setEligiendoCarpeta] = useState(false);
+  const [leyendoEntrada, setLeyendoEntrada] = useState(false);
   const [clavesPlanilla, setClavesPlanilla] = useState(null); // Set "Proveedor|Remito" del historial
   const [mostrarModalDuplicados, setMostrarModalDuplicados] = useState(false);
+  const [confirmacionVisual, setConfirmacionVisual] = useState(false);
+  const [guardandoAprendizaje, setGuardandoAprendizaje] = useState(false);
 
   const procesando = tickets.procesando;
   const resultado = tickets.resultado;
@@ -101,6 +100,11 @@ export default function TicketsPage() {
 
   const nNuevos = useMemo(() => registros.filter((r) => r.Estado !== 'DUPLICADO').length, [registros]);
   const nDuplicados = registros.length - nNuevos;
+  const registrosConObservaciones = useMemo(
+    () => registros.filter((r) => Object.keys(revisarRegistro(r)).length > 0),
+    [registros]
+  );
+  const erroresLectura = resultado?.errores || [];
 
   const alertas = useMemo(() => {
     if (!resultado) return [];
@@ -157,10 +161,12 @@ export default function TicketsPage() {
     setFiles([]);
     limpiarTickets();
     setRegistrosEditados([]);
+    setHuboEdiciones(false);
     setEditandoIdx(null);
     setValoresEdit({});
     setCentro('');
     setCarga('');
+    setConfirmacionVisual(false);
     if (inputRef.current) inputRef.current.value = '';
   }
 
@@ -193,6 +199,28 @@ export default function TicketsPage() {
     }
   }
 
+  async function leerEntrada() {
+    if (!carpeta?.handle) {
+      showToast('Elegí primero la carpeta STOCK', 'error');
+      return;
+    }
+    setLeyendoEntrada(true);
+    try {
+      const { leerPdfDeEntrada } = await import('@/lib/tickets/archivo.mjs');
+      const pdfs = await leerPdfDeEntrada(carpeta.handle);
+      if (pdfs.length === 0) {
+        showToast('No hay archivos PDF en Entrada', 'error');
+        return;
+      }
+      addFiles(pdfs);
+      showToast(`${pdfs.length} PDF(s) de Entrada listos para lectura`);
+    } catch (err) {
+      showToast(err.message || 'No se pudieron leer los PDF de Entrada', 'error');
+    } finally {
+      setLeyendoEntrada(false);
+    }
+  }
+
   async function procesar() {
     if (files.length === 0) return;
     setRegistrosEditados([]);
@@ -209,6 +237,7 @@ export default function TicketsPage() {
 
   function iniciarEdicion(idx) {
     const r = registros[idx];
+    setConfirmacionVisual(false);
     setEditandoIdx(idx);
     setValoresEdit({ ...r });
   }
@@ -222,9 +251,15 @@ export default function TicketsPage() {
     setRegistrosEditados((prev) => {
       const base = resultado?.registros || [];
       const lista = prev.length > 0 ? [...prev] : [...base];
-      lista[idx] = { ...valoresEdit };
+      const revision = { ...(valoresEdit._revision || {}) };
+      for (const campo of Object.keys(valoresEdit)) delete revision[campo];
+      const editado = { ...valoresEdit, _revision: revision };
+      if (Object.keys(revision).length === 0) delete editado._revision;
+      const indiceReal = lista.findIndex((r) => r.Archivo === editado.Archivo);
+      lista[indiceReal >= 0 ? indiceReal : idx] = editado;
       return lista;
     });
+    setConfirmacionVisual(false);
     setHuboEdiciones(true);
     setEditandoIdx(null);
     setValoresEdit({});
@@ -235,9 +270,12 @@ export default function TicketsPage() {
     setRegistrosEditados((prev) => {
       const base = resultado?.registros || [];
       const lista = prev.length > 0 ? [...prev] : [...base];
-      lista.splice(idx, 1);
+      const archivo = registros[idx]?.Archivo;
+      const indiceReal = lista.findIndex((r) => r.Archivo === archivo);
+      lista.splice(indiceReal >= 0 ? indiceReal : idx, 1);
       return lista;
     });
+    setConfirmacionVisual(false);
     setHuboEdiciones(true);
     showToast('Registro eliminado');
   }
@@ -246,8 +284,59 @@ export default function TicketsPage() {
     setValoresEdit((prev) => ({ ...prev, [campo]: valor }));
   }
 
+  async function confirmarRevision(checked) {
+    if (!checked) {
+      setConfirmacionVisual(false);
+      return;
+    }
+    if (guardandoAprendizaje || !resultado) return;
+
+    setGuardandoAprendizaje(true);
+    try {
+      const filas = registros.map((r) => ({
+        ...Object.fromEntries(CAMPOS.map((c) => [c, r[c]])),
+        Archivo: r.Archivo,
+      }));
+      const originales = new Map((resultado.registros || []).map((r) => [r.Archivo, r]));
+      const camposCorregibles = CAMPOS.filter((c) => !['Proveedor', 'Centro', 'Carga'].includes(c));
+      const correcciones = registros.flatMap((corregido) => {
+        const original = originales.get(corregido.Archivo);
+        if (!original) return [];
+        const cambios = Object.fromEntries(
+          camposCorregibles
+            .filter((campo) => String(original[campo] ?? '').trim() !== String(corregido[campo] ?? '').trim())
+            .map((campo) => [campo, { de: original[campo], a: corregido[campo] }])
+        );
+        return Object.keys(cambios).length ? [{ original, corregido, cambios }] : [];
+      });
+      const data = await guardarBase(filas, correcciones);
+      setConfirmacionVisual(true);
+      const learned = data.aprendidos || {};
+      showToast(
+        `Revisión confirmada · base de lectura actualizada (${learned.tickets || 0} tickets, ${learned.reglas || 0} reglas)`
+      );
+    } catch (err) {
+      setConfirmacionVisual(false);
+      showToast(`No se pudo guardar el aprendizaje: ${err.message || 'error de conexión'}`, 'error');
+    } finally {
+      setGuardandoAprendizaje(false);
+    }
+  }
+
   async function incorporar() {
     if (registros.length === 0) return;
+    if (erroresLectura.length > 0) {
+      showToast('Resolvé los errores de lectura o quitá esos PDF antes de incorporar', 'error');
+      return;
+    }
+    if (registrosConObservaciones.length > 0) {
+      showToast('Revisá y corregí todos los campos marcados antes de incorporar', 'error');
+      return;
+    }
+    if (!confirmacionVisual) {
+      showToast('Confirmá que revisaste cada registro contra su PDF original', 'error');
+      return;
+    }
     if (!centro || !carga) {
       showToast('Seleccioná el Centro y la Carga antes de incorporar', 'error');
       return;
@@ -302,7 +391,7 @@ export default function TicketsPage() {
       <Paso
         n="1"
         titulo="Cargá los tickets"
-        ayuda="Arrastrá los PDF de pesaje o elegí los archivos. Se leen solos con OCR (puede tardar unos segundos)."
+        ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK y leé los PDF de Entrada."
       >
         <div
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
@@ -371,7 +460,7 @@ export default function TicketsPage() {
       <Paso
         n="2"
         titulo="Revisá y completá"
-        ayuda="Elegí STORK y el Centro y la Carga. Revisá que los datos leídos sean correctos."
+        ayuda="Elegí STOCK y el Centro y la Carga. Revisá que los datos leídos sean correctos."
       >
         <div className="space-y-2 border-t border-white/5 pt-3 mb-3">
           <div className="flex flex-wrap items-center gap-3">
@@ -382,17 +471,26 @@ export default function TicketsPage() {
               className="btn-ghost !px-3 !py-1.5 !text-xs"
             >
               <IconUpload className="h-3.5 w-3.5" />
-              {eligiendoCarpeta ? 'Abriendo…' : carpeta ? 'Cambiar STORK' : 'Elegir carpeta STORK'}
+              {eligiendoCarpeta ? 'Abriendo…' : carpeta ? 'Cambiar STOCK' : 'Elegir carpeta STOCK'}
+            </button>
+            <button
+              type="button"
+              onClick={leerEntrada}
+              disabled={!carpeta || leyendoEntrada || procesando}
+              className="btn-ghost !px-3 !py-1.5 !text-xs"
+            >
+              <IconFileText className="h-3.5 w-3.5" />
+              {leyendoEntrada ? 'Leyendo Entrada…' : 'Leer PDFs de Entrada'}
             </button>
             <span className="text-[11px] text-slate-400">
               {carpeta ? (
                 <>
-                  STORK: <span className="font-mono text-slate-200">{carpeta.nombre}</span> ·
+                  STOCK: <span className="font-mono text-slate-200">{carpeta.nombre}</span> ·
                   {clavesPlanilla ? `${clavesPlanilla.size} registro(s) en el historial` : ''}
                 </>
               ) : (
                 <>
-                  Elegí la carpeta <span className="font-mono text-slate-300">STORK</span> (la que tiene{' '}
+                  Elegí la carpeta <span className="font-mono text-slate-300">STOCK</span> (la que tiene{' '}
                   <span className="font-mono text-slate-300">Entrada</span>,{' '}
                   <span className="font-mono text-slate-300">Salida</span> y{' '}
                   <span className="font-mono text-slate-300">procesados</span>).
@@ -436,7 +534,7 @@ export default function TicketsPage() {
           </label>
           <p className="mb-2 text-[11px] text-slate-500">
             {centro && carga
-              ? <span className="text-emerald-400">Listo para incorporar</span>
+              ? <span className="text-emerald-400">Centro y carga seleccionados</span>
               : <span className="text-amber-400">Obligatorio para incorporar</span>}
           </p>
         </div>
@@ -444,12 +542,13 @@ export default function TicketsPage() {
         {/* Resultado */}
         {hayResultado && (
           <div className="space-y-3 border-t border-white/5 pt-3">
-          <div className="grid grid-cols-5 gap-1.5">
+          <div className="grid grid-cols-6 gap-1.5">
             <Stat label="Archivos" value={resultado.total ?? 0} cls="text-slate-100" />
             <Stat label="Nuevos" value={nNuevos} cls="text-emerald-400" />
             <Stat label="Duplicados" value={nDuplicados} cls="text-amber-400" />
             <Stat label="Similares" value={resultado.similares ?? 0} cls="text-falpat-soft" />
-            <Stat label="Errores" value={(resultado.errores || []).length} cls={(resultado.errores || []).length ? 'text-red-400' : 'text-slate-400'} />
+            <Stat label="Revisar" value={registrosConObservaciones.length} cls={registrosConObservaciones.length ? 'text-red-400' : 'text-emerald-400'} />
+            <Stat label="Errores" value={erroresLectura.length} cls={erroresLectura.length ? 'text-red-400' : 'text-slate-400'} />
           </div>
 
           {alertas.length > 0 && !mostrarModalDuplicados && (
@@ -490,7 +589,7 @@ export default function TicketsPage() {
           {registros.length > 0 && (
             <div>
               <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                {registros.length} registros por fecha — editá o eliminá antes de exportar
+                    {registros.length} registros — revisá todos contra sus PDF antes de exportar
               </p>
               <div className="table-scroll rounded-lg border border-white/10">
                 <table className="w-full text-xs">
@@ -499,12 +598,15 @@ export default function TicketsPage() {
                       {CAMPOS.map((c) => (
                         <th key={c} className="whitespace-nowrap px-2 py-1.5 font-semibold">{c}</th>
                       ))}
+                      <th className="px-2 py-1.5 font-semibold">PDF / Archivo</th>
                       <th className="px-2 py-1.5 font-semibold">Estado</th>
                       <th className="px-2 py-1.5 font-semibold">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {registros.slice(0, PREVIEW_MAX).map((r, i) => (
+                    {registros.map((r, i) => {
+                      const dudosos = revisarRegistro(r);
+                      return (
                       <tr key={i} className="border-t border-white/5">
                         {CAMPOS.map((c) => {
                           if (c === 'Centro' || c === 'Carga') {
@@ -519,9 +621,12 @@ export default function TicketsPage() {
                           }
                           const crudo = r[c];
                           const falta = sinDato(crudo);
+                          const motivo = dudosos[c];
+                          const rojo = !!motivo || falta;
                           const mono = c === 'N Remito' || c === 'Pat. Chasis';
+                          const rojoCls = 'rounded bg-red-500/15 px-1 font-bold text-red-300';
                           return (
-                            <td key={c} className="whitespace-nowrap px-2 py-1 text-slate-300">
+                            <td key={c} className="whitespace-nowrap px-2 py-1 text-slate-300" title={motivo || undefined}>
                               {editandoIdx === i ? (
                                 <input
                                   type="text"
@@ -529,24 +634,39 @@ export default function TicketsPage() {
                                   onChange={(e) => campoEditado(c, e.target.value)}
                                   className="w-20 rounded border border-white/10 bg-night-900 px-1 py-0.5 text-[11px] text-slate-200 outline-none focus:border-falpat/50"
                                 />
-                              ) : falta && r.Archivo ? (
+                              ) : rojo && r.Archivo ? (
                                 <a
                                   href={`/api/tickets/pdf?file=${encodeURIComponent(r.Archivo)}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  title={`Ver PDF: ${r.Archivo}`}
-                                  className={`inline-block rounded bg-red-500/15 px-1 font-bold text-red-300 underline decoration-dotted underline-offset-2 hover:bg-red-500/25 ${mono ? 'font-mono text-[10px]' : 'text-[11px]'}`}
+                                  title={motivo ? `${motivo} · Ver PDF: ${r.Archivo}` : `Ver PDF: ${r.Archivo}`}
+                                  className={`inline-block ${rojoCls} underline decoration-dotted underline-offset-2 hover:bg-red-500/25 ${mono ? 'font-mono text-[10px]' : 'text-[11px]'}`}
                                 >
-                                  N/D
+                                  {falta ? 'N/D' : crudo}
                                 </a>
                               ) : (
-                                <span className={`${falta ? 'rounded bg-red-500/15 px-1 font-bold text-red-300' : ''} ${mono ? 'font-mono text-[10px]' : 'text-[11px]'}`}>
+                                <span className={`${rojo ? rojoCls : ''} ${mono ? 'font-mono text-[10px]' : 'text-[11px]'}`}>
                                   {falta ? 'N/D' : crudo}
                                 </span>
                               )}
                             </td>
                           );
                         })}
+                        <td className="whitespace-nowrap px-2 py-1">
+                          {r.Archivo ? (
+                            <a
+                              href={`/api/tickets/pdf?file=${encodeURIComponent(r.Archivo)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`Abrir PDF original: ${r.Archivo}`}
+                              className="inline-block max-w-[180px] truncate font-mono text-[10px] text-falpat-soft underline decoration-dotted underline-offset-2 hover:text-white"
+                            >
+                              {r.Archivo}
+                            </a>
+                          ) : (
+                            <span className="text-slate-500">N/D</span>
+                          )}
+                        </td>
                         <td className="px-2 py-1">
                           {r.Estado === 'DUPLICADO' ? (
                             <span className="badge badge-salida !text-[9px] !px-1.5 !py-0.5">Duplicado</span>
@@ -607,15 +727,11 @@ export default function TicketsPage() {
                           )}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-              {registros.length > PREVIEW_MAX && (
-                <p className="mt-1 text-[10px] text-slate-600">
-                  …y {registros.length - PREVIEW_MAX} más.
-                </p>
-              )}
             </div>
           )}
 
@@ -633,17 +749,37 @@ export default function TicketsPage() {
       <Paso
         n="3"
         titulo="Guardá el histórico"
-        ayuda="Se guarda el historial en Salida\Stock-Historico.xlsx y los PDF pasen solos de Entrada a procesados."
+        ayuda="Solo se incorpora si no hay campos dudosos ni errores y confirmaste la revisión visual de todos los PDF."
       >
+        <label className="flex items-start gap-2 text-xs text-slate-300">
+          <input
+            type="checkbox"
+            checked={confirmacionVisual}
+            onChange={(e) => confirmarRevision(e.target.checked)}
+            disabled={
+              registros.length === 0 ||
+              registrosConObservaciones.length > 0 ||
+              erroresLectura.length > 0 ||
+              procesando ||
+              guardandoAprendizaje
+            }
+            className="mt-0.5 accent-emerald-500"
+          />
+          <span>
+            {guardandoAprendizaje
+              ? 'Guardando lo aprendido…'
+              : 'Revisé cada registro contra su PDF original; guardá esta lectura para futuras tandas.'}
+          </span>
+        </label>
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-[11px] text-slate-400">
             {carpeta ? (
               <>
-                STORK: <span className="font-mono text-slate-200">{carpeta.nombre}</span> · todo automático
+                STOCK: <span className="font-mono text-slate-200">{carpeta.nombre}</span> · todo automático
               </>
             ) : (
               <>
-                Elegí STORK en el paso 2 antes de incorporar.
+                Elegí STOCK en el paso 2 antes de incorporar.
               </>
             )}
           </span>
@@ -653,7 +789,16 @@ export default function TicketsPage() {
           <button
             type="button"
             onClick={incorporar}
-            disabled={registros.length === 0 || incorporando || !carpeta || !centro || !carga}
+            disabled={
+              registros.length === 0 ||
+              incorporando ||
+              !carpeta ||
+              !centro ||
+              !carga ||
+              registrosConObservaciones.length > 0 ||
+              erroresLectura.length > 0 ||
+              !confirmacionVisual
+            }
             className="btn-primary"
           >
             <IconCheck className="h-4 w-4" />
@@ -665,8 +810,17 @@ export default function TicketsPage() {
           </button>
           <span className="text-[11px]">
             {(!centro || !carga) && <span className="text-amber-400">Falta elegir Centro y Carga. </span>}
-            {!carpeta && <span className="text-amber-400">Falta elegir STORK en el paso 2. </span>}
+            {!carpeta && <span className="text-amber-400">Falta elegir STOCK en el paso 2. </span>}
             {registros.length === 0 && <span className="text-slate-500">Cargá tickets para empezar.</span>}
+            {registrosConObservaciones.length > 0 && (
+              <span className="text-red-300">{registrosConObservaciones.length} registro(s) con campos por revisar. </span>
+            )}
+            {erroresLectura.length > 0 && (
+              <span className="text-red-300">{erroresLectura.length} PDF(s) no se pudieron leer. </span>
+            )}
+            {!confirmacionVisual && registros.length > 0 && registrosConObservaciones.length === 0 && erroresLectura.length === 0 && (
+              <span className="text-amber-400">Falta confirmar la revisión visual de todos los PDF.</span>
+            )}
           </span>
         </div>
       </Paso>

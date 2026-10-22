@@ -20,7 +20,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { fetchState, createRecord, removeRecord, updateRecord as updateRecordApi } from '@/lib/api';
+import { fetchState, fetchBase, saveBase, createRecord, removeRecord, updateRecord as updateRecordApi } from '@/lib/api';
 import { toMillis } from '@/lib/utils';
 
 const AppContext = createContext(null);
@@ -41,13 +41,32 @@ export function AppProvider({ children }) {
   // secciones, así el OCR sigue corriendo aunque el usuario cambie de página.
   const [tickets, setTickets] = useState({ procesando: false, resultado: null, error: '' });
 
+  // Base de conocimiento de tickets (data/base.json): se carga una vez y se
+  // va poblando sola con cada incorporacion.
+  const [baseConocimiento, setBaseConocimiento] = useState({});
+  const baseRef = useRef(baseConocimiento);
+  useEffect(() => {
+    baseRef.current = baseConocimiento;
+  }, [baseConocimiento]);
+
+  // Registros guardados accesibles desde el OCR (para aprender patentes por
+  // chofer) sin volver a declarar la dependencia en procesarTickets.
+  const recordsRef = useRef(records);
+  useEffect(() => {
+    recordsRef.current = records;
+  }, [records]);
+
   const procesarTickets = useCallback(async (files) => {
     setTickets({ procesando: true, resultado: null, error: '' });
     try {
       // El OCR corre en el propio navegador (pdf.js + tesseract.js): no
       // depende de un servidor con Python/Tesseract instalado.
-      const { procesarArchivos } = await import('@/lib/tickets/ocr.mjs');
-      const data = await procesarArchivos(files);
+      const [{ procesarArchivos }, { learnFromRecords, unirBase }] = await Promise.all([
+        import('@/lib/tickets/ocr.mjs'),
+        import('@/lib/tickets/extract.mjs'),
+      ]);
+      const base = unirBase(baseRef.current, learnFromRecords(recordsRef.current));
+      const data = await procesarArchivos(files, { base });
       setTickets({ procesando: false, resultado: data, error: '' });
       return data;
     } catch (err) {
@@ -97,6 +116,27 @@ export function AppProvider({ children }) {
   useEffect(() => {
     loadRecords();
   }, [loadRecords]);
+
+  // Base de conocimiento (data/base.json): se lee una vez al iniciar.
+  const loadBase = useCallback(async () => {
+    try {
+      setBaseConocimiento(await fetchBase());
+    } catch (err) {
+      console.error('Error leyendo la base de conocimiento:', err);
+    }
+  }, []);
+  useEffect(() => {
+    loadBase();
+  }, [loadBase]);
+
+  // Aprende de los tickets incorporados y actualiza la base persistida.
+  const guardarBase = useCallback(async (filas, correcciones = []) => {
+    const data = await saveBase(filas, correcciones);
+    if (!data?.base) throw new Error('El servidor no devolvió la base de conocimiento actualizada.');
+    setBaseConocimiento(data.base);
+    baseRef.current = data.base;
+    return data;
+  }, []);
 
   const openModal = useCallback((carga) => {
     setEditingRecord(null);
@@ -208,6 +248,8 @@ export function AppProvider({ children }) {
       tickets,
       procesarTickets,
       limpiarTickets,
+      baseConocimiento,
+      guardarBase,
     }),
     [
       records,
@@ -231,6 +273,8 @@ export function AppProvider({ children }) {
       tickets,
       procesarTickets,
       limpiarTickets,
+      baseConocimiento,
+      guardarBase,
     ]
   );
 
