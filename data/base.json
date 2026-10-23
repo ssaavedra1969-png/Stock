@@ -2,14 +2,24 @@
   "patentes": {
     "WILBERGER": [
       "AH784OW"
+    ],
+    "PRIMITERRA": [
+      "AH702XY"
+    ],
+    "AGUERD": [
+      "AH702YZ"
     ]
   },
   "choferes": {
-    "WILBERGER": "WILBERGER JUIAR MANUEL"
+    "WILBERGER": "WILBERGER JUIAR MANUEL",
+    "PRIMITERRA": "PRIMITERRA TONING",
+    "AGUERD": "AGUERD TOMAS AGUSTIN"
   },
   "netos": {},
   "patentesPorTicket": {
-    "LCE|112392": "AH784OW"
+    "LCE|112392": "AH784OW",
+    "LCE|112316": "AH702XY",
+    "LCE|112333": "AH702YZ"
   },
   "correccionesPorTicket": {
     "LCE|112392": {
@@ -21,6 +31,26 @@
       "Peso Neto": "36.140",
       "Chofer": "WILBERGER JUIAR MANUEL",
       "Pat. Chasis": "AH784OW"
+    },
+    "LCE|112316": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112316",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": "36220",
+      "Peso Neto": "35.020",
+      "Chofer": "PRIMITERRA TONING",
+      "Pat. Chasis": "AH702XY"
+    },
+    "LCE|112333": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112333",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "35460",
+      "Peso Neto": "35.280",
+      "Chofer": "AGUERD TOMAS AGUSTIN",
+      "Pat. Chasis": "AH702YZ"
     }
   },
   "correccionesPorArchivo": {
@@ -33,9 +63,31 @@
       "Peso Neto": "36.140",
       "Chofer": "WILBERGER JUIAR MANUEL",
       "Pat. Chasis": "AH784OW"
+    },
+    "LCE|IMG-261019122048-001.PDF": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112316",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": "36220",
+      "Peso Neto": "35.020",
+      "Chofer": "PRIMITERRA TONING",
+      "Pat. Chasis": "AH702XY"
+    },
+    "LCE|IMG-261019122226-001.PDF": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112333",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "35460",
+      "Peso Neto": "35.280",
+      "Chofer": "AGUERD TOMAS AGUSTIN",
+      "Pat. Chasis": "AH702YZ"
     }
   },
-  "reglasLectura": {},
+  "reglasLectura": {
+    "LCE|Material|PIEDRA PARTIDA 10 30": "PIEDRA PARTIDA 6/12"
+  },
   "razonesSociales": [
     "ALMAJO NORTE",
     "ARENERA CANELONES"
