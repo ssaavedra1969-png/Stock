@@ -24,7 +24,8 @@
     "LCE|112392": "AH784OW",
     "LCE|112316": "AH702XY",
     "LCE|112333": "AH702YZ",
-    "SPO|66006": "AG266CJ"
+    "SPO|66006": "AG266CJ",
+    "LCE|112376": "AH702YZ"
   },
   "correccionesPorTicket": {
     "LCE|112392": {
@@ -66,6 +67,16 @@
       "Peso Neto": "36.480",
       "Chofer": "GARCIA CRISTIAN",
       "Pat. Chasis": "AG266CJ"
+    },
+    "LCE|112376": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112376",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "34.520",
+      "Peso Neto": "34.720",
+      "Chofer": "AGUERD TOMAS AGUSTIN",
+      "Pat. Chasis": "AH702YZ"
     }
   },
   "correccionesPorArchivo": {
@@ -108,6 +119,16 @@
       "Peso Neto": "36.480",
       "Chofer": "GARCIA CRISTIAN",
       "Pat. Chasis": "AG266CJ"
+    },
+    "LCE|20261015_LCE_1.PDF": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112376",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "34.520",
+      "Peso Neto": "34.720",
+      "Chofer": "AGUERD TOMAS AGUSTIN",
+      "Pat. Chasis": "AH702YZ"
     }
   },
   "reglasLectura": {
