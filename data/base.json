@@ -8,18 +8,23 @@
     ],
     "AGUERD": [
       "AH702YZ"
+    ],
+    "GARCIA": [
+      "AG266CJ"
     ]
   },
   "choferes": {
     "WILBERGER": "WILBERGER JUIAR MANUEL",
     "PRIMITERRA": "PRIMITERRA TONING",
-    "AGUERD": "AGUERD TOMAS AGUSTIN"
+    "AGUERD": "AGUERD TOMAS AGUSTIN",
+    "GARCIA": "GARCIA CRISTIAN"
   },
   "netos": {},
   "patentesPorTicket": {
     "LCE|112392": "AH784OW",
     "LCE|112316": "AH702XY",
-    "LCE|112333": "AH702YZ"
+    "LCE|112333": "AH702YZ",
+    "SPO|66006": "AG266CJ"
   },
   "correccionesPorTicket": {
     "LCE|112392": {
@@ -51,6 +56,16 @@
       "Peso Neto": "35.280",
       "Chofer": "AGUERD TOMAS AGUSTIN",
       "Pat. Chasis": "AH702YZ"
+    },
+    "SPO|66006": {
+      "Fecha": "15/10/2026",
+      "N Remito": "66006",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA FINA",
+      "Neto": "34.600",
+      "Peso Neto": "36.480",
+      "Chofer": "GARCIA CRISTIAN",
+      "Pat. Chasis": "AG266CJ"
     }
   },
   "correccionesPorArchivo": {
@@ -83,10 +98,21 @@
       "Peso Neto": "35.280",
       "Chofer": "AGUERD TOMAS AGUSTIN",
       "Pat. Chasis": "AH702YZ"
+    },
+    "SPO|IMG-261019120909-001.PDF": {
+      "Fecha": "15/10/2026",
+      "N Remito": "66006",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA FINA",
+      "Neto": "34.600",
+      "Peso Neto": "36.480",
+      "Chofer": "GARCIA CRISTIAN",
+      "Pat. Chasis": "AG266CJ"
     }
   },
   "reglasLectura": {
-    "LCE|Material|PIEDRA PARTIDA 10 30": "PIEDRA PARTIDA 6/12"
+    "LCE|Material|PIEDRA PARTIDA 10 30": "PIEDRA PARTIDA 6/12",
+    "SPO|Material|WOK IE TRI TIMA KRLPSIAN FAL BREA EIA CROECERR R10 CDLE MINERS": "ARENA FINA"
   },
   "razonesSociales": [
     "ALMAJO NORTE",
