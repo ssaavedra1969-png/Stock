@@ -11,13 +11,17 @@
     ],
     "GARCIA": [
       "AG266CJ"
+    ],
+    "DIERICKX": [
+      "AH604EL"
     ]
   },
   "choferes": {
     "WILBERGER": "WILBERGER JUIAR MANUEL",
     "PRIMITERRA": "PRIMITERRA TONING",
     "AGUERD": "AGUERD TOMAS AGUSTIN",
-    "GARCIA": "GARCIA CRISTIAN"
+    "GARCIA": "GARCIA CRISTIAN",
+    "DIERICKX": "DIERICKX CARLOS"
   },
   "netos": {},
   "patentesPorTicket": {
@@ -25,7 +29,8 @@
     "LCE|112316": "AH702XY",
     "LCE|112333": "AH702YZ",
     "SPO|66006": "AG266CJ",
-    "LCE|112376": "AH702YZ"
+    "LCE|112376": "AH702YZ",
+    "AVE|166348": "AH604EL"
   },
   "correccionesPorTicket": {
     "LCE|112392": {
@@ -77,6 +82,16 @@
       "Peso Neto": "34.720",
       "Chofer": "AGUERD TOMAS AGUSTIN",
       "Pat. Chasis": "AH702YZ"
+    },
+    "AVE|166348": {
+      "Fecha": "08/10/2026",
+      "N Remito": "166348",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "35.400",
+      "Peso Neto": "35.480",
+      "Chofer": "DIERICKX CARLOS",
+      "Pat. Chasis": "AH604EL"
     }
   },
   "correccionesPorArchivo": {
@@ -129,6 +144,16 @@
       "Peso Neto": "34.720",
       "Chofer": "AGUERD TOMAS AGUSTIN",
       "Pat. Chasis": "AH702YZ"
+    },
+    "AVE|IMG-261019135808-001.PDF": {
+      "Fecha": "08/10/2026",
+      "N Remito": "166348",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "35.400",
+      "Peso Neto": "35.480",
+      "Chofer": "DIERICKX CARLOS",
+      "Pat. Chasis": "AH604EL"
     }
   },
   "reglasLectura": {
