@@ -766,26 +766,26 @@ export default function TicketsPage() {
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-night-800">
                     <tr className="text-left text-[9px] uppercase tracking-wider text-slate-500">
-                      {COLUMNAS_TABLA.map((c) => {
-                        const activo = orden.campo === c;
-                        return (
-                          <th key={c} className="whitespace-nowrap px-2 py-1.5 font-semibold">
-                            <button
-                              type="button"
-                              onClick={() => cambiarOrden(c)}
-                              className={`inline-flex items-center gap-1 uppercase tracking-wider transition hover:text-slate-200 ${
-                                activo ? 'text-falpat-soft' : ''
-                              }`}
-                              title={`Ordenar por ${c === 'Archivo' ? 'PDF / Archivo' : c}`}
-                            >
-                              {c === 'Archivo' ? 'PDF / Archivo' : c}
-                              <span className={`text-[8px] ${activo ? 'text-falpat' : 'text-slate-600'}`}>
-                                {activo ? (orden.dir === 'asc' ? '▲' : '▼') : '↕'}
-                              </span>
-                            </button>
-                          </th>
-                        );
-                      })}
+                          {COLUMNAS_TABLA.map((c) => {
+                            const activo = orden.campo === c;
+                            return (
+                              <th key={c} className="whitespace-nowrap px-2 py-1.5 font-semibold">
+                                <button
+                                  type="button"
+                                  onClick={() => cambiarOrden(c)}
+                                  className={`inline-flex items-center gap-1 uppercase tracking-wider transition hover:text-slate-200 ${
+                                    activo ? 'text-falpat-soft' : ''
+                                  }`}
+                                  title={`Ordenar por ${c === 'Archivo' ? 'PDF' : c}`}
+                                >
+                                  {c === 'Archivo' ? 'PDF' : c}
+                                  <span className={`text-[8px] ${activo ? 'text-falpat' : 'text-slate-600'}`}>
+                                    {activo ? (orden.dir === 'asc' ? '▲' : '▼') : '↕'}
+                                  </span>
+                                </button>
+                              </th>
+                            );
+                          })}
                       <th className="px-2 py-1.5 font-semibold">Acciones</th>
                     </tr>
                   </thead>
@@ -876,7 +876,7 @@ export default function TicketsPage() {
                             </td>
                           );
                         })}
-                        <td className="whitespace-nowrap px-2 py-1">
+                        <td className="whitespace-nowrap px-1 py-1">
                           {r.Archivo ? (
                             <a
                               href={`/api/tickets/pdf?file=${encodeURIComponent(r.Archivo)}`}
@@ -884,12 +884,13 @@ export default function TicketsPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               title={`Abrir PDF original: ${r.Archivo}`}
-                              className="inline-block max-w-[180px] truncate font-mono text-[10px] text-falpat-soft underline decoration-dotted underline-offset-2 hover:text-white"
+                              className="inline-flex items-center gap-1 rounded p-0.5 text-falpat-soft hover:bg-white/5 hover:text-white"
                             >
-                              {r.Archivo}
+                              <IconFileText className="h-3 w-3 shrink-0" />
+                              <span className="text-[9px] uppercase tracking-wider">PDF</span>
                             </a>
                           ) : (
-                            <span className="text-slate-500">N/D</span>
+                            <span className="px-0.5 text-slate-500">—</span>
                           )}
                         </td>
                         <td className="px-2 py-1">
