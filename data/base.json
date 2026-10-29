@@ -101,6 +101,16 @@
       "Peso Neto": "34.720",
       "Chofer": "AGUERD TOMAS AGUSTIN",
       "Pat. Chasis": "AH702YZ"
+    },
+    "LCE|112363": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112363",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": "35760",
+      "Peso Neto": "36.780",
+      "Chofer": "PRIMITERRA TONINO",
+      "Pat. Chasis": "AH702XY"
     }
   },
   "correccionesPorArchivo": {
@@ -143,9 +153,20 @@
       "Peso Neto": "34.720",
       "Chofer": "AGUERD TOMAS AGUSTIN",
       "Pat. Chasis": "AH702YZ"
+    },
+    "LCE|20261015_LCE_7.PDF": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112363",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": "35760",
+      "Peso Neto": "36.780",
+      "Chofer": "PRIMITERRA TONINO",
+      "Pat. Chasis": "AH702XY"
     }
   },
   "reglasLectura": {
-    "SPO|Material|ELPEITN GY KREME WOTULO 1 13 3 EN CRERCERA RID TALS 37 5 GULA WLNE ZA 3 0 PAS KL MOVAS": "ARENA GRANITICA 0/6"
+    "SPO|Material|ELPEITN GY KREME WOTULO 1 13 3 EN CRERCERA RID TALS 37 5 GULA WLNE ZA 3 0 PAS KL MOVAS": "ARENA GRANITICA 0/6",
+    "LCE|Material|N D": "ARENA GRANITICA 0/6"
   }
 }
