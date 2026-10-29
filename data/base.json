@@ -53,7 +53,8 @@
     "LCE|112355": "AH784OW",
     "AVE|2740550": "AH784OY",
     "AVE|165420": "AH919IQ",
-    "SPO|43688": "AG894ER"
+    "SPO|43688": "AG894ER",
+    "AVE|741125": "AH919IQ"
   },
   "correccionesPorTicket": {
     "AVE|165420": {
@@ -75,6 +76,16 @@
       "Peso Neto": "37.980",
       "Chofer": "OCHOA ANIBAL",
       "Pat. Chasis": "AG894ER"
+    },
+    "AVE|741125": {
+      "Fecha": "15/10/2026",
+      "N Remito": "741125",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "CTO AVELLANEDA",
+      "Neto": "36.500",
+      "Peso Neto": "35.890",
+      "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
+      "Pat. Chasis": "AH919IQ"
     }
   },
   "correccionesPorArchivo": {
@@ -97,23 +108,19 @@
       "Peso Neto": "37.980",
       "Chofer": "OCHOA ANIBAL",
       "Pat. Chasis": "AG894ER"
+    },
+    "AVE|20261015_CEMENTOAVELLANEDA_1.PDF": {
+      "Fecha": "15/10/2026",
+      "N Remito": "741125",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "CTO AVELLANEDA",
+      "Neto": "36.500",
+      "Peso Neto": "35.890",
+      "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
+      "Pat. Chasis": "AH919IQ"
     }
   },
   "reglasLectura": {
     "SPO|Material|ELPEITN GY KREME WOTULO 1 13 3 EN CRERCERA RID TALS 37 5 GULA WLNE ZA 3 0 PAS KL MOVAS": "ARENA GRANITICA 0/6"
-  },
-  "razonesSociales": [
-    "ALMAJO NORTE",
-    "ARENERA CANELONES"
-  ],
-  "materiales": [
-    "ARENA MODULO 1.8-1.9",
-    "ARENA FINA",
-    "ARENA GRANITICA 0/6",
-    "PIEDRA PARTIDA 0/6",
-    "PIEDRA PARTIDA 6/12",
-    "PIEDRA PARTIDA 6/20",
-    "PIEDRA PARTIDA 10/30",
-    "CTO AVELLANEDA"
-  ]
+  }
 }
