@@ -23,6 +23,9 @@
     ],
     "TOLOSA": [
       "AH784OY"
+    ],
+    "AGUERD": [
+      "AH702YZ"
     ]
   },
   "choferes": {
@@ -33,7 +36,8 @@
     "LEDESMA": "LEDESMA CAMILO",
     "WILBERGER": "WILBERGER JUAN",
     "PIACENTINI": "PIACENTINI ALEJANDRO MIGUEL",
-    "TOLOSA": "TOLOSA CESAR"
+    "TOLOSA": "TOLOSA CESAR",
+    "AGUERD": "AGUERD TOMAS AGUSTIN"
   },
   "netos": {},
   "patentesPorTicket": {
@@ -54,7 +58,8 @@
     "AVE|2740550": "AH784OY",
     "AVE|165420": "AH919IQ",
     "SPO|43688": "AG894ER",
-    "AVE|741125": "AH919IQ"
+    "AVE|741125": "AH919IQ",
+    "LCE|112376": "AH702YZ"
   },
   "correccionesPorTicket": {
     "AVE|165420": {
@@ -86,6 +91,16 @@
       "Peso Neto": "35.890",
       "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
       "Pat. Chasis": "AH919IQ"
+    },
+    "LCE|112376": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112376",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "34.520",
+      "Peso Neto": "34.720",
+      "Chofer": "AGUERD TOMAS AGUSTIN",
+      "Pat. Chasis": "AH702YZ"
     }
   },
   "correccionesPorArchivo": {
@@ -118,6 +133,16 @@
       "Peso Neto": "35.890",
       "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
       "Pat. Chasis": "AH919IQ"
+    },
+    "LCE|20261015_LCE_4.PDF": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112376",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": "34.520",
+      "Peso Neto": "34.720",
+      "Chofer": "AGUERD TOMAS AGUSTIN",
+      "Pat. Chasis": "AH702YZ"
     }
   },
   "reglasLectura": {
