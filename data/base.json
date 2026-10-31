@@ -14,6 +14,9 @@
     ],
     "DIERICKX": [
       "AH604EL"
+    ],
+    "RODRIGUEZ": [
+      "AH784OX"
     ]
   },
   "choferes": {
@@ -21,7 +24,8 @@
     "PRIMITERRA": "PRIMITERRA TONING",
     "AGUERD": "AGUERD TOMAS AGUSTIN",
     "GARCIA": "GARCIA CRISTIAN",
-    "DIERICKX": "DIERICKX CARLOS"
+    "DIERICKX": "DIERICKX CARLOS",
+    "RODRIGUEZ": "RODRIGUEZ MATIAS"
   },
   "netos": {},
   "patentesPorTicket": {
@@ -30,7 +34,8 @@
     "LCE|112333": "AH702YZ",
     "SPO|66006": "AG266CJ",
     "LCE|112376": "AH702YZ",
-    "AVE|166348": "AH604EL"
+    "AVE|166348": "AH604EL",
+    "LCE|112288": "AH784OX"
   },
   "correccionesPorTicket": {
     "LCE|112392": {
@@ -92,6 +97,16 @@
       "Peso Neto": "35.480",
       "Chofer": "DIERICKX CARLOS",
       "Pat. Chasis": "AH604EL"
+    },
+    "LCE|112288": {
+      "Fecha": "13/10/2026",
+      "N Remito": "112288",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": "36120",
+      "Peso Neto": "35.600",
+      "Chofer": "RODRIGUEZ MATIAS",
+      "Pat. Chasis": "AH784OX"
     }
   },
   "correccionesPorArchivo": {
@@ -164,6 +179,16 @@
       "Peso Neto": "36.140",
       "Chofer": "WILBERGER JUIAR MANUEL",
       "Pat. Chasis": "AH784OW"
+    },
+    "LCE|1.PDF": {
+      "Fecha": "13/10/2026",
+      "N Remito": "112288",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": "36120",
+      "Peso Neto": "35.600",
+      "Chofer": "RODRIGUEZ MATIAS",
+      "Pat. Chasis": "AH784OX"
     }
   },
   "reglasLectura": {
