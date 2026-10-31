@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { revisarRegistro } from '@/lib/tickets/extract.mjs';
 import { MATERIALES, RAZONES_SOCIALES } from '@/lib/tickets/base.mjs';
+import EditorTicket from '@/components/EditorTicket';
 import {
   IconUpload,
   IconFileText,
@@ -98,7 +99,7 @@ export default function TicketsPage() {
   const [registrosEditados, setRegistrosEditados] = useState([]);
   const [huboEdiciones, setHuboEdiciones] = useState(false);
   const [editandoIdx, setEditandoIdx] = useState(null);
-  const [valoresEdit, setValoresEdit] = useState({});
+  const [soloPendientes, setSoloPendientes] = useState(false);
   const [incorporando, setIncorporando] = useState(false);
   const [centro, setCentro] = useState('');
   const [carga, setCarga] = useState('');
@@ -200,6 +201,11 @@ export default function TicketsPage() {
     return [...ordenados].sort((a, b) => factor * compararRegistros(a, b, orden.campo));
   }, [resultado, registrosEditados, huboEdiciones, clavesPlanilla, orden]);
 
+  const registrosVisibles = useMemo(
+    () => (soloPendientes ? registros.filter((r) => tieneFaltantes(r)) : registros),
+    [registros, soloPendientes]
+  );
+
   const nNuevos = useMemo(() => registros.filter((r) => r.Estado !== 'DUPLICADO').length, [registros]);
   const nDuplicados = registros.length - nNuevos;
   const registrosConObservaciones = useMemo(
@@ -290,7 +296,7 @@ export default function TicketsPage() {
     setRegistrosEditados([]);
     setHuboEdiciones(false);
     setEditandoIdx(null);
-    setValoresEdit({});
+    setSoloPendientes(false);
     setCentro('');
     setCarga('');
     setConfirmacionVisual(false);
@@ -392,19 +398,16 @@ export default function TicketsPage() {
   }
 
   function iniciarEdicion(idx) {
-    const r = registros[idx];
+    setConfirmacionVisual(false);
     setEditandoIdx(idx);
-    setValoresEdit({ ...r });
   }
 
   function cancelarEdicion() {
     setEditandoIdx(null);
-    setValoresEdit({});
   }
 
   function cambiarOrden(campo) {
     setEditandoIdx(null);
-    setValoresEdit({});
     setOrden((prev) =>
       prev.campo === campo
         ? { campo, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
@@ -412,41 +415,40 @@ export default function TicketsPage() {
     );
   }
 
-  function guardarEdicion(idx) {
+  // Llamada desde el EditorTicket: recibe el formulario completo.
+  function guardarEdicion(form, irSiguiente) {
     setRegistrosEditados((prev) => {
       const base = resultado?.registros || [];
       const lista = prev.length > 0 ? [...prev] : [...base];
-      const revision = { ...(valoresEdit._revision || {}) };
-      for (const campo of Object.keys(valoresEdit)) delete revision[campo];
-      const editado = { ...valoresEdit, _revision: revision };
+      const revision = { ...(form._revision || {}) };
+      for (const campo of Object.keys(form)) delete revision[campo];
+      const editado = { ...form, _revision: revision };
       if (Object.keys(revision).length === 0) delete editado._revision;
       const indiceReal = lista.findIndex((r) => r.Archivo === editado.Archivo);
-      lista[indiceReal >= 0 ? indiceReal : idx] = editado;
+      if (indiceReal >= 0) lista[indiceReal] = editado;
       return lista;
     });
     setConfirmacionVisual(false);
     setHuboEdiciones(true);
-    setEditandoIdx(null);
-    setValoresEdit({});
+    if (irSiguiente && editandoIdx < registrosVisibles.length - 1) {
+      setEditandoIdx(editandoIdx + 1);
+    } else {
+      setEditandoIdx(null);
+    }
     showToast('Registro actualizado');
   }
 
-  function eliminarRegistro(idx) {
+  function eliminarRegistro(archivo) {
     setRegistrosEditados((prev) => {
       const base = resultado?.registros || [];
       const lista = prev.length > 0 ? [...prev] : [...base];
-      const archivo = registros[idx]?.Archivo;
       const indiceReal = lista.findIndex((r) => r.Archivo === archivo);
-      lista.splice(indiceReal >= 0 ? indiceReal : idx, 1);
+      if (indiceReal >= 0) lista.splice(indiceReal, 1);
       return lista;
     });
     setConfirmacionVisual(false);
     setHuboEdiciones(true);
     showToast('Registro eliminado');
-  }
-
-  function campoEditado(campo, valor) {
-    setValoresEdit((prev) => ({ ...prev, [campo]: valor }));
   }
 
   async function confirmarRevision(checked) {
@@ -759,9 +761,20 @@ export default function TicketsPage() {
 
           {registros.length > 0 && (
             <div>
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    {registros.length} registros — revisá todos contra sus PDF antes de exportar
-              </p>
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  {registrosVisibles.length} de {registros.length} registros — revisá todos contra sus PDF antes de exportar
+                </p>
+                <label className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={soloPendientes}
+                    onChange={(e) => setSoloPendientes(e.target.checked)}
+                    className="accent-amber-400"
+                  />
+                  Solo pendientes ({registrosConObservaciones.length})
+                </label>
+              </div>
               <div className="table-scroll rounded-lg border border-white/10">
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-night-800">
@@ -790,7 +803,7 @@ export default function TicketsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {registros.map((r, i) => {
+                    {registrosVisibles.map((r, i) => {
                       const dudosos = revisarRegistro(r);
                       return (
                       <tr key={i} className="border-t border-white/5">
@@ -813,49 +826,7 @@ export default function TicketsPage() {
                           const rojoCls = 'rounded bg-red-500/15 px-1 font-bold text-red-300';
                           return (
                             <td key={c} className="whitespace-nowrap px-2 py-1 text-slate-300" title={motivo || undefined}>
-                              {editandoIdx === i ? (
-                                c === 'Razon Social' || c === 'Material' ? (
-                                  <select
-                                    value={valoresEdit[c] ?? ''}
-                                    onChange={(e) => campoEditado(c, e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        guardarEdicion(i);
-                                      } else if (e.key === 'Escape') {
-                                        e.preventDefault();
-                                        cancelarEdicion();
-                                      }
-                                    }}
-                                    className="w-full min-w-[110px] rounded border border-falpat/40 bg-night-900 px-1 py-0.5 text-[11px] text-slate-100 outline-none focus:border-falpat"
-                                  >
-                                    {valoresEdit[c] && !(c === 'Razon Social' ? opcionesRazon : opcionesMaterial).includes(valoresEdit[c]) && (
-                                      <option value={valoresEdit[c]}>{valoresEdit[c]}</option>
-                                    )}
-                                    {(c === 'Razon Social' ? opcionesRazon : opcionesMaterial).map((op) => (
-                                      <option key={op} value={op}>{op}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <input
-                                    type="text"
-                                    value={valoresEdit[c] ?? ''}
-                                    onChange={(e) => campoEditado(c, e.target.value)}
-                                    onFocus={(e) => e.target.select()}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        guardarEdicion(i);
-                                      } else if (e.key === 'Escape') {
-                                        e.preventDefault();
-                                        cancelarEdicion();
-                                      }
-                                    }}
-                                    autoFocus={c === CAMPOS[0]}
-                                    className="w-full min-w-[72px] rounded border border-falpat/40 bg-night-900 px-1 py-0.5 text-[11px] text-slate-100 outline-none focus:border-falpat"
-                                  />
-                                )
-                              ) : r.Archivo ? (
+                              {r.Archivo ? (
                                 <a
                                   href={`/api/tickets/pdf?file=${encodeURIComponent(r.Archivo)}`}
                                   onClick={(e) => abrirPdf(r.Archivo, e)}
@@ -901,57 +872,36 @@ export default function TicketsPage() {
                           )}
                         </td>
                         <td className="px-2 py-1">
-                          {editandoIdx === i ? (
-                            <div className="flex items-center gap-0.5">
-                              <button
-                                type="button"
-                                onClick={() => guardarEdicion(i)}
-                                className="rounded p-0.5 text-emerald-400 hover:bg-white/5"
-                                title="Guardar"
+                          <div className="flex items-center gap-0.5">
+                            {r.Archivo && tieneFaltantes(r) && (
+                              <a
+                                href={`/api/tickets/pdf?file=${encodeURIComponent(r.Archivo)}`}
+                                onClick={(e) => abrirPdf(r.Archivo, e)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded p-0.5 text-red-300 hover:bg-red-500/10"
+                                title="Ver PDF original (faltan datos)"
                               >
-                                <IconCheck className="h-3 w-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={cancelarEdicion}
-                                className="rounded p-0.5 text-slate-400 hover:bg-white/5"
-                                title="Cancelar"
-                              >
-                                <IconX className="h-3 w-3" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-0.5">
-                              {r.Archivo && tieneFaltantes(r) && (
-                                <a
-                                  href={`/api/tickets/pdf?file=${encodeURIComponent(r.Archivo)}`}
-                                  onClick={(e) => abrirPdf(r.Archivo, e)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="rounded p-0.5 text-red-300 hover:bg-red-500/10"
-                                  title="Ver PDF original (faltan datos)"
-                                >
-                                  <IconFileText className="h-3 w-3" />
-                                </a>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => iniciarEdicion(i)}
-                                className="rounded p-0.5 text-slate-400 hover:bg-white/5 hover:text-falpat-soft"
-                                title="Editar"
-                              >
-                                <IconPencil className="h-3 w-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => eliminarRegistro(i)}
-                                className="rounded p-0.5 text-slate-400 hover:bg-white/5 hover:text-red-300"
-                                title="Eliminar"
-                              >
-                                <IconTrash className="h-3 w-3" />
-                              </button>
-                            </div>
-                          )}
+                                <IconFileText className="h-3 w-3" />
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => iniciarEdicion(i)}
+                              className="rounded p-0.5 text-slate-400 hover:bg-white/5 hover:text-falpat-soft"
+                              title="Editar"
+                            >
+                              <IconPencil className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => eliminarRegistro(r.Archivo)}
+                              className="rounded p-0.5 text-slate-400 hover:bg-white/5 hover:text-red-300"
+                              title="Eliminar"
+                            >
+                              <IconTrash className="h-3 w-3" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                       );
@@ -1087,6 +1037,23 @@ export default function TicketsPage() {
       </Paso>
 
       {procesando && <ProcessingOverlay progreso={progreso} archivos={files.length} />}
+
+      {/* Editor de ticket — modal con visor de PDF */}
+      {editandoIdx !== null && registrosVisibles[editandoIdx] && (
+        <EditorTicket
+          registro={registrosVisibles[editandoIdx]}
+          index={editandoIdx}
+          total={registrosVisibles.length}
+          pendientes={registrosConObservaciones.length}
+          centro={centro}
+          carga={carga}
+          materiales={opcionesMaterial}
+          razones={opcionesRazon}
+          onClose={cancelarEdicion}
+          onSave={guardarEdicion}
+          onNavigate={(nuevoIdx) => setEditandoIdx(nuevoIdx)}
+        />
+      )}
 
       {alertas.length > 0 && mostrarModalDuplicados && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
