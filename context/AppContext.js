@@ -214,6 +214,8 @@ export function AppProvider({ children }) {
       'cliente',
       'proveedor',
       'nroRemitoFalpat',
+      'chofer',
+      'patenteChasis',
     ];
     const sets = Object.fromEntries(FIELDS.map((f) => [f, new Set()]));
     for (const r of records) {

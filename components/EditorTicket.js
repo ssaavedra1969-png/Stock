@@ -159,6 +159,11 @@ export default function EditorTicket({
       (m) => String(m).trim().toLowerCase() === valor.toLowerCase()
     );
   }, [form.Material, materiales]);
+  const razonNueva = useMemo(() => {
+    const valor = String(form['Razon Social'] || '').trim();
+    if (!valor) return false;
+    return !((razones || RAZONES).some((r) => String(r).trim().toLowerCase() === valor.toLowerCase()));
+  }, [form, razones]);
   const puedeAnterior = index > 0;
   const puedeSiguiente = index < total - 1;
 
@@ -190,7 +195,15 @@ export default function EditorTicket({
 
   function setCampo(campo, valor) {
     setForm((prev) => {
-      const next = { ...prev, [campo]: valor };
+      let next = { ...prev, [campo]: valor };
+      if (campo === 'Neto' || campo === 'Peso Neto') {
+        if (valor === '' || valor === null || valor === undefined) {
+          next = { ...next, [campo]: '' };
+        } else {
+          const num = Number(valor);
+          next = { ...next, [campo]: isNaN(num) ? valor : num };
+        }
+      }
       if (campo === 'N Remito' || campo === 'Proveedor') {
         if (next._confirmados) {
           const confirmados = { ...next._confirmados };
@@ -353,6 +366,11 @@ export default function EditorTicket({
                     {campo.key === 'Material' && materialNuevo && !error && (
                       <span className="mt-1 block text-[10px] leading-snug text-emerald-300">
                         Material nuevo: se agregará a la lista al guardar.
+                      </span>
+                    )}
+                    {campo.key === 'Razon Social' && razonNueva && !error && (
+                      <span className="mt-1 block text-[10px] leading-snug text-emerald-300">
+                        Razón social nueva: se agregará a la lista al guardar.
                       </span>
                     )}
                   </label>
