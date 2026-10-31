@@ -92,7 +92,15 @@ function ordenarPorFecha(registros) {
 }
 
 export default function TicketsPage() {
-  const { showToast, tickets, procesarTickets, limpiarTickets, guardarBase, baseConocimiento } = useApp();
+  const {
+    showToast,
+    tickets,
+    procesarTickets,
+    limpiarTickets,
+    guardarBase,
+    agregarMateriales,
+    baseConocimiento,
+  } = useApp();
   const inputRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [arrastrando, setArrastrando] = useState(false);
@@ -416,7 +424,7 @@ export default function TicketsPage() {
   }
 
   // Llamada desde el EditorTicket: recibe el formulario completo.
-  function guardarEdicion(form, irSiguiente) {
+  async function guardarEdicion(form, irSiguiente) {
     setRegistrosEditados((prev) => {
       const base = resultado?.registros || [];
       const lista = prev.length > 0 ? [...prev] : [...base];
@@ -435,7 +443,28 @@ export default function TicketsPage() {
     } else {
       setEditandoIdx(null);
     }
-    showToast('Registro actualizado');
+
+    const material = String(form.Material || '').trim();
+    const materialNuevo =
+      material &&
+      !opcionesMaterial.some(
+        (m) => String(m).trim().toLowerCase() === material.toLowerCase()
+      );
+    if (materialNuevo) {
+      try {
+        await agregarMateriales([material]);
+        showToast(`Registro actualizado · Material "${material}" agregado a la lista`);
+      } catch (err) {
+        showToast(
+          `Registro actualizado, pero no se pudo agregar "${material}" a la lista: ${
+            err.message || 'error de conexión'
+          }`,
+          'error'
+        );
+      }
+    } else {
+      showToast('Registro actualizado');
+    }
   }
 
   function eliminarRegistro(archivo) {

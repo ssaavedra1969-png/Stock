@@ -39,27 +39,47 @@ export async function POST(request) {
   } catch (err) {
     return Response.json({ error: 'JSON inválido.' }, { status: 400 });
   }
-  const filas = body?.filas;
+  const filas = Array.isArray(body?.filas) ? body.filas : [];
   const correcciones = body?.correcciones;
-  if (!Array.isArray(filas)) {
-    return Response.json({ error: 'Falta el campo "filas".' }, { status: 400 });
+  const materiales = body?.materiales;
+  const razonesSociales = body?.razonesSociales;
+  const hayCatalogo = Array.isArray(materiales) || Array.isArray(razonesSociales);
+  if (!Array.isArray(body?.filas) && !hayCatalogo) {
+    return Response.json(
+      { error: 'Faltan los datos a guardar ("filas", "materiales" o "razonesSociales").' },
+      { status: 400 }
+    );
   }
   if (correcciones !== undefined && !Array.isArray(correcciones)) {
     return Response.json({ error: 'El campo "correcciones" debe ser una lista.' }, { status: 400 });
   }
+  if (materiales !== undefined && !Array.isArray(materiales)) {
+    return Response.json({ error: 'El campo "materiales" debe ser una lista.' }, { status: 400 });
+  }
+  if (razonesSociales !== undefined && !Array.isArray(razonesSociales)) {
+    return Response.json(
+      { error: 'El campo "razonesSociales" debe ser una lista.' },
+      { status: 400 }
+    );
+  }
 
   const aprendido = unirBase(
     aprenderDeFilas(filas),
-    aprenderDeCorrecciones(correcciones || [])
+    aprenderDeCorrecciones(correcciones || []),
+    { materiales: materiales || [], razonesSociales: razonesSociales || [] }
   );
   const reemplazar = body?.reemplazar === true;
+  const partes = [];
+  if (filas.length) partes.push(`+${filas.length} ticket(s)`);
+  if (materiales?.length) partes.push(`+${materiales.length} material(es)`);
+  if (razonesSociales?.length) partes.push(`+${razonesSociales.length} razón(es) social(es)`);
   try {
     const { db } = await writeJson(
       PATH,
       (actual) => (reemplazar ? aprendido : unirBase(actual || {}, aprendido)),
       reemplazar
         ? `Base de conocimiento: reemplazo con ${filas.length} ticket(s)`
-        : `Base de conocimiento: +${filas.length} ticket(s)`
+        : `Base de conocimiento: ${partes.join(' · ') || 'sin cambios'}`
     );
     return Response.json({
       ok: true,

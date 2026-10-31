@@ -20,7 +20,15 @@ import {
   useRef,
   useState,
 } from 'react';
-import { fetchState, fetchBase, saveBase, createRecord, removeRecord, updateRecord as updateRecordApi } from '@/lib/api';
+import {
+  fetchState,
+  fetchBase,
+  saveBase,
+  saveBaseMateriales,
+  createRecord,
+  removeRecord,
+  updateRecord as updateRecordApi,
+} from '@/lib/api';
 import { toMillis } from '@/lib/utils';
 
 const AppContext = createContext(null);
@@ -132,6 +140,15 @@ export function AppProvider({ children }) {
   // Aprende de los tickets incorporados y actualiza la base persistida.
   const guardarBase = useCallback(async (filas, correcciones = []) => {
     const data = await saveBase(filas, correcciones);
+    if (!data?.base) throw new Error('El servidor no devolvió la base de conocimiento actualizada.');
+    setBaseConocimiento(data.base);
+    baseRef.current = data.base;
+    return data;
+  }, []);
+
+  // Agrega materiales nuevos al catalogo persistido (data/base.json).
+  const agregarMateriales = useCallback(async (materiales) => {
+    const data = await saveBaseMateriales(materiales);
     if (!data?.base) throw new Error('El servidor no devolvió la base de conocimiento actualizada.');
     setBaseConocimiento(data.base);
     baseRef.current = data.base;
@@ -250,6 +267,7 @@ export function AppProvider({ children }) {
       limpiarTickets,
       baseConocimiento,
       guardarBase,
+      agregarMateriales,
     }),
     [
       records,
@@ -275,6 +293,7 @@ export function AppProvider({ children }) {
       limpiarTickets,
       baseConocimiento,
       guardarBase,
+      agregarMateriales,
     ]
   );
 

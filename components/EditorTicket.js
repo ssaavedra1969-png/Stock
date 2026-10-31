@@ -1,7 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { revisarRegistro } from '@/lib/tickets/extract.mjs';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  revisarRegistro,
+  largoRemitoEsperado,
+  normalizeRemito,
+} from '@/lib/tickets/extract.mjs';
 import { MATERIALES_OK } from '@/lib/tickets/extract.mjs';
 import {
   IconAlert,
@@ -30,6 +34,24 @@ const CAMPOS_FORM = [
 
 function listaId(campo) {
   return `ticket-lista-${campo.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+}
+
+// Si el remito no tiene el largo habitual, pregunta antes de guardar pero
+// permite continuar. La confirmación queda en el registro para que no vuelva
+// a marcarse como observación.
+function conRemitoConfirmado(form) {
+  if (form?._confirmados?.['N Remito']) return form;
+  const valor = String(form?.['N Remito'] ?? '').trim();
+  if (!valor || valor.toUpperCase() === 'N/D') return form;
+  const esperado = largoRemitoEsperado(form.Proveedor);
+  if (!esperado) return form;
+  const digitos = normalizeRemito(valor)?.length || 0;
+  if (digitos === esperado) return form;
+  const ok = window.confirm(
+    `El N° de remito "${valor}" tiene ${digitos} dígito(s); lo normal para ${form.Proveedor} es ${esperado}. ¿Es correcto?`
+  );
+  if (!ok) return null;
+  return { ...form, _confirmados: { ...(form._confirmados || {}), 'N Remito': true } };
 }
 
 /**
@@ -130,6 +152,13 @@ export default function EditorTicket({
 
   const errores = useMemo(() => revisarRegistro(form), [form]);
   const nErrores = Object.keys(errores).length;
+  const materialNuevo = useMemo(() => {
+    const valor = String(form.Material || '').trim();
+    if (!valor) return false;
+    return !(materiales || [...MATERIALES_OK]).some(
+      (m) => String(m).trim().toLowerCase() === valor.toLowerCase()
+    );
+  }, [form.Material, materiales]);
   const puedeAnterior = index > 0;
   const puedeSiguiente = index < total - 1;
 
@@ -149,9 +178,27 @@ export default function EditorTicket({
   const pdfSrc =
     pdfUrl && !form._file ? `${pdfUrl}#toolbar=1&navpanes=0&view=FitH` : pdfUrl;
 
+  const guardar = useCallback(
+    (irSiguiente) => {
+      const confirmado = conRemitoConfirmado(form);
+      if (!confirmado) return;
+      if (confirmado !== form) setForm(confirmado);
+      onSave(confirmado, irSiguiente);
+    },
+    [form, onSave]
+  );
+
   function setCampo(campo, valor) {
     setForm((prev) => {
       const next = { ...prev, [campo]: valor };
+      if (campo === 'N Remito' || campo === 'Proveedor') {
+        if (next._confirmados) {
+          const confirmados = { ...next._confirmados };
+          delete confirmados['N Remito'];
+          if (Object.keys(confirmados).length) next._confirmados = confirmados;
+          else delete next._confirmados;
+        }
+      }
       if (next._revision) {
         const revision = { ...next._revision };
         delete revision[campo];
@@ -171,7 +218,7 @@ export default function EditorTicket({
       }
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         event.preventDefault();
-        onSave(form, event.shiftKey);
+        guardar(event.shiftKey);
         return;
       }
       if (event.altKey && event.key === 'ArrowLeft' && puedeAnterior) {
@@ -185,7 +232,7 @@ export default function EditorTicket({
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [form, index, puedeAnterior, puedeSiguiente, onClose, onSave, onNavigate]);
+  }, [index, puedeAnterior, puedeSiguiente, onClose, guardar, onNavigate]);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-2 backdrop-blur-sm">
@@ -303,6 +350,11 @@ export default function EditorTicket({
                         {error}
                       </span>
                     )}
+                    {campo.key === 'Material' && materialNuevo && !error && (
+                      <span className="mt-1 block text-[10px] leading-snug text-emerald-300">
+                        Material nuevo: se agregará a la lista al guardar.
+                      </span>
+                    )}
                   </label>
                 );
               })}
@@ -377,7 +429,7 @@ export default function EditorTicket({
             </button>
             <button
               type="button"
-              onClick={() => onSave(form, false)}
+              onClick={() => guardar(false)}
               className="btn-ghost !px-3 !py-1.5 !text-xs"
             >
               <IconCheck className="h-3.5 w-3.5" />
@@ -385,7 +437,7 @@ export default function EditorTicket({
             </button>
             <button
               type="button"
-              onClick={() => onSave(form, true)}
+              onClick={() => guardar(true)}
               className="btn-primary !px-3 !py-1.5 !text-xs"
             >
               <IconCheck className="h-3.5 w-3.5" />
