@@ -59,7 +59,8 @@
     "AVE|165420": "AH919IQ",
     "SPO|43688": "AG894ER",
     "AVE|741125": "AH919IQ",
-    "LCE|112376": "AH702YZ"
+    "LCE|112376": "AH702YZ",
+    "SPO|66008": "AG894ER"
   },
   "correccionesPorTicket": {
     "AVE|165420": {
@@ -111,6 +112,26 @@
       "Peso Neto": "36.780",
       "Chofer": "PRIMITERRA TONINO",
       "Pat. Chasis": "AH702XY"
+    },
+    "LCE|112388": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112388",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": "34.960",
+      "Peso Neto": "34.540",
+      "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
+    },
+    "SPO|66008": {
+      "Fecha": "15/10/2026",
+      "N Remito": "66008",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": "34.400",
+      "Peso Neto": "35.920",
+      "Chofer": "OCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
     }
   },
   "correccionesPorArchivo": {
@@ -163,10 +184,41 @@
       "Peso Neto": "36.780",
       "Chofer": "PRIMITERRA TONINO",
       "Pat. Chasis": "AH702XY"
+    },
+    "LCE|20261015_LCE_5.PDF": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112388",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": "34960",
+      "Peso Neto": "34.540",
+      "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
+    },
+    "SPO|IMG-261019121018-001.PDF": {
+      "Fecha": "15/10/2026",
+      "N Remito": "66008",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": "34.400",
+      "Peso Neto": "35.920",
+      "Chofer": "OCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
+    },
+    "LCE|IMG-261019121422-001.PDF": {
+      "Fecha": "15/10/2026",
+      "N Remito": "112388",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": "34.960",
+      "Peso Neto": "34.540",
+      "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
     }
   },
   "reglasLectura": {
     "SPO|Material|ELPEITN GY KREME WOTULO 1 13 3 EN CRERCERA RID TALS 37 5 GULA WLNE ZA 3 0 PAS KL MOVAS": "ARENA GRANITICA 0/6",
-    "LCE|Material|N D": "ARENA GRANITICA 0/6"
+    "LCE|Material|N D": "ARENA GRANITICA 0/6",
+    "LCE|Razon Social|ALMAJO NORTE": "ARENERA CANELONES"
   }
 }
