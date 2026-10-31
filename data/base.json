@@ -96,7 +96,10 @@
     "LCE|112294": "AH919IQ",
     "LCE|112297": "AH919KE",
     "LCE|112301": "AH784OW",
-    "AVE|274550": "AH784OY"
+    "AVE|274550": "AH784OY",
+    "LCE|112242": "AH919KE",
+    "LCE|112246": "AH702XY",
+    "AVE|186403": "AH702XX"
   },
   "correccionesPorTicket": {
     "LCE|112392": {
@@ -418,6 +421,36 @@
       "Peso Neto": "35.360",
       "Chofer": "TOLOSA CESAR",
       "Pat. Chasis": "AH784OY"
+    },
+    "LCE|112242": {
+      "Fecha": "10/10/2026",
+      "N Remito": "112242",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35400,
+      "Peso Neto": "35.120",
+      "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
+    },
+    "LCE|112246": {
+      "Fecha": "10/10/2026",
+      "N Remito": "112246",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": "35.460",
+      "Peso Neto": "35.300",
+      "Chofer": "PRIMITERRA TONINO",
+      "Pat. Chasis": "AH702XY"
+    },
+    "AVE|186403": {
+      "Fecha": "10/10/2026",
+      "N Remito": "186403",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35330,
+      "Peso Neto": "35.660",
+      "Chofer": "ALONSO MIGUEL",
+      "Pat. Chasis": "AH702XX"
     }
   },
   "correccionesPorArchivo": {
@@ -850,6 +883,36 @@
       "Peso Neto": "35.360",
       "Chofer": "TOLOSA CESAR",
       "Pat. Chasis": "AH784OY"
+    },
+    "LCE|IMG-261019132319-001.PDF": {
+      "Fecha": "10/10/2026",
+      "N Remito": "112242",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35400,
+      "Peso Neto": "35.120",
+      "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
+    },
+    "LCE|IMG-261019132430-001.PDF": {
+      "Fecha": "10/10/2026",
+      "N Remito": "112246",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": "35.460",
+      "Peso Neto": "35.300",
+      "Chofer": "PRIMITERRA TONINO",
+      "Pat. Chasis": "AH702XY"
+    },
+    "AVE|IMG-261019132532-001.PDF": {
+      "Fecha": "10/10/2026",
+      "N Remito": "186403",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35330,
+      "Peso Neto": "35.660",
+      "Chofer": "ALONSO MIGUEL",
+      "Pat. Chasis": "AH702XX"
     }
   },
   "reglasLectura": {
@@ -878,7 +941,8 @@
     "LCE|Chofer|PRIMITERRA TONING": "PRIMITERRA TONINO",
     "LCE|Material|ARENA GRANITICA 0 6": "PIEDRA PARTIDA 6/20",
     "LCE|Chofer|VIVAS ARNALDO LEONEL TA": "VIVAS ARNALDO LEONEL",
-    "LCE|Chofer|AGLUERD TOMAS AGUSTIN J F": "AGUERO TOMAS AGUSTIN"
+    "LCE|Chofer|AGLUERD TOMAS AGUSTIN J F": "AGUERO TOMAS AGUSTIN",
+    "AVE|Razon Social|ALMAJO NORTE": "ARENERA CANELONES"
   },
   "razonesSociales": [
     "ALMAJO NORTE",
