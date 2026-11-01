@@ -36,6 +36,17 @@ No ejecutes `npm run build` mientras `npm run dev` esté activo en el mismo
 directorio: ambos usan `.next`. El build comprueba la compilación, pero no
 sustituye las pruebas funcionales de cada flujo.
 
+## Autocompletado de chofer y patente
+
+En los formularios de Entrada y Salida, Chofer y Patente sugieren los valores
+ya guardados. Cuando el valor ingresado tiene una única asociación en los
+movimientos existentes, se completa también el campo relacionado: patente a
+partir del chofer o chofer a partir de la patente. La comparación ignora
+mayúsculas, tildes y espacios en la patente. Si hay más de una asociación, no
+se elige ninguna automáticamente para evitar asignaciones ambiguas. El
+autocompletado solo prepara el formulario; los datos se guardan al confirmar
+el registro.
+
 ## Datos y publicación
 
 - `GITHUB_BRANCH` selecciona la rama de datos que usan las APIs. En desarrollo,
