@@ -206,6 +206,16 @@
       "Peso Neto": 35120,
       "Chofer": "WILBERGER JUAN",
       "Pat. Chasis": "AH784OW"
+    },
+    "LCE|112354": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112354",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": 35620,
+      "Peso Neto": 35260,
+      "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
     }
   },
   "correccionesPorArchivo": {
@@ -348,6 +358,16 @@
       "Peso Neto": 35120,
       "Chofer": "WILBERGER JUAN",
       "Pat. Chasis": "AH784OW"
+    },
+    "LCE|IMG-261019122540-001.PDF": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112354",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": 35620,
+      "Peso Neto": 35260,
+      "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
     }
   },
   "reglasLectura": {
@@ -359,7 +379,8 @@
     "SPO|Razon Social|GRUPO FALPAT SRL": "ARENERA CANELONES",
     "SPO|Material|LI DESCELPOIOR IE AREAW FINK EN CROREZERA RIS TELA GULES MINERA": "ARENA FINA",
     "AVE|Pat. Chasis|ALS171": "AI417ZZ",
-    "LCE|Razon Social|ARENERA CANELONES": "GRUPO FALPAT SRL"
+    "LCE|Razon Social|ARENERA CANELONES": "GRUPO FALPAT SRL",
+    "LCE|Razon Social|GRUPO FALPAT SRL": "ARENERA CANELONES"
   },
   "razonesSociales": [
     "ALMAJO NORTE",
