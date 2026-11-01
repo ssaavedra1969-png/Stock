@@ -196,6 +196,16 @@
       "Peso Neto": 35680,
       "Chofer": "VIVMAS LEONEL",
       "Pat. Chasis": "AI417ZZ"
+    },
+    "LCE|112355": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112355",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": 35500,
+      "Peso Neto": 35120,
+      "Chofer": "WILBERGER JUAN",
+      "Pat. Chasis": "AH784OW"
     }
   },
   "correccionesPorArchivo": {
@@ -328,6 +338,16 @@
       "Peso Neto": 35680,
       "Chofer": "VIVMAS LEONEL",
       "Pat. Chasis": "AI417ZZ"
+    },
+    "LCE|IMG-261019122702-001.PDF": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112355",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": 35500,
+      "Peso Neto": 35120,
+      "Chofer": "WILBERGER JUAN",
+      "Pat. Chasis": "AH784OW"
     }
   },
   "reglasLectura": {
@@ -338,7 +358,8 @@
     "SPO|Material|D AZRIP ITN AREAL AINURPO 1 B I EN CABECERA RIO TALA GUIA MINCCA": "ARENA MODULO 1.8-1.9",
     "SPO|Razon Social|GRUPO FALPAT SRL": "ARENERA CANELONES",
     "SPO|Material|LI DESCELPOIOR IE AREAW FINK EN CROREZERA RIS TELA GULES MINERA": "ARENA FINA",
-    "AVE|Pat. Chasis|ALS171": "AI417ZZ"
+    "AVE|Pat. Chasis|ALS171": "AI417ZZ",
+    "LCE|Razon Social|ARENERA CANELONES": "GRUPO FALPAT SRL"
   },
   "razonesSociales": [
     "ALMAJO NORTE",
