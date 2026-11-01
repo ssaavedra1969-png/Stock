@@ -1,5 +1,7 @@
 import './globals.css';
+import './app-theme.css';
 import { AppProvider } from '@/context/AppContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import AppShell from '@/components/AppShell';
 import ModalForm from '@/components/ModalForm';
 import Toast from '@/components/Toast';
@@ -20,9 +22,11 @@ export default function RootLayout({ children }) {
     <html lang="es">
       <body className="min-h-screen">
         <AppProvider>
-          <AppShell>{children}</AppShell>
-          <ModalForm />
-          <Toast />
+          <ThemeProvider>
+            <AppShell>{children}</AppShell>
+            <ModalForm />
+            <Toast />
+          </ThemeProvider>
         </AppProvider>
       </body>
     </html>

@@ -101,33 +101,15 @@ const compact = (n) => {
 // Card con profundidad estilo Glamour's: glow dorado decorativo + sombra.
 export function ChartCard({ title, icon: Icon, children, style }) {
   return (
-    <div
-      style={{
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.015) 100%)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '18px',
-        padding: '1.5rem',
-        boxShadow: '0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)',
-        position: 'relative',
-        overflow: 'hidden',
-        ...style,
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          top: -50,
-          right: -50,
-          width: 170,
-          height: 170,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(212,175,55,0.14) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', position: 'relative' }}>
-        {Icon && <Icon size={16} color={GOLD} />}
-        <span style={{ fontWeight: '700', fontSize: '0.9rem', color: '#f3f4f6' }}>{title}</span>
+    <div className="card omx-chart-card relative" style={style}>
+      <div className="omx-chart-glow" />
+      <div className="relative mb-4 flex items-center gap-2">
+        {Icon && (
+          <span className="omx-accent-text flex items-center">
+            <Icon className="h-4 w-4" />
+          </span>
+        )}
+        <span className="omx-chart-title text-sm font-bold">{title}</span>
       </div>
       <div style={{ position: 'relative', height: '300px', filter: 'drop-shadow(0 10px 16px rgba(0,0,0,0.45))' }}>{children}</div>
     </div>

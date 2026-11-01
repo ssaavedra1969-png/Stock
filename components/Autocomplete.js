@@ -142,7 +142,7 @@ export default function Autocomplete({
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
 
       {open && (
-        <div className="absolute z-50 mt-2 w-full animate-drop-in overflow-hidden rounded-xl border border-white/10 bg-night-850/95 shadow-2xl shadow-black/60 backdrop-blur-xl">
+        <div className="omx-dropdown absolute z-50 mt-2 w-full animate-drop-in overflow-hidden border backdrop-blur-xl">
           {filtered.length === 0 ? (
             <div className="flex items-center gap-2.5 px-4 py-3.5 text-sm text-slate-500">
               <IconBox className="h-4 w-4 shrink-0" />

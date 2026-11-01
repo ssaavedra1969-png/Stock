@@ -21,6 +21,7 @@ import {
   resumenPorProducto,
 } from '@/lib/importar';
 import { formatDate } from '@/lib/utils';
+import SectionHero from '@/components/SectionHero';
 import {
   IconUpload,
   IconDownload,
@@ -155,23 +156,23 @@ export default function IncorporarPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      {/* Encabezado */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="section-sub mb-1">Carga masiva desde planillas Excel</p>
-          <h1 className="section-title !text-2xl">Incorporar datos</h1>
-        </div>
+      <SectionHero
+        icon={IconUpload}
+        title="Incorporar datos"
+        tag="Incorporar"
+        subtitle="Carga masiva desde planillas Excel"
+      >
         <a href={tipoActual.plantilla} download className="btn-ghost" title="Descargar planilla modelo">
           <IconDownload className="h-4 w-4" />
           Plantilla {tipoActual.label}
         </a>
-      </div>
+      </SectionHero>
 
       {/* Paso 1: tipo de carga */}
-      <div className="card space-y-4">
+      <div className="card omx-step space-y-4">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-falpat/15 font-mono text-xs font-bold text-falpat-soft">1</span>
-          <h2 className="section-title !text-base">Tipo de carga</h2>
+          <span className="omx-step-num flex h-6 w-6 items-center justify-center rounded-full font-mono text-xs font-bold">1</span>
+          <h2 className="omx-step-title text-sm">Tipo de carga</h2>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {TIPOS.map((t) => {
@@ -215,16 +216,14 @@ export default function IncorporarPage() {
       </div>
 
       {/* Paso 2: archivo */}
-      <div className="card space-y-4">
+      <div className="card omx-step space-y-4">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-falpat/15 font-mono text-xs font-bold text-falpat-soft">2</span>
-          <h2 className="section-title !text-base">Planilla</h2>
+          <span className="omx-step-num flex h-6 w-6 items-center justify-center rounded-full font-mono text-xs font-bold">2</span>
+          <h2 className="omx-step-title text-sm">Planilla</h2>
         </div>
         <label
-          className={
-            'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-8 text-center transition hover:bg-white/[0.03] ' +
-            (archivoNombre ? 'border-falpat/40' : 'border-white/15')
-          }
+          data-drag={archivoNombre ? 'true' : 'false'}
+          className="omx-dropzone flex cursor-pointer flex-col items-center justify-center gap-2 p-8 text-center transition"
         >
           <input ref={inputRef} type="file" accept=".xlsx,.xls" onChange={onArchivo} className="hidden" disabled={leyendo} />
           <IconFileSpreadsheet className="h-7 w-7 text-falpat" />
@@ -270,11 +269,11 @@ export default function IncorporarPage() {
 
       {/* Paso 3: preview */}
       {analisis && (
-        <div className="card space-y-5">
+        <div className="card omx-step space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-falpat/15 font-mono text-xs font-bold text-falpat-soft">3</span>
-              <h2 className="section-title !text-base">Revisar e importar</h2>
+              <span className="omx-step-num flex h-6 w-6 items-center justify-center rounded-full font-mono text-xs font-bold">3</span>
+              <h2 className="omx-step-title text-sm">Revisar e importar</h2>
             </div>
             <button
               type="button"
@@ -416,7 +415,7 @@ export default function IncorporarPage() {
 
 function Stat({ label, value, cls }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-center">
+    <div className="omx-stat border p-3 text-center">
       <div className={`font-mono text-xl font-bold tabular-nums ${cls}`}>{value}</div>
       <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
     </div>

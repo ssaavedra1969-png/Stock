@@ -20,7 +20,7 @@ function Brand({ onClick, collapsed }) {
       className="flex items-center gap-3 text-left focus:outline-none"
       aria-label="GRUPO FALPAT SRL"
     >
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-falpat to-indigo shadow-[0_4px_16px_rgba(59,130,246,0.3)]">
+      <span className="omx-brand-logo flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl">
         <Image
           src={LOGO_PATH}
           alt="Logo GRUPO FALPAT SRL"
@@ -33,7 +33,7 @@ function Brand({ onClick, collapsed }) {
       {!collapsed && (
         <span className="leading-tight">
           <span className="block text-sm font-extrabold uppercase tracking-widest text-slate-50">
-            Grupo <span className="text-gradient-falpat">Falpat</span>
+            Grupo <span className="omx-brand-gradient">Falpat</span>
           </span>
           <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
             SRL · Control de Stock
@@ -57,7 +57,7 @@ function NavItem({ icon, label, href, collapsed }) {
         'group relative flex items-center overflow-hidden rounded-xl border border-white/[0.04] px-3.5 py-2.5 text-sm font-semibold transition ' +
         (collapsed ? 'justify-center px-2.5 ' : 'gap-3 ') +
         (active
-          ? 'translate-x-0 bg-gradient-to-br from-falpat/15 to-indigo/5 text-falpat-soft shadow-[inset_0_1px_rgba(255,255,255,0.09),-12px_14px_26px_rgba(0,0,0,0.5)]'
+          ? 'omx-nav-active translate-x-0 text-falpat-soft shadow-[inset_0_1px_rgba(255,255,255,0.09),-12px_14px_26px_rgba(0,0,0,0.5)]'
           : 'border-white/[0.04] bg-white/[0.02] text-slate-400 shadow-[0_2px_6px_rgba(0,0,0,0.28)] hover:translate-x-0 hover:border-falpat/25 hover:bg-white/[0.05] hover:text-slate-100')
       }
     >
@@ -85,7 +85,7 @@ function QuickStats() {
   return (
     <div className="grid grid-cols-3 gap-2">
       {items.map((it) => (
-        <div key={it.label} className="rounded-xl border border-white/[0.05] bg-white/[0.03] p-2.5 text-center">
+        <div key={it.label} className="omx-stat border p-2.5 text-center">
           <div className={`font-mono text-lg font-bold tabular-nums ${it.cls}`}>{it.value}</div>
           <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
             {it.label}

@@ -1,0 +1,862 @@
+@keyframes neon-glow-effect {
+  0%, 100% { opacity: 0.95; filter: drop-shadow(0 0 4px currentColor); }
+  50% { opacity: 1; filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 14px currentColor); }
+}
+.app-optimmax .neon-glow-effect {
+  animation: neon-glow-effect 3s infinite ease-in-out;
+}
+
+/* Flip dashboard panel max */
+.app-optimmax .flip-dashboard-panel-max {
+  background-color: #0f172a;
+  border: 5px solid var(--accent);
+  border-radius: 20px;
+  padding: 16px 44px;
+  box-shadow: 0 16px 36px rgba(0,0,0,0.7), inset 0 2px 5px rgba(255,255,255,0.05), 0 0 20px color-mix(in srgb, var(--accent) 20%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 85%;
+  min-width: 820px;
+  margin: 0 auto;
+}
+
+/* Flip leaf card giant */
+.app-optimmax .flip-leaf-card-giant {
+  position: relative;
+  background: #1e293b;
+  color: #ffffff;
+  font-family: 'Arial Black', 'Impact', sans-serif;
+  font-weight: 900;
+  font-size: 42px;
+  width: 48px;
+  height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  box-shadow: 0 6px 10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  min-width: 48px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.app-optimmax .flip-leaf-card-giant::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: calc(50% - 1px);
+  width: 100%;
+  height: 2.5px;
+  background: #0f172a;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.1);
+  z-index: 5;
+}
+
+/* Weather icon giant */
+.app-optimmax .flip-weather-icon-giant {
+  width: 40px;
+  height: 44px;
+  font-size: 22px;
+  min-width: 40px;
+}
+
+/* Weather temp giant */
+.app-optimmax .flip-weather-temp-giant {
+  font-size: 16px;
+  width: 56px;
+  height: 44px;
+  color: #a7f3d0;
+  min-width: 56px;
+}
+
+/* Calendar month giant */
+.app-optimmax .flip-cal-month-giant {
+  font-size: 14px;
+  width: 62px;
+  height: 30px;
+  color: var(--accent-2);
+  min-width: 62px;
+}
+
+/* Calendar day giant */
+.app-optimmax .flip-cal-day-giant {
+  font-size: 18px;
+  width: 62px;
+  height: 30px;
+  color: var(--accent-3);
+  min-width: 62px;
+}
+
+/* Label sub giant */
+.app-optimmax .flip-label-sub-giant {
+  font-family: 'Arial', sans-serif;
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-top: 6px;
+  text-shadow: 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* AM/PM box giant */
+.app-optimmax .flip-ampm-box-giant {
+  background: #1e293b;
+  color: var(--accent);
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1.5px solid var(--accent);
+}
+
+/* Flip leaf cards premium */
+.app-optimmax .flip-leaf-card-premium {
+  position: relative;
+  background: #18181b;
+  color: #ffffff;
+  font-family: 'Arial Black', 'Impact', sans-serif;
+  font-weight: 900;
+  font-size: 32px;
+  width: 36px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  box-shadow: 0 5px 8px rgba(0,0,0,0.55);
+}
+
+.app-optimmax .flip-leaf-card-premium::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: calc(50% - 1px);
+  width: 100%;
+  height: 2px;
+  background: #020203;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.18);
+  z-index: 5;
+}
+
+/* Weather icon card */
+.app-optimmax .flip-weather-icon {
+  width: 28px;
+  height: 32px;
+  font-size: 16px;
+}
+
+/* Weather icon card giant */
+.app-optimmax .flip-weather-icon-giant {
+  width: 40px;
+  height: 44px;
+  font-size: 22px;
+  min-width: 40px;
+}
+
+/* Weather temp card */
+.app-optimmax .flip-weather-temp {
+  font-size: 14px;
+  width: 44px;
+  height: 32px;
+  color: #a7f3d0;
+}
+
+/* Weather temp card giant */
+.app-optimmax .flip-weather-temp-giant {
+  font-size: 16px;
+  width: 56px;
+  height: 44px;
+  color: #a7f3d0;
+  min-width: 56px;
+}
+
+/* Calendar month card */
+.app-optimmax .flip-cal-month {
+  font-size: 12px;
+  width: 46px;
+  height: 24px;
+  color: #f43f5e;
+}
+
+/* Calendar day card */
+.app-optimmax .flip-cal-day {
+  font-size: 15px;
+  width: 46px;
+  height: 24px;
+  color: #38bdf8;
+}
+
+/* Flip label sub premium */
+.app-optimmax .flip-label-sub-premium {
+  font-family: 'Arial', sans-serif;
+  font-size: 8.5px;
+  font-weight: 900;
+  color: #4b5563;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* AM/PM period box */
+.app-optimmax .flip-ampm-period-box {
+  background: #27272a;
+  color: #cbd5e1;
+  font-family: monospace;
+  font-size: 9.5px;
+  font-weight: 900;
+  padding: 3px 5px;
+  border-radius: 4px;
+  border: 1px solid #4b5563;
+}
+
+@keyframes neon-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.65; }
+}
+.app-optimmax .neon-back-glow {
+  animation: neon-pulse 3.5s infinite ease-in-out;
+}
+
+.app-optimmax {
+  --accent: #22ff9d;
+  --accent-2: #22ff9d;
+  --accent-3: #22ff9d;
+  --accent-glow: rgba(34, 255, 157, 0.6);
+  --muted: #8b9bb4;
+  color-scheme: dark;
+  position: relative;
+  isolation: isolate;
+  font-family: 'Inter', 'Satoshi', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #e2e8f0;
+  line-height: 1.6;
+  overflow-x: clip;
+}
+
+.app-optimmax[data-theme="neon-green"] {
+  --accent: #22ff9d;
+  --accent-2: #22ff9d;
+  --accent-3: #22ff9d;
+  --accent-glow: rgba(34, 255, 157, 0.7);
+}
+
+.app-optimmax[data-theme="orange"] {
+  --accent: #ff7a2a;
+  --accent-2: #ff7a2a;
+  --accent-3: #ff7a2a;
+  --accent-glow: rgba(255, 122, 42, 0.7);
+}
+
+.app-optimmax[data-theme="yellow"] {
+  --accent: #ffd23f;
+  --accent-2: #ffd23f;
+  --accent-3: #ffd23f;
+  --accent-glow: rgba(255, 210, 63, 0.7);
+}
+
+.app-optimmax[data-theme="cyan"] {
+  --accent: #22d3ee;
+  --accent-2: #22d3ee;
+  --accent-3: #22d3ee;
+  --accent-glow: rgba(34, 211, 238, 0.7);
+}
+
+.app-optimmax[data-theme="pink"] {
+  --accent: #ff4fa3;
+  --accent-2: #ff4fa3;
+  --accent-3: #ff4fa3;
+  --accent-glow: rgba(255, 79, 163, 0.7);
+}
+
+.app-optimmax[data-theme="multi"] {
+  --accent: #22ff9d;
+  --accent-2: #ff7a2a;
+  --accent-3: #22d3ee;
+  --accent-glow: rgba(34, 255, 157, 0.55);
+}
+
+.app-optimmax::before {
+  content: "";
+  position: absolute;
+  inset: -2rem -1rem;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 2rem;
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 14%, transparent), transparent 55%),
+    radial-gradient(circle at bottom, color-mix(in srgb, var(--accent-3) 10%, transparent), transparent 60%);
+}
+
+.app-optimmax .text-slate-100 {
+  color: #ffffff;
+}
+
+.app-optimmax .text-slate-300 {
+  color: #d6dee9;
+}
+
+.app-optimmax .text-slate-400,
+.app-optimmax .text-slate-500 {
+  color: var(--muted);
+}
+
+.app-optimmax .text-slate-600 {
+  color: #6f7d92;
+}
+
+.app-optimmax .text-falpat {
+  color: var(--accent);
+}
+
+.app-optimmax .text-falpat-soft {
+  color: color-mix(in srgb, var(--accent) 82%, white);
+}
+
+.app-optimmax .bg-night-800 {
+  background-color: #0a0e17;
+}
+
+.app-optimmax .omx-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 70%),
+    rgba(10, 14, 23, 0.6);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: 0 60px 120px -100px var(--accent-glow);
+  padding: 1rem 1.25rem;
+}
+
+.app-optimmax .omx-logo {
+  display: flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: radial-gradient(circle at top, color-mix(in srgb, var(--accent) 90%, white), var(--accent-2));
+  color: #050810;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+    0 20px 60px -30px var(--accent-glow);
+}
+
+.app-optimmax[data-theme="multi"] .omx-logo {
+  background: linear-gradient(120deg, var(--accent), var(--accent-2) 55%, var(--accent-3));
+}
+
+.app-optimmax .omx-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}
+
+.app-optimmax .omx-tag {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  color: var(--muted);
+}
+
+.app-optimmax .omx-subtitle {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+
+
+.app-optimmax .omx-theme-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 0.25rem;
+}
+
+.app-optimmax .omx-theme-dot {
+  position: relative;
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  cursor: pointer;
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.app-optimmax .omx-theme-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0.25rem;
+  border-radius: 999px;
+}
+
+.app-optimmax .omx-theme-dot[data-theme-choice="neon-green"]::after {
+  background: radial-gradient(circle, #22ff9d, #0b3d26);
+}
+
+.app-optimmax .omx-theme-dot[data-theme-choice="orange"]::after {
+  background: radial-gradient(circle, #ff7a2a, #4a2009);
+}
+
+.app-optimmax .omx-theme-dot[data-theme-choice="yellow"]::after {
+  background: radial-gradient(circle, #ffd23f, #4a3b00);
+}
+
+.app-optimmax .omx-theme-dot[data-theme-choice="cyan"]::after {
+  background: radial-gradient(circle, #22d3ee, #0b2f3d);
+}
+
+.app-optimmax .omx-theme-dot[data-theme-choice="pink"]::after {
+  background: radial-gradient(circle, #ff4fa3, #4a0b2b);
+}
+
+.app-optimmax .omx-theme-dot[data-theme-choice="multi"]::after {
+  background: conic-gradient(from 180deg, #22ff9d, #ff7a2a, #22d3ee, #22ff9d);
+}
+
+.app-optimmax .omx-theme-dot:hover {
+  transform: scale(1.06);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.app-optimmax .omx-theme-dot.active {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent),
+    0 20px 60px -40px var(--accent-glow);
+}
+
+.app-optimmax .card:not([class*="border-red"]):not([class*="border-emerald"]):not([class*="border-amber"]) {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.03), transparent 70%),
+    rgba(10, 14, 23, 0.55);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: 0 80px 140px -100px var(--accent-glow);
+}
+
+.app-optimmax .omx-step {
+  border-radius: 1.5rem;
+}
+
+.app-optimmax .omx-step-num {
+  background: radial-gradient(circle at top, color-mix(in srgb, var(--accent) 90%, white), var(--accent-2));
+  color: #050810;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+    0 20px 50px -30px var(--accent-glow);
+}
+
+.app-optimmax[data-theme="multi"] .omx-step-num {
+  background: linear-gradient(120deg, var(--accent), var(--accent-2) 55%, var(--accent-3));
+}
+
+.app-optimmax .omx-step-title {
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.app-optimmax .omx-step-help {
+  color: var(--muted);
+}
+
+.app-optimmax .btn-primary {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background-color: transparent;
+  background-image:
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 90%, white), var(--accent-2)),
+    linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.35) 50%, transparent 75%);
+  background-size: 100% 100%, 220% 100%;
+  background-position: 0 0, -120% 0;
+  color: #050810;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+    0 24px 50px -30px var(--accent-glow);
+  transition: transform 200ms ease, box-shadow 200ms ease, background-position 500ms ease;
+}
+
+.app-optimmax .btn-primary:hover {
+  transform: translateY(-1px);
+  background-position: 0 0, 120% 0;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+    0 30px 60px -30px var(--accent-glow);
+}
+
+.app-optimmax .btn-primary:active {
+  transform: scale(0.98);
+}
+
+.app-optimmax .btn-primary:disabled {
+  opacity: 0.5;
+  transform: none;
+}
+
+.app-optimmax[data-theme="multi"] .btn-primary {
+  background-image:
+    linear-gradient(120deg, var(--accent) 0%, var(--accent-2) 50%, var(--accent-3) 100%),
+    linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.35) 50%, transparent 75%);
+}
+
+.app-optimmax .btn-ghost {
+  border-radius: 1rem;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  color: #c9d1f5;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: transform 200ms ease, border-color 200ms ease, color 200ms ease, background-color 200ms ease;
+}
+
+.app-optimmax .btn-ghost:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  color: #ffffff;
+}
+
+.app-optimmax .field {
+  border-radius: 1rem;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #f8fafc;
+}
+
+.app-optimmax .field:focus {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.app-optimmax select.field option {
+  background-color: #0a0e17;
+  color: #e2e8f0;
+}
+
+.app-optimmax select.field option:checked {
+  background-color: #141c2b;
+  color: #ffffff;
+}
+
+.app-optimmax input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+.app-optimmax .omx-dropzone {
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 1rem;
+  background: radial-gradient(circle at top, color-mix(in srgb, var(--accent) 5%, transparent), transparent 70%);
+  transition: border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease;
+}
+
+.app-optimmax .omx-dropzone:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.app-optimmax .omx-dropzone[data-drag="true"] {
+  border-color: color-mix(in srgb, var(--accent) 80%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+    0 40px 80px -60px var(--accent-glow);
+}
+
+.app-optimmax .omx-chip {
+  border-radius: 999px;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.app-optimmax .omx-stat {
+  border-radius: 1rem;
+  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.app-optimmax .omx-stat:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 20px 50px -40px var(--accent-glow);
+}
+
+.app-optimmax .table-scroll {
+  border-radius: 1rem;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.app-optimmax .table-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  border-radius: 999px;
+}
+
+.app-optimmax table thead {
+  background-color: #0a0e17;
+}
+
+.app-optimmax table thead th {
+  color: var(--muted);
+}
+
+.app-optimmax table td,
+.app-optimmax table th {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.app-optimmax table tbody tr {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.app-optimmax table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.app-optimmax .badge {
+  border-radius: 999px;
+  letter-spacing: 0.08em;
+}
+
+.app-optimmax .badge-entrada {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: color-mix(in srgb, var(--accent) 82%, white);
+}
+
+.app-optimmax .badge-salida {
+  border-color: rgba(212, 175, 55, 0.35);
+  background: rgba(212, 175, 55, 0.1);
+  color: #e7c766;
+}
+
+.app-optimmax .omx-info {
+  border-radius: 1rem;
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: color-mix(in srgb, var(--accent) 60%, white);
+}
+
+.app-optimmax .omx-info summary {
+  color: color-mix(in srgb, var(--accent) 75%, white);
+}
+
+.app-optimmax .omx-modal {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.035), transparent 70%),
+    #0a0e17;
+  box-shadow: 0 80px 140px -100px var(--accent-glow);
+}
+
+.app-optimmax .omx-modal > header,
+.app-optimmax .omx-modal > footer {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.app-optimmax .omx-dropdown {
+  border-radius: 1rem;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: #0a0e17;
+  box-shadow: 0 30px 70px -40px var(--accent-glow);
+}
+
+.app-optimmax .omx-dropdown li:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: #ffffff;
+}
+
+.app-optimmax .omx-progress-bar {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent));
+  background-size: 200% 100%;
+  animation: omx-bar 1.8s linear infinite;
+}
+
+.app-optimmax .omx-brand-gradient {
+  background-image: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.app-optimmax .omx-accent-text {
+  color: var(--accent);
+}
+
+.app-optimmax .omx-chart-card {
+  overflow: hidden;
+}
+
+.app-optimmax .omx-chart-glow {
+  position: absolute;
+  right: -2rem;
+  top: -3rem;
+  height: 7rem;
+  width: 7rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.app-optimmax .omx-chart-title {
+  color: #ffffff;
+}
+
+.app-optimmax .omx-brand-logo {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  box-shadow: 0 18px 40px -30px var(--accent-glow);
+}
+
+.app-optimmax .omx-nav-active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 15%, transparent), color-mix(in srgb, var(--accent) 5%, transparent));
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.app-optimmax .omx-modal-header,
+.app-optimmax .omx-modal-footer {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.app-optimmax .btn-volt {
+  border-radius: 1rem;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.app-optimmax .btn-volt:hover {
+  transform: translateY(-1px);
+}
+
+.app-optimmax .bg-falpat {
+  background-color: var(--accent);
+}
+
+.app-optimmax .bg-falpat\/10 {
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.app-optimmax .bg-falpat\/15 {
+  background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.app-optimmax .bg-falpat\/20 {
+  background-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.app-optimmax .hover\:bg-falpat\/20:hover {
+  background-color: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.app-optimmax .border-falpat {
+  border-color: var(--accent);
+}
+
+.app-optimmax .border-falpat\/30 {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.app-optimmax .border-falpat\/60 {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.app-optimmax .border-falpat\/25 {
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.app-optimmax .border-falpat\/40 {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.app-optimmax .border-falpat\/50 {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.app-optimmax .hover\:border-falpat\/25:hover {
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.app-optimmax .hover\:border-falpat\/40:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.app-optimmax .bg-falpat\/5 {
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.app-optimmax .bg-falpat\/25 {
+  background-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.app-optimmax .bg-falpat\/30 {
+  background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.app-optimmax .hover\:bg-falpat\/10:hover {
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.app-optimmax .hover\:border-falpat\/30:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.app-optimmax .hover\:text-falpat-soft:hover,
+.app-optimmax .group:hover .group-hover\:text-falpat-soft {
+  color: color-mix(in srgb, var(--accent) 82%, white);
+}
+
+.app-optimmax .shadow-glow {
+  box-shadow: 0 0 18px -4px var(--accent-glow);
+}
+
+.app-optimmax ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.app-optimmax ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-optimmax ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  border-radius: 999px;
+}
+
+@keyframes omx-bar {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}

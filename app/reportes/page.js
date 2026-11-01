@@ -11,6 +11,7 @@ import { toMillis, parseWeight, normalizeText, anioMes, descripcionPeriodo } fro
 import FiltroPeriodo from '@/components/FiltroPeriodo';
 import FiltrosAplicados from '@/components/FiltrosAplicados';
 import MultiSelect from '@/components/MultiSelect';
+import SectionHero from '@/components/SectionHero';
 import {
   IconArrowUpRight,
   IconArrowDownLeft,
@@ -20,6 +21,7 @@ import {
   IconX,
   IconSearch,
   IconTruck,
+  IconPieChart,
 } from '@/components/Icons';
 
 function fmtTn(n) {
@@ -245,26 +247,22 @@ export default function Informes() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      {/* Encabezado */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="section-sub mb-1">
-            {new Date().toLocaleDateString('es-AR', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
-          </p>
-          <h1 className="section-title !text-2xl">
-            Informes de <span className="text-gradient-falpat">Stock</span>
-          </h1>
-        </div>
+      <SectionHero
+        icon={IconPieChart}
+        title="Reportes de Stock"
+        tag="Reportes"
+        subtitle={`Entradas, salidas y balance · ${new Date().toLocaleDateString('es-AR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })}`}
+      >
         <button type="button" onClick={reload} className="btn-ghost" disabled={loading}>
           <IconRefresh className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
           Actualizar
         </button>
-      </div>
+      </SectionHero>
 
       {error && <ErrorPanel message={error} onRetry={reload} />}
 
@@ -381,7 +379,7 @@ export default function Informes() {
               key={r.key}
               type="button"
               onClick={() => quickRange(r.key)}
-              className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-slate-300 transition hover:border-falpat/40 hover:bg-falpat/10 hover:text-falpat-soft"
+              className="omx-chip rounded-full border px-3 py-1 text-xs text-slate-300 transition hover:border-falpat/40 hover:bg-falpat/10 hover:text-falpat-soft"
             >
               {r.label}
             </button>

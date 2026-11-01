@@ -14,6 +14,7 @@ import { formatDate, normalizeText, cn, toMillis, anioMes, descripcionPeriodo } 
 import SearchBar from '@/components/SearchBar';
 import FiltroPeriodo from '@/components/FiltroPeriodo';
 import FiltrosAplicados from '@/components/FiltrosAplicados';
+import SectionHero from '@/components/SectionHero';
 import {
   IconArrowUpRight,
   IconArrowDownLeft,
@@ -22,6 +23,7 @@ import {
   IconAlert,
   IconTrash,
   IconBox,
+  IconLayout,
   IconFileText,
   IconUser,
   IconTruck,
@@ -190,7 +192,7 @@ function BadgeCarga({ carga }) {
 
 function MiniStat({ label, value, accent = 'text-slate-100' }) {
   return (
-    <div className="flex flex-col items-center rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+    <div className="omx-stat flex flex-col items-center border px-3 py-2">
       <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
       <span className={`font-mono text-sm font-bold tabular-nums ${accent}`}>{value}</span>
     </div>
@@ -551,35 +553,29 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      {/* Encabezado */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="section-sub mb-1">
-            {new Date().toLocaleDateString('es-AR', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
-          </p>
-          <h1 className="section-title !text-2xl">
-            Panel de <span className="text-gradient-falpat">Stock</span>
-          </h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ModeBadge online={!error} />
-          <button
-            type="button"
-            onClick={reload}
-            className="btn-ghost"
-            disabled={loading}
-            title="Recargar datos"
-          >
-            <IconRefresh className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-            <span className="hidden sm:inline">Actualizar</span>
-          </button>
-        </div>
-      </div>
+      <SectionHero
+        icon={IconLayout}
+        title="Panel de Stock"
+        tag="Panel"
+        subtitle={`Control de entradas y salidas · ${new Date().toLocaleDateString('es-AR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })}`}
+      >
+        <ModeBadge online={!error} />
+        <button
+          type="button"
+          onClick={reload}
+          className="btn-ghost"
+          disabled={loading}
+          title="Recargar datos"
+        >
+          <IconRefresh className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+          <span className="hidden sm:inline">Actualizar</span>
+        </button>
+      </SectionHero>
 
       {error && <ErrorPanel message={error} onRetry={reload} />}
 

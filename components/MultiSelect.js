@@ -91,7 +91,7 @@ export default function MultiSelect({
       )}
 
       {open && (
-        <div className="absolute left-0 right-0 z-30 mt-1.5 overflow-hidden rounded-xl border border-white/10 bg-night-800 shadow-2xl">
+        <div className="omx-dropdown absolute left-0 right-0 z-30 mt-1.5 overflow-hidden border">
           <div className="relative border-b border-white/10 p-2">
             <IconSearch className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
             <input

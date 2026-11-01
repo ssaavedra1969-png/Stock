@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { revisarRegistro, parseNum } from '@/lib/tickets/extract.mjs';
 import { MATERIALES, RAZONES_SOCIALES } from '@/lib/tickets/base.mjs';
 import EditorTicket from '@/components/EditorTicket';
+import SectionHero from '@/components/SectionHero';
 import {
   IconUpload,
   IconFileText,
@@ -697,18 +698,19 @@ export default function TicketsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-3">
-      {/* Encabezado compacto */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="section-title !text-lg">Remitos</h1>
-        <div className="flex items-center gap-2">
-          {(files.length > 0 || hayResultado) && (
-            <button type="button" onClick={limpiar} className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={procesando}>
-              <IconRefresh className="h-3.5 w-3.5" />
-              Nueva
-            </button>
-          )}
-        </div>
-      </div>
+      <SectionHero
+        icon={IconFileText}
+        title="Remitos"
+        tag="Tickets"
+        subtitle="Cargá, revisá y guardá los remitos en el histórico"
+      >
+        {(files.length > 0 || hayResultado) && (
+          <button type="button" onClick={limpiar} className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={procesando}>
+            <IconRefresh className="h-3.5 w-3.5" />
+            Nueva
+          </button>
+        )}
+      </SectionHero>
 
       {/* Paso 1 — Cargar los remitos */}
       <Paso
@@ -720,10 +722,8 @@ export default function TicketsPage() {
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
           onDragLeave={() => setArrastrando(false)}
           onDrop={onDrop}
-          className={
-            'flex items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-4 text-center transition ' +
-            (arrastrando ? 'border-falpat/60 bg-white/[0.05]' : 'border-white/15 hover:bg-white/[0.03]')
-          }
+          data-drag={arrastrando}
+          className="omx-dropzone flex items-center justify-center gap-3 px-4 py-4 text-center transition"
         >
           <input
             ref={inputRef}
@@ -753,7 +753,7 @@ export default function TicketsPage() {
             {files.map((f, i) => (
               <span
                 key={`${f.name}-${f.size}-${i}`}
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/5 bg-white/[0.03] px-2 py-1 text-[11px] text-slate-300"
+                className="omx-chip inline-flex items-center gap-1.5 rounded-md border border-white/5 bg-white/[0.03] px-2 py-1 text-[11px] text-slate-300"
               >
                 <IconFileText className="h-3 w-3 text-falpat-soft" />
                 <span className="max-w-[120px] truncate">{f.name}</span>
@@ -882,8 +882,8 @@ export default function TicketsPage() {
           )}
 
           {(resultado.alertas || []).length > 0 && (
-            <details className="rounded-lg border border-falpat/30 bg-falpat/10 p-2 text-xs text-sky-100">
-              <summary className="cursor-pointer font-semibold uppercase tracking-wider text-sky-200">
+            <details className="omx-info rounded-lg border p-2 text-xs">
+              <summary className="cursor-pointer font-semibold uppercase tracking-wider">
                 Similares ({(resultado.alertas || []).length})
               </summary>
               <ul className="mt-1 space-y-0.5 pl-2">
@@ -1245,7 +1245,7 @@ export default function TicketsPage() {
 
       {alertas.length > 0 && mostrarModalDuplicados && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-night-900 border border-white/10 rounded-lg p-5 w-full max-w-2xl mx-4 shadow-2xl">
+          <div className="omx-modal bg-night-900 border border-white/10 rounded-lg p-5 w-full max-w-2xl mx-4 shadow-2xl">
             <div className="flex items-start gap-3 mb-4">
               <div className="bg-amber-500/20 rounded-full p-2 shrink-0">
                 <IconAlert className="h-5 w-5 text-amber-400" />
@@ -1287,7 +1287,7 @@ export default function TicketsPage() {
               <button
                 type="button"
                 onClick={() => setMostrarModalDuplicados(false)}
-                className="px-4 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-slate-200 text-sm font-medium transition"
+                className="btn-ghost !px-3 !py-1.5 !text-xs"
               >
                 Entendido
               </button>
@@ -1301,14 +1301,14 @@ export default function TicketsPage() {
 
 function Paso({ n, titulo, ayuda, children }) {
   return (
-    <section className="card !p-3 space-y-3">
+    <section className="card omx-step space-y-3">
       <header className="flex items-start gap-3">
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-falpat/20 font-mono text-xs font-bold text-falpat-soft">
+        <span className="omx-step-num flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold">
           {n}
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-slate-100">{titulo}</h2>
-          {ayuda && <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{ayuda}</p>}
+          <h2 className="omx-step-title text-sm">{titulo}</h2>
+          {ayuda && <p className="omx-step-help mt-0.5 text-[11px] leading-relaxed">{ayuda}</p>}
         </div>
       </header>
       {children}
@@ -1318,7 +1318,7 @@ function Paso({ n, titulo, ayuda, children }) {
 
 function Stat({ label, value, cls }) {
   return (
-    <div className="rounded-lg border border-white/5 bg-white/[0.03] p-2 text-center">
+    <div className="omx-stat rounded-lg border p-2 text-center">
       <div className={`font-mono text-sm font-bold tabular-nums ${cls}`}>{value}</div>
       <div className="text-[8px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
     </div>
@@ -1384,7 +1384,7 @@ function ProcessingOverlay({ progreso, archivos }) {
 
         <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-falpat via-emerald-400 to-amber-400 transition-all duration-200"
+            className="omx-progress-bar h-full rounded-full transition-all duration-200"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -1431,7 +1431,7 @@ function ProcessingOverlay({ progreso, archivos }) {
 
         <div className="flex items-center justify-between border-t border-white/5 pt-2">
           <span className="font-mono text-[10px] text-slate-500">{elapsed.toFixed(1)}s</span>
-          <span className="bg-gradient-to-r from-falpat via-emerald-400 to-amber-400 bg-clip-text text-[10px] font-bold text-transparent">
+          <span className="omx-brand-gradient bg-clip-text text-[10px] font-bold text-transparent">
             Grupo Falpat SRL
           </span>
         </div>

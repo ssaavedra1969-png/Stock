@@ -273,15 +273,15 @@ export default function ModalForm() {
     >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
-      <div className="glass-strong relative z-10 flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden animate-slide-up">
+      <div className="omx-modal glass-strong relative z-10 flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden animate-slide-up">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-8">
+        <div className="omx-modal-header flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-8">
           <div>
-            <h2 className="section-title flex items-center gap-2">
+            <h2 className="omx-step-title flex items-center gap-2 text-base">
               <IconBox className="h-5 w-5 text-falpat" />
               {isEdit ? 'Editar registro' : 'Nuevo registro'}
             </h2>
-            <p className="section-sub mt-0.5">Stock de materiales · GRUPO FALPAT SRL</p>
+            <p className="omx-step-help mt-0.5 text-xs">Stock de materiales · GRUPO FALPAT SRL</p>
           </div>
           <button
             type="button"
@@ -564,7 +564,7 @@ export default function ModalForm() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 border-t border-white/10 bg-black/20 px-5 py-4 sm:px-8">
+          <div className="omx-modal-footer flex items-center justify-end gap-3 border-t border-white/10 bg-black/20 px-5 py-4 sm:px-8">
             <button type="button" onClick={closeModal} className="btn-ghost" disabled={submitting}>
               Cancelar
             </button>

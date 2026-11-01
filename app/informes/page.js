@@ -21,6 +21,7 @@ import { formatDate, formatDateTime, todayISO, toMillis, anioMes, descripcionPer
 import FiltroPeriodo from '@/components/FiltroPeriodo';
 import FiltrosAplicados from '@/components/FiltrosAplicados';
 import MultiSelect from '@/components/MultiSelect';
+import SectionHero from '@/components/SectionHero';
 import {
   IconFilter,
   IconFileSpreadsheet,
@@ -1377,23 +1378,21 @@ const cab = (arr, titulo, labelPeriodo) => {
 
   return (
     <div className="font-display mx-auto max-w-6xl space-y-6">
-      {/* Encabezado de página */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="section-sub mb-1">Reportes gerenciales con encabezado de empresa</p>
-          <h1 className="section-title !text-2xl">Informes</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={handleExportExcel} className="btn-ghost" title="Descargar informe en Excel">
-            <IconFileSpreadsheet className="h-4 w-4" />
-            Excel
-          </button>
-          <button type="button" onClick={handleExportPDF} className="btn-primary" title="Descargar informe en PDF">
-            <IconPrinter className="h-4 w-4" />
-            PDF
-          </button>
-        </div>
-      </div>
+      <SectionHero
+        icon={IconLayers}
+        title="Informes"
+        tag="Informes"
+        subtitle="Reportes gerenciales con encabezado de empresa"
+      >
+        <button type="button" onClick={handleExportExcel} className="btn-ghost" title="Descargar informe en Excel">
+          <IconFileSpreadsheet className="h-4 w-4" />
+          Excel
+        </button>
+        <button type="button" onClick={handleExportPDF} className="btn-primary" title="Descargar informe en PDF">
+          <IconPrinter className="h-4 w-4" />
+          PDF
+        </button>
+      </SectionHero>
 
       {/* Filtros */}
       <div className="card space-y-4">
@@ -1487,16 +1486,19 @@ const cab = (arr, titulo, labelPeriodo) => {
       </div>
 
       {/* ===== Informe (panel oscuro) ===== */}
-      <div className="font-display relative overflow-hidden rounded-2xl border border-white/10 bg-night-900/70 text-slate-200 shadow-2xl shadow-black/40 backdrop-blur-xl">
+      <div className="card font-display relative overflow-hidden !p-0 text-slate-200">
         {/* Línea superior degradada */}
-        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-falpat via-indigo-500/70 to-transparent" />
+        <div
+          className="absolute inset-x-0 top-0 h-[2px]"
+          style={{ background: 'linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3), transparent)' }}
+        />
 
         {/* Encabezado de empresa */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-6 py-5">
           <div className="flex items-center gap-4">
             <div
               className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]"
-              style={{ boxShadow: 'inset 0 0 24px rgba(45,212,255,0.08)' }}
+              style={{ boxShadow: 'inset 0 0 24px color-mix(in srgb, var(--accent) 16%, transparent)' }}
             >
               <Image src={LOGO_PATH} alt="Logo GRUPO FALPAT SRL" width={56} height={56} className="h-12 w-12 object-contain" />
             </div>
@@ -1509,9 +1511,7 @@ const cab = (arr, titulo, labelPeriodo) => {
             </div>
           </div>
           <div className="text-right">
-            <h1
-              className="bg-gradient-to-r from-falpat via-sky-300 to-indigo-400 bg-clip-text text-base font-extrabold uppercase tracking-wide text-transparent"
-            >
+            <h1 className="omx-brand-gradient text-base font-extrabold uppercase tracking-wide">
               Informe de {reportTitle}
             </h1>
             <p className="mt-0.5 font-mono text-xs font-semibold tabular-nums text-slate-300">{periodoLabel}</p>
@@ -1565,7 +1565,7 @@ const cab = (arr, titulo, labelPeriodo) => {
                   centerBottom={donutCenterBottom}
                 />
               </ChartCard>
-              <div className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur">
+              <div className="omx-stat flex flex-col border p-4 backdrop-blur">
                 <h3 className="mb-3 font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   Distribución
                 </h3>
@@ -1614,10 +1614,10 @@ function ResumenChip({ label, value, accent = false, tone }) {
       : tone === 'volt'
         ? 'linear-gradient(90deg,#d4af37,#f0d060)'
         : accent
-          ? 'linear-gradient(90deg,#3b82f6,#818cf8)'
+          ? 'linear-gradient(90deg, var(--accent), var(--accent-2))'
           : 'linear-gradient(90deg,rgba(255,255,255,0.35),transparent)';
   return (
-    <div className="relative min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06]">
+    <div className="omx-stat relative min-w-0 overflow-hidden border px-4 py-3 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06]">
       <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: line }} />
       <div
         className={`overflow-hidden text-ellipsis whitespace-nowrap font-mono text-lg font-bold tabular-nums ${

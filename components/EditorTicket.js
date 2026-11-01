@@ -107,7 +107,7 @@ function InputConLista({ value, onChange, lista, placeholder, mono, error }) {
         className={`field !py-2 text-xs w-full ${mono ? 'font-mono' : ''} ${error ? 'field-error' : ''}`}
       />
       {abierto && opciones.length > 0 && (
-        <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-white/10 bg-night-900 shadow-xl">
+        <ul className="omx-dropdown absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-white/10 bg-night-900 shadow-xl">
           {opciones.map((opcion) => (
             <li
               key={opcion}
@@ -243,7 +243,7 @@ export default function EditorTicket({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-2 backdrop-blur-sm">
-      <div className="flex h-[94vh] w-full max-w-7xl animate-pop-in flex-col overflow-hidden rounded-2xl border border-white/10 bg-night-900 shadow-2xl">
+      <div className="omx-modal flex h-[94vh] w-full max-w-7xl animate-pop-in flex-col overflow-hidden rounded-2xl border border-white/10 bg-night-900 shadow-2xl">
         <header className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
