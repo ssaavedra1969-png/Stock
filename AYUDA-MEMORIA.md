@@ -447,6 +447,28 @@ ALONSO→AH702XX · RODRIGUEZ MATIAS→AH784OX · WILBERGER→AH784OW.
       `TICKETS_ENTRADA/PROCESADOS/SALIDA/HISTORICO/KB`, `PYTHON_BIN`, `LECTURA_DIR`.
 - [x] lint + build OK. Pendiente del usuario: probar el circuito completo desde la PC del estudio.
 
+### EN CURSO → HECHO (sesión 2026-11-01): Tema global neon/glass, header flip clock con clima real
+
+- [x] **Tema global "OptimMAX"**: nuevo `context/ThemeContext.js` con 6 temas (neon-green, orange,
+      yellow, cyan, pink, multi). `components/ThemeSwitcher.js` con 6 dots. `components/SectionHero.js`
+      hero compartido en las 5 páginas (/, /reportes, /informes, /incorporar, /tickets).
+- [x] **CSS global** `app/app-theme.css` con scope `.app-optimmax` y clases `omx-*`. Reemplazó
+      `app/tickets/tickets-theme.css`. `app/layout.js` importa el CSS y envuelve con `ThemeProvider`.
+- [x] **6 temas**: neon-green (#22ff9d), orange (#ff7a2a), yellow (#ffd23f), cyan (#22d3ee),
+      pink (#ff4fa3), multi. Persistencia en localStorage (`falpat-theme`).
+- [x] **Header flip clock retro**: `components/Topbar.js` rediseñado con reloj flip mecánico (HH:MM:SS),
+      clima real vía Open-Meteo + Nominatim (geolocalización del navegador, fallback Buenos Aires),
+      panel dark (#0f172a) con borde accent, tarjetas #1e293b, labels y AM/PM en accent color.
+      Calendar month/day con accent-2/accent-3. Panel 820px centrado.
+- [x] **Clima real**: Open-Meteo (temperatura + weather code) + Nominatim (ciudad). Icono por código
+      de clima y hora del día (sol/luna). Se actualiza cada 30 min.
+- [x] **Colores adaptativos**: borde del panel, labels, AM/PM, separadores y calendario usan
+      `var(--accent)` / `var(--accent-2)` / `var(--accent-3)` según el tema seleccionado.
+- [x] **Build + push**: commit `b4c79ba` en `main`, deploy en Vercel. Lint OK (solo warning
+      preexistente en tickets/page.js).
+- [x] **Checkpoint git**: tag `checkpoint-antes-tema-tickets` (HEAD 320d796) + backups en
+      `C:\Users\AI01_\AppData\Local\Temp\opencode\checkpoints\antes-tema-tickets\`.
+
 ### EN CURSO → HECHO (sesión 2026-09-12): Filtros de período por sección + sidebar colapsable + rediseño del bloque de filtros
 
 - [x] **Filtros de período propios por sección en el Informe General**: las secciones 01 (Ventas)
