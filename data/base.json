@@ -40,7 +40,7 @@
     "OCHOA": "OCHOA ANIBAL",
     "PRIMITERRA": "PRIMITERRA TONINO",
     "AGUERO": "AGUERO TOMAS AGUSTIN",
-    "LEDESMA": "LEDESMA CAMILO",
+    "LEDESMA": "LEDESMA CAMILD",
     "WILBERGER": "WILBERGER JUAN",
     "PIACENTINI": "PIACENTINI ALEJANDRO MIGUEL",
     "TOLOSA": "TOLOSA CESAR",
@@ -74,7 +74,8 @@
     "SPO|85970": "AE403QQ",
     "SPO|65971": "AG894ER",
     "SPO|65975": "AE403QQ",
-    "AVE|168440": "AI417ZZ"
+    "AVE|168440": "AI417ZZ",
+    "LCE|112297": "AH919KE"
   },
   "correccionesPorTicket": {
     "AVE|165420": {
@@ -215,6 +216,16 @@
       "Neto": 35620,
       "Peso Neto": 35260,
       "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
+    },
+    "LCE|112297": {
+      "Fecha": "13/10/2026",
+      "N Remito": "112297",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": 35640,
+      "Peso Neto": 35280,
+      "Chofer": "LEDESMA CAMILD",
       "Pat. Chasis": "AH919KE"
     }
   },
@@ -367,6 +378,16 @@
       "Neto": 35620,
       "Peso Neto": 35260,
       "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
+    },
+    "LCE|IMG-261019131736-001.PDF": {
+      "Fecha": "13/10/2026",
+      "N Remito": "112297",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": 35640,
+      "Peso Neto": 35280,
+      "Chofer": "LEDESMA CAMILD",
       "Pat. Chasis": "AH919KE"
     }
   },
