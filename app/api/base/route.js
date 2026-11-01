@@ -43,10 +43,19 @@ export async function POST(request) {
   const correcciones = body?.correcciones;
   const materiales = body?.materiales;
   const razonesSociales = body?.razonesSociales;
-  const hayCatalogo = Array.isArray(materiales) || Array.isArray(razonesSociales);
+  const choferes = body?.choferes;
+  const patentes = body?.patentes;
+  const hayCatalogo =
+    Array.isArray(materiales) ||
+    Array.isArray(razonesSociales) ||
+    (choferes && typeof choferes === 'object') ||
+    (patentes && typeof patentes === 'object');
   if (!Array.isArray(body?.filas) && !hayCatalogo) {
     return Response.json(
-      { error: 'Faltan los datos a guardar ("filas", "materiales" o "razonesSociales").' },
+      {
+        error:
+          'Faltan los datos a guardar ("filas", "materiales", "razonesSociales", "choferes" o "patentes").',
+      },
       { status: 400 }
     );
   }
@@ -62,11 +71,22 @@ export async function POST(request) {
       { status: 400 }
     );
   }
+  if (choferes !== undefined && (typeof choferes !== 'object' || Array.isArray(choferes))) {
+    return Response.json({ error: 'El campo "choferes" debe ser un objeto.' }, { status: 400 });
+  }
+  if (patentes !== undefined && (typeof patentes !== 'object' || Array.isArray(patentes))) {
+    return Response.json({ error: 'El campo "patentes" debe ser un objeto.' }, { status: 400 });
+  }
 
   const aprendido = unirBase(
     aprenderDeFilas(filas),
     aprenderDeCorrecciones(correcciones || []),
-    { materiales: materiales || [], razonesSociales: razonesSociales || [] }
+    {
+      materiales: materiales || [],
+      razonesSociales: razonesSociales || [],
+      choferes: choferes || {},
+      patentes: patentes || {},
+    }
   );
   const reemplazar = body?.reemplazar === true;
   const partes = [];

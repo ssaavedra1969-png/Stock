@@ -133,6 +133,7 @@ export function AppProvider({ children }) {
       console.error('Error leyendo la base de conocimiento:', err);
     }
   }, []);
+
   useEffect(() => {
     loadBase();
   }, [loadBase]);
@@ -153,6 +154,65 @@ export function AppProvider({ children }) {
     setBaseConocimiento(data.base);
     baseRef.current = data.base;
     return data;
+  }, []);
+
+  // Agrega nuevas razones sociales al catalogo persistido.
+  const agregarRazonesSociales = useCallback(async (razones) => {
+    const data = await fetch('/api/base', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ razonesSociales: razones }),
+    });
+    const json = await data.json();
+    if (!json?.base) throw new Error(json?.error || 'Error al guardar razones sociales');
+    setBaseConocimiento(json.base);
+    baseRef.current = json.base;
+    return json;
+  }, []);
+
+  // Agrega nuevos choferes al catalogo persistido (apellido -> nombre completo).
+  const agregarChoferes = useCallback(async (choferes) => {
+    const mapa = {};
+    for (const nombre of choferes || []) {
+      const limpio = String(nombre || '').trim().toUpperCase();
+      const apellido = limpio.split(/\s+/)[0];
+      if (apellido && apellido !== 'N/D') mapa[apellido] = limpio;
+    }
+    if (!Object.keys(mapa).length) return null;
+    const data = await fetch('/api/base', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ choferes: mapa }),
+    });
+    const json = await data.json();
+    if (!json?.base) throw new Error(json?.error || 'Error al guardar choferes');
+    setBaseConocimiento(json.base);
+    baseRef.current = json.base;
+    return json;
+  }, []);
+
+  // Agrega nuevas patentes al catalogo persistido (apellido -> [patentes]).
+  // Recibe [{ chofer, patente }] para asociar la patente al chofer.
+  const agregarPatentes = useCallback(async (patentes) => {
+    const mapa = {};
+    for (const item of patentes || []) {
+      const apellido = String(item?.chofer || '').trim().toUpperCase().split(/\s+/)[0];
+      const patente = String(item?.patente || '').trim().toUpperCase();
+      if (!apellido || !patente) continue;
+      const lista = mapa[apellido] || (mapa[apellido] = []);
+      if (!lista.includes(patente)) lista.push(patente);
+    }
+    if (!Object.keys(mapa).length) return null;
+    const data = await fetch('/api/base', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patentes: mapa }),
+    });
+    const json = await data.json();
+    if (!json?.base) throw new Error(json?.error || 'Error al guardar patentes');
+    setBaseConocimiento(json.base);
+    baseRef.current = json.base;
+    return json;
   }, []);
 
   const openModal = useCallback((carga) => {
@@ -270,6 +330,9 @@ export function AppProvider({ children }) {
       baseConocimiento,
       guardarBase,
       agregarMateriales,
+      agregarRazonesSociales,
+      agregarChoferes,
+      agregarPatentes,
     }),
     [
       records,
@@ -296,6 +359,9 @@ export function AppProvider({ children }) {
       baseConocimiento,
       guardarBase,
       agregarMateriales,
+      agregarRazonesSociales,
+      agregarChoferes,
+      agregarPatentes,
     ]
   );
 

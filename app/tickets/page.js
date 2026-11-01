@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { revisarRegistro } from '@/lib/tickets/extract.mjs';
+import { revisarRegistro, parseNum } from '@/lib/tickets/extract.mjs';
 import { MATERIALES, RAZONES_SOCIALES } from '@/lib/tickets/base.mjs';
 import EditorTicket from '@/components/EditorTicket';
 import {
@@ -33,6 +33,7 @@ const CAMPOS = [
 
 const CENTROS = ['Lujan', 'Campana'];
 const CARGAS = ['Entrada', 'Salida'];
+const EDICIONES_KEY = 'falpat:tickets:ediciones';
 
 const COLUMNAS_TABLA = [...CAMPOS, 'Archivo', 'Estado'];
 
@@ -99,6 +100,9 @@ export default function TicketsPage() {
     limpiarTickets,
     guardarBase,
     agregarMateriales,
+    agregarRazonesSociales,
+    agregarChoferes,
+    agregarPatentes,
     baseConocimiento,
   } = useApp();
   const inputRef = useRef(null);
@@ -116,6 +120,7 @@ export default function TicketsPage() {
   const [leyendoEntrada, setLeyendoEntrada] = useState(false);
   const [clavesPlanilla, setClavesPlanilla] = useState(null); // Set "Proveedor|Remito" del historial
   const [mostrarModalDuplicados, setMostrarModalDuplicados] = useState(false);
+  const [avisoArchivo, setAvisoArchivo] = useState(null);
   const [confirmacionVisual, setConfirmacionVisual] = useState(false);
   const [guardandoAprendizaje, setGuardandoAprendizaje] = useState(false);
   const [progreso, setProgreso] = useState(null);
@@ -130,6 +135,32 @@ export default function TicketsPage() {
   );
   const progresoRef = useRef(null);
   const progresoFlush = useRef(null);
+
+  // Recupera ediciones pendientes (por ejemplo, si el guardado falló y se
+  // recargó la página). Se guardan sin el File del PDF, que no es serializable.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(EDICIONES_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (Array.isArray(data?.registrosEditados) && data.registrosEditados.length) {
+        setRegistrosEditados(data.registrosEditados);
+        setHuboEdiciones(true);
+      }
+    } catch {
+      // storage no disponible: se ignora
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!huboEdiciones || registrosEditados.length === 0) return;
+    try {
+      const limpios = registrosEditados.map(({ _file, ...r }) => r);
+      sessionStorage.setItem(EDICIONES_KEY, JSON.stringify({ registrosEditados: limpios }));
+    } catch {
+      // storage lleno o no disponible: se ignora
+    }
+  }, [registrosEditados, huboEdiciones]);
 
   useEffect(() => () => {
     if (progresoFlush.current) clearTimeout(progresoFlush.current);
@@ -308,6 +339,11 @@ export default function TicketsPage() {
     setCentro('');
     setCarga('');
     setConfirmacionVisual(false);
+    try {
+      sessionStorage.removeItem(EDICIONES_KEY);
+    } catch {
+      // storage no disponible
+    }
     if (inputRef.current) inputRef.current.value = '';
   }
 
@@ -387,6 +423,12 @@ export default function TicketsPage() {
   async function procesar() {
     if (files.length === 0) return;
     setRegistrosEditados([]);
+    setHuboEdiciones(false);
+    try {
+      sessionStorage.removeItem(EDICIONES_KEY);
+    } catch {
+      // storage no disponible
+    }
     setEditandoIdx(null);
     progresoRef.current = {
       total: files.length,
@@ -423,14 +465,28 @@ export default function TicketsPage() {
     );
   }
 
+  // Helper: convertir Neto/Peso Neto a numero puro (kilos) para sumar en Excel.
+  // Usa parseNum, que respeta el formato argentino: punto = miles, coma = decimal.
+  function normalizarNumero(valor) {
+    if (valor === '' || valor === null || valor === undefined) return '';
+    const num = parseNum(valor);
+    return num == null ? valor : num;
+  }
+
   // Llamada desde el EditorTicket: recibe el formulario completo.
   async function guardarEdicion(form, irSiguiente) {
+    // Normalizar Neto y Peso Neto a numeros puros (kilos) antes de guardar
+    const formNormalizado = {
+      ...form,
+      Neto: normalizarNumero(form.Neto),
+      'Peso Neto': normalizarNumero(form['Peso Neto']),
+    };
     setRegistrosEditados((prev) => {
       const base = resultado?.registros || [];
       const lista = prev.length > 0 ? [...prev] : [...base];
       const revision = { ...(form._revision || {}) };
-      for (const campo of Object.keys(form)) delete revision[campo];
-      const editado = { ...form, _revision: revision };
+      for (const campo of Object.keys(formNormalizado)) delete revision[campo];
+      const editado = { ...formNormalizado, _revision: revision };
       if (Object.keys(revision).length === 0) delete editado._revision;
       const indiceReal = lista.findIndex((r) => r.Archivo === editado.Archivo);
       if (indiceReal >= 0) lista[indiceReal] = editado;
@@ -464,6 +520,68 @@ export default function TicketsPage() {
       }
     } else {
       showToast('Registro actualizado');
+    }
+
+    const razonSocial = String(form['Razon Social'] || '').trim();
+    const razonSocialNueva =
+      razonSocial &&
+      !opcionesRazon.some(
+        (r) => String(r).trim().toLowerCase() === razonSocial.toLowerCase()
+      );
+    if (razonSocialNueva) {
+      try {
+        await agregarRazonesSociales([razonSocial]);
+        showToast(
+          `Registro actualizado · Razón social "${razonSocial}" agregada a la lista`
+        );
+      } catch (err) {
+        showToast(
+          `Registro actualizado, pero no se pudo agregar "${razonSocial}" a la lista: ${
+            err.message || 'error de conexión'
+          }`,
+          'error'
+        );
+      }
+    }
+
+    const chofer = String(form.Chofer || '').trim();
+    const choferApellido = chofer.split(/\s+/)[0].toUpperCase();
+    const choferesBase = baseConocimiento?.choferes || {};
+    const choferConocido =
+      !!choferesBase[choferApellido] ||
+      Object.values(choferesBase).some(
+        (nombre) => String(nombre).trim().toUpperCase() === chofer.toUpperCase()
+      );
+    if (chofer && !choferConocido) {
+      try {
+        await agregarChoferes([chofer]);
+        showToast(`Registro actualizado · Chofer "${chofer}" agregado a la lista`);
+      } catch (err) {
+        showToast(
+          `Registro actualizado, pero no se pudo agregar "${chofer}" a la lista: ${
+            err.message || 'error de conexión'
+          }`,
+          'error'
+        );
+      }
+    }
+
+    const patChasis = String(form['Pat. Chasis'] || '').trim().toUpperCase();
+    const patentesBase = Object.values(baseConocimiento?.patentes || {})
+      .flat()
+      .map((p) => String(p).toUpperCase());
+    if (patChasis && !patentesBase.includes(patChasis)) {
+      try {
+        await agregarPatentes([{ chofer, patente: patChasis }]);
+        showToast(`Registro actualizado · Patente "${patChasis}" agregada a la lista`);
+      } catch (err) {
+        showToast(
+          `Registro actualizado, pero no se pudo agregar "${patChasis}" a la lista: ${
+            err.message || 'error de conexión'
+          }`,
+          'error'
+        );
+      }
     }
   }
 
@@ -549,13 +667,12 @@ export default function TicketsPage() {
     }
     setIncorporando(true);
     try {
-      const { incorporarEnCarpeta, leerPlanillaDeCarpeta, clavesDeFilas } = await import('@/lib/tickets/archivo.mjs');
+      const { incorporarEnCarpeta } = await import('@/lib/tickets/archivo.mjs');
       const registrosConMeta = registros.map((r) => ({ ...r, Centro: centro, Carga: carga }));
       const data = await incorporarEnCarpeta(carpeta.handle, registrosConMeta);
 
-      // Refrescar las claves del historial para la próxima tanda.
-      const { rows } = await leerPlanillaDeCarpeta(carpeta.handle);
-      setClavesPlanilla(clavesDeFilas(rows && rows.length ? rows : [CAMPOS]));
+      // Claves ya actualizadas que devuelve la incorporación (sin releer el Excel).
+      if (data.claves) setClavesPlanilla(new Set(data.claves));
 
       let msg = `${data.agregados} fila(s) agregada(s) · Total: ${data.total}`;
       if (data.duplicados) msg += ` · ${data.duplicados} repetida(s) (PDF archivado igualmente)`;
@@ -566,7 +683,11 @@ export default function TicketsPage() {
       showToast(msg);
       limpiar();
     } catch (err) {
-      showToast(err.message || 'Error al incorporar', 'error');
+      if (err?.code === 'ARCHIVO_OCUPADO') {
+        setAvisoArchivo({ nombre: err.nombre || 'Stock-Historico.xlsx' });
+      } else {
+        showToast(err.message || 'Error al incorporar', 'error');
+      }
     } finally {
       setIncorporando(false);
     }
@@ -1066,6 +1187,44 @@ export default function TicketsPage() {
       </Paso>
 
       {procesando && <ProcessingOverlay progreso={progreso} archivos={files.length} />}
+
+      {avisoArchivo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/80 backdrop-blur-sm">
+          <div className="card !p-5 w-full max-w-sm mx-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-400/30 bg-amber-400/10">
+                <IconAlert className="h-5 w-5 text-amber-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-100">Cerrá el Excel</p>
+                <p className="mt-1 text-[11px] leading-snug text-slate-400">
+                  El archivo <span className="font-mono text-slate-200">{avisoArchivo.nombre}</span>{' '}
+                  está abierto. Cerralo y volvé a intentar.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-white/5 pt-3">
+              <button
+                type="button"
+                onClick={() => setAvisoArchivo(null)}
+                className="btn-ghost !px-3 !py-1.5 !text-xs"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAvisoArchivo(null);
+                  incorporar();
+                }}
+                className="btn-primary"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Editor de ticket — modal con visor de PDF */}
       {editandoIdx !== null && registrosVisibles[editandoIdx] && (

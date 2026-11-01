@@ -195,15 +195,9 @@ export default function EditorTicket({
 
   function setCampo(campo, valor) {
     setForm((prev) => {
+      // Neto/Peso Neto se guardan como texto tal cual se tipean; la
+      // normalizacion a numero se hace al guardar (respeta punto de miles).
       let next = { ...prev, [campo]: valor };
-      if (campo === 'Neto' || campo === 'Peso Neto') {
-        if (valor === '' || valor === null || valor === undefined) {
-          next = { ...next, [campo]: '' };
-        } else {
-          const num = Number(valor);
-          next = { ...next, [campo]: isNaN(num) ? valor : num };
-        }
-      }
       if (campo === 'N Remito' || campo === 'Proveedor') {
         if (next._confirmados) {
           const confirmados = { ...next._confirmados };

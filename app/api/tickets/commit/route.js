@@ -11,6 +11,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { parseNum } from '@/lib/tickets/extract.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -145,6 +146,24 @@ export async function POST(request) {
     // No existe todavía: se crea con los encabezados.
   }
 
+  const idxNeto = HEADERS.indexOf('Neto');
+  const idxPesoNeto = HEADERS.indexOf('Peso Neto');
+  const numeroPeso = (valor) => {
+    if (valor === '' || valor === null || valor === undefined) return '';
+    const n = parseNum(valor);
+    return n == null ? valor : n;
+  };
+  const normalizarFila = (fila) => {
+    if (!Array.isArray(fila)) return fila;
+    const copia = [...fila];
+    if (idxNeto >= 0 && copia.length > idxNeto) copia[idxNeto] = numeroPeso(copia[idxNeto]);
+    if (idxPesoNeto >= 0 && copia.length > idxPesoNeto) {
+      copia[idxPesoNeto] = numeroPeso(copia[idxPesoNeto]);
+    }
+    return copia;
+  };
+  histRows = histRows.map((fila, i) => (i === 0 ? fila : normalizarFila(fila)));
+
   const existentes = new Set(
     histRows.slice(1).map((fila) => `${fila[1] ?? ''}|${fila[2] ?? ''}`)
   );
@@ -153,7 +172,7 @@ export async function POST(request) {
     const k = `${r.Proveedor || ''}|${r['N Remito'] || ''}`;
     if (existentes.has(k)) continue;
     existentes.add(k);
-    histRows.push(HEADERS.map((c) => r[c] ?? ''));
+    histRows.push(normalizarFila(HEADERS.map((c) => r[c] ?? '')));
     agregados += 1;
   }
 
