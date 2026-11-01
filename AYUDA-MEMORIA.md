@@ -818,6 +818,16 @@ conocimiento con tablas canónicas de Razón Social y Material.
 
 ## 10. TOMAR EL PROYECTO DESDE OTRA PC
 
+### Handoff actual (2026-11-01)
+
+- Rama de trabajo publicada: `work/falpat-stock-2026-11-01`.
+- Esta rama contiene el código y la documentación de esta tanda. Para continuarla, cambiar a
+  esa rama; no reemplazar `main` ni `dev`.
+- La compilación de Vercel Preview terminó correctamente. El acceso al preview está protegido
+  por Vercel y puede requerir iniciar sesión.
+- `main` de producción no se actualizó. Los endpoints de importación PDF de prueba siguen
+  bloqueados en Vercel por diseño.
+
 ### Preparación
 
 1. Clonar `https://github.com/ssaavedra1969-png/Stock.git` o abrir el repo existente en VS Code.
