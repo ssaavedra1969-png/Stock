@@ -39,7 +39,12 @@ export async function POST(request) {
 
   try {
     const { db } = await writeDb((current) => {
-      const rec = { id: makeId(), createdAt: new Date().toISOString(), ...record };
+      const rec = {
+        id: makeId(),
+        createdAt: new Date().toISOString(),
+        ...record,
+        origenCarga: 'manual',
+      };
       const name = String(rec.producto || '').trim();
       const productos = Array.isArray(current.productos) ? current.productos : [];
       return {

@@ -8,7 +8,8 @@
 // - Tabla responsiva con TODOS los registros (ordenable + paginación).
 // - Búsqueda en tiempo real.
 // ============================================================
-import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatDate, normalizeText, cn, toMillis, anioMes, descripcionPeriodo } from '@/lib/utils';
 import SearchBar from '@/components/SearchBar';
@@ -55,6 +56,7 @@ const COLUMNS = [
   { key: 'nroRemitoFalpat', label: 'Nro Falpat', type: 'text' },
   { key: 'nroRemitoProveedor', label: 'Remito Proveedor', type: 'text' },
   { key: 'proveedorCliente', label: 'Proveedor / Cliente', type: 'text' },
+  { key: 'razonSocial', label: 'Razón Social', type: 'text' },
   { key: 'pesoProveedor', label: 'Peso Proveedor', type: 'number' },
   { key: 'pesoBalanza', label: 'Peso Balanza', type: 'number' },
   { key: 'planta', label: 'CD', type: 'text' },
@@ -62,28 +64,67 @@ const COLUMNS = [
 
 // Valor numérico de un peso con unidad ("35.4 tn", "1000 u", "").
 function numeroPeso(v) {
-  if (v == null) return 0;
-  const n = parseFloat(String(v).replace(/[^\d.,]/g, '').replace(',', '.'));
-  return Number.isFinite(n) ? n : 0;
+  const raw = String(v ?? '').replace(/[^\d.,+-]/g, '');
+  if (!raw) return null;
+
+  const separator = Math.max(raw.lastIndexOf('.'), raw.lastIndexOf(','));
+  let normalized = raw;
+  if (separator >= 0) {
+    const digitsAfter = raw.length - separator - 1;
+    const integer = raw.slice(0, separator).replace(/[.,]/g, '');
+    const fraction = raw.slice(separator + 1).replace(/[.,]/g, '');
+    normalized =
+      digitsAfter === 3 && integer
+        ? raw.replace(/[.,]/g, '')
+        : `${integer}.${fraction}`;
+  }
+  const weight = Number(normalized);
+  return Number.isFinite(weight) ? weight : null;
 }
 
 function getSortValue(r, key) {
-  if (key === 'fechaRemito') return toMillis(r.fechaRemito) || 0;
+  if (key === 'fechaRemito') return toMillis(r.fechaRemito);
   if (key === 'pesoBalanza' || key === 'pesoProveedor') return numeroPeso(r[key]);
-  if (key === 'proveedorCliente') return (r.carga === 'Entrada' ? r.proveedor : r.cliente) || '';
-  return String(r[key] || '');
+  if (key === 'proveedorCliente') return r.carga === 'Entrada' ? r.proveedor || '' : r.cliente || '';
+  const value = r[key];
+  return value == null || String(value).trim() === '' ? null : String(value);
 }
 
-function SortHeader({ column, sort, onSort }) {
+function getColumnText(record, key) {
+  if (key === 'proveedorCliente') return record.carga === 'Entrada' ? record.proveedor || '—' : record.cliente || '—';
+  if (key === 'razonSocial') return record.carga === 'Entrada' ? record.razonSocial || '—' : '—';
+  if (key === 'fechaRemito') return formatDate(record.fechaRemito);
+  return record[key] == null || record[key] === '' ? '—' : String(record[key]);
+}
+
+function SortHeader({
+  column,
+  sort,
+  onSort,
+  onAutoFit,
+  onResizeStart,
+  onResizeMove,
+  onResizeEnd,
+  onResizeBy,
+}) {
   const active = sort.key === column.key;
   const up = active && sort.dir === 'asc';
   const down = active && sort.dir === 'desc';
   return (
-    <th className="px-2 py-3">
+    <th
+      className="relative px-2 py-2"
+      title={`Ordenar por ${column.label}. Arrastrá el borde derecho para cambiar el ancho o hacé doble clic para ajustar al contenido.`}
+      onDoubleClick={(event) => {
+        if (event.clientX < event.currentTarget.getBoundingClientRect().right - 8) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onAutoFit();
+      }}
+      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
       <button
         type="button"
         onClick={() => onSort(column.key)}
-        title={`Ordenar por ${column.label}`}
         className={cn(
           'inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.16em] transition hover:text-slate-200',
           active ? 'text-falpat-soft' : 'text-slate-500'
@@ -95,6 +136,24 @@ function SortHeader({ column, sort, onSort }) {
           <IconChevronDown className={cn('h-2.5 w-2.5', down ? 'text-falpat' : 'text-slate-700')} />
         </span>
       </button>
+      <div
+        role="separator"
+        aria-label={`Cambiar ancho de la columna ${column.label}`}
+        aria-orientation="vertical"
+        tabIndex={0}
+        className="absolute inset-y-0 right-0 z-10 w-2 touch-none cursor-col-resize border-r border-white/20 hover:bg-falpat/40 focus:bg-falpat/50"
+        onPointerDown={onResizeStart}
+        onPointerMove={onResizeMove}
+        onPointerUp={onResizeEnd}
+        onPointerCancel={onResizeEnd}
+        onLostPointerCapture={onResizeEnd}
+        onKeyDown={(event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          event.stopPropagation();
+          onResizeBy(event.key === 'ArrowRight' ? 16 : -16);
+        }}
+      />
     </th>
   );
 }
@@ -313,12 +372,12 @@ function TableRow({ record, onEdit, onDelete, onSelect }) {
       onClick={() => onSelect?.(record)}
       className="cursor-pointer border-b border-white/[0.05] transition last:border-0 hover:bg-white/[0.03]"
     >
-      <td className="px-2 py-3">
-        <span className="block max-w-[110px] truncate text-xs font-semibold text-falpat-soft" title={record.producto}>
+      <td className="px-2 py-2">
+        <span className="block w-full truncate text-xs font-semibold text-falpat-soft" title={record.producto}>
           {record.producto || '—'}
         </span>
       </td>
-      <td className="whitespace-nowrap px-2 py-3">
+      <td className="whitespace-nowrap px-2 py-2">
         {record.codigoProducto ? (
           <span className="inline-flex rounded-md border border-falpat/30 bg-falpat/10 px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-falpat-soft">
             {record.codigoProducto}
@@ -327,50 +386,55 @@ function TableRow({ record, onEdit, onDelete, onSelect }) {
           <span className="text-slate-600">—</span>
         )}
       </td>
-      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs tabular-nums text-slate-300">
+      <td className="whitespace-nowrap px-2 py-2 font-mono text-xs tabular-nums text-slate-300">
         {formatDate(record.fechaRemito)}
       </td>
-      <td className="whitespace-nowrap px-2 py-3">
+      <td className="whitespace-nowrap px-2 py-2">
         <BadgeCarga carga={record.carga} />
       </td>
-      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs font-semibold uppercase tracking-wide text-slate-100">
+      <td className="whitespace-nowrap px-2 py-2 font-mono text-xs font-semibold uppercase tracking-wide text-slate-100">
         {record.patente}
       </td>
-      <td className="px-2 py-3">
-        <span className="block max-w-[90px] truncate text-xs text-slate-300" title={record.chofer}>
+      <td className="px-2 py-2">
+        <span className="block w-full truncate text-xs text-slate-300" title={record.chofer}>
           {record.chofer}
         </span>
       </td>
-      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs text-slate-300">
+      <td className="whitespace-nowrap px-2 py-2 font-mono text-xs text-slate-300">
         {record.nroRemitoFalpat}
       </td>
-      <td className="px-2 py-3">
-        <span className="block max-w-[85px] truncate font-mono text-xs text-slate-300" title={record.nroRemitoProveedor}>
+      <td className="px-2 py-2">
+        <span className="block w-full truncate font-mono text-xs text-slate-300" title={record.nroRemitoProveedor}>
           {record.nroRemitoProveedor || '—'}
         </span>
       </td>
-      <td className="px-2 py-3">
+      <td className="px-2 py-2">
         {isEntrada ? (
           <span
-            className="block max-w-[100px] truncate text-xs font-semibold text-slate-200"
+            className="block w-full truncate text-xs font-semibold text-slate-200"
             title={record.proveedor}
           >
             {record.proveedor || '—'}
           </span>
         ) : (
-          <span className="block max-w-[100px] truncate text-xs" title={record.cliente}>
+          <span className="block w-full truncate text-xs" title={record.cliente}>
             {record.cliente || '—'}
           </span>
         )}
       </td>
-      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs text-slate-400">{record.pesoProveedor || '—'}</td>
-      <td className="whitespace-nowrap px-2 py-3 font-mono text-xs text-slate-300">{record.pesoBalanza}</td>
-      <td className="px-2 py-3">
-        <span className="block max-w-[75px] truncate text-xs text-slate-300" title={record.planta}>
+      <td className="px-2 py-2">
+        <span className="block w-full truncate text-xs text-slate-300" title={record.razonSocial}>
+          {isEntrada ? record.razonSocial || '—' : '—'}
+        </span>
+      </td>
+      <td className="whitespace-nowrap px-2 py-2 font-mono text-xs text-slate-400">{record.pesoProveedor || '—'}</td>
+      <td className="whitespace-nowrap px-2 py-2 font-mono text-xs text-slate-300">{record.pesoBalanza}</td>
+      <td className="px-2 py-2">
+        <span className="block w-full truncate text-xs text-slate-300" title={record.planta}>
           {record.planta}
         </span>
       </td>
-      <td className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-2 py-3 text-right">
+      <td className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-2 py-2 text-right">
         <div className="flex items-center justify-end gap-1">
           <button
             type="button"
@@ -422,6 +486,10 @@ function TableSkeleton() {
 
 export default function Home() {
   const { records, loading, error, reload, deleteRecord, openEdit, openModal, showToast } = useApp();
+  const tableRef = useRef(null);
+  const tableDragRef = useRef(null);
+  const columnResizeRef = useRef(null);
+  const suppressTableClickRef = useRef(false);
   const [query, setQuery] = useState('');
   const [cargaFiltro, setCargaFiltro] = useState('Todos');
   const [mes, setMes] = useState('');
@@ -430,6 +498,7 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [navIndex, setNavIndex] = useState(0);
+  const [columnWidths, setColumnWidths] = useState(null);
 
   // Años disponibles para el filtro de período.
   const anios = useMemo(
@@ -469,6 +538,7 @@ export default function Home() {
           r.nroRemitoProveedor,
           r.proveedor,
           r.cliente,
+          r.razonSocial,
           r.planta,
           r.pesoBalanza,
           formatDate(r.fechaRemito),
@@ -484,10 +554,13 @@ export default function Home() {
     arr.sort((a, b) => {
       const va = getSortValue(a, key);
       const vb = getSortValue(b, key);
+      const missingA = va == null || String(va).trim() === '';
+      const missingB = vb == null || String(vb).trim() === '';
+      if (missingA !== missingB) return missingA ? 1 : -1;
       const cmp =
         typeof va === 'number' && typeof vb === 'number'
           ? va - vb
-          : String(va).localeCompare(String(vb), 'es', { sensitivity: 'base' });
+          : String(va).localeCompare(String(vb), 'es', { sensitivity: 'base', numeric: true });
       return dir === 'asc' ? cmp : -cmp;
     });
     return arr;
@@ -508,6 +581,88 @@ export default function Home() {
       if (s.key === key) return { key, dir: s.dir === 'asc' ? 'desc' : 'asc' };
       return { key, dir: key === 'fechaRemito' ? 'desc' : 'asc' };
     });
+  }
+
+  function autoFitColumn(index, column) {
+    const table = tableRef.current;
+    if (!table) return;
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) {
+      showToast('No se pudo medir el contenido para ajustar la columna.', 'error');
+      return;
+    }
+
+    const textCell = table.querySelector(`tbody tr td:nth-child(${index + 1})`);
+    const textStyle = textCell ? window.getComputedStyle(textCell) : null;
+    context.font = textStyle?.font || (column.type === 'number' ? '12px monospace' : '12px Arial');
+    const letterSpacing = parseFloat(textStyle?.letterSpacing || '0') || 0;
+    const contentWidth = sorted.reduce((maxWidth, record) => {
+      const value = getColumnText(record, column.key);
+      const measuredWidth =
+        context.measureText(value).width + letterSpacing * Math.max(0, value.length - 1);
+      return Math.max(maxWidth, measuredWidth);
+    }, 0);
+    const headerButton = table.querySelector(`thead th:nth-child(${index + 1}) button`);
+    const headerStyle = headerButton ? window.getComputedStyle(headerButton) : null;
+    context.font = headerStyle?.font || 'bold 10px Arial';
+    const headerWidth = context.measureText(column.label.toUpperCase()).width + 20;
+    const fittedWidth = Math.max(64, Math.ceil(Math.max(contentWidth, headerWidth) + 24));
+    const currentWidths = getCurrentColumnWidths(table);
+    currentWidths[index] = fittedWidth;
+    setColumnWidths(currentWidths);
+  }
+
+  function getCurrentColumnWidths(table = tableRef.current) {
+    if (!table) return [];
+    if (columnWidths) return [...columnWidths];
+    return Array.from(table.querySelectorAll('thead th'), (header) =>
+      Math.ceil(header.getBoundingClientRect().width)
+    );
+  }
+
+  function startColumnResize(index, event) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const table = tableRef.current;
+    if (!table) return;
+    const widths = getCurrentColumnWidths(table);
+    columnResizeRef.current = {
+      pointerId: event.pointerId,
+      index,
+      startX: event.clientX,
+      startWidth: widths[index],
+      widths,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveColumnResize(event) {
+    const resize = columnResizeRef.current;
+    if (!resize || resize.pointerId !== event.pointerId) return;
+    const widths = [...resize.widths];
+    widths[resize.index] = Math.max(64, resize.startWidth + event.clientX - resize.startX);
+    setColumnWidths(widths);
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function stopColumnResize(event) {
+    const resize = columnResizeRef.current;
+    if (!resize || resize.pointerId !== event.pointerId) return;
+    columnResizeRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    event.stopPropagation();
+  }
+
+  function resizeColumnBy(index, amount) {
+    const widths = getCurrentColumnWidths();
+    if (!widths.length) return;
+    widths[index] = Math.max(64, widths[index] + amount);
+    setColumnWidths(widths);
   }
 
   async function handleDelete(id) {
@@ -551,13 +706,50 @@ export default function Home() {
     setAnio('');
   }
 
+  function startTableDrag(event) {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return;
+    if (event.target.closest('button, a, input, select, textarea, th')) return;
+    tableDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: event.currentTarget.scrollLeft,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveTableDrag(event) {
+    const drag = tableDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const distance = event.clientX - drag.startX;
+    if (!drag.moved && Math.abs(distance) < 5) return;
+    drag.moved = true;
+    event.currentTarget.scrollLeft = drag.startScrollLeft - distance;
+    event.preventDefault();
+  }
+
+  function stopTableDrag(event) {
+    const drag = tableDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    tableDragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (drag.moved) {
+      suppressTableClickRef.current = true;
+      window.setTimeout(() => {
+        suppressTableClickRef.current = false;
+      }, 0);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <SectionHero
         icon={IconLayout}
-        title="Panel de Stock"
-        tag="Panel"
-        subtitle={`Control de entradas y salidas · ${new Date().toLocaleDateString('es-AR', {
+        title="Inicio"
+        tag="Stock"
+        subtitle={`Resumen de movimientos · ${new Date().toLocaleDateString('es-AR', {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
@@ -582,15 +774,22 @@ export default function Home() {
       {/* Barra superior: acciones (izquierda) + resumen (derecha) */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/tickets"
+            className="btn-primary whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+            title="Leer remitos PDF para registrar una entrada"
+          >
+            <IconFileText className="h-3.5 w-3.5" />
+            Cargar Entrada PDF
+          </Link>
           <button
             type="button"
             onClick={() => openModal('Entrada')}
-            className="btn-primary whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
-            title="Registrar una entrada de material"
-            aria-label="Registrar entrada"
+            className="btn-ghost whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+            title="Registrar manualmente una entrada"
           >
             <IconArrowUpRight className="h-3.5 w-3.5" />
-            Registrar entrada
+            Entrada manual
           </button>
           <button
             type="button"
@@ -631,13 +830,13 @@ export default function Home() {
       )}
 
       {/* Tabla de últimos registros */}
-      <div className="card overflow-hidden !p-0">
+      <div id="movimientos" className="card scroll-mt-36 overflow-hidden !p-0">
         <div className="flex flex-col gap-4 border-b border-white/10 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="section-title">Movimientos de stock</h2>
               <p className="section-sub mt-0.5">
-                {rangeLabel} registros · deslizá la tabla con la barra de abajo para ver todas las columnas
+                {rangeLabel} registros · arrastrá con el botón izquierdo o deslizá horizontalmente con el touchpad
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -696,14 +895,56 @@ export default function Home() {
           </div>
         ) : (
           <>
-            <div className="table-scroll">
-              <table className="w-full min-w-[1180px] border-collapse text-left">
+            <div
+              className="table-scroll cursor-grab active:cursor-grabbing"
+              role="region"
+              aria-label="Tabla de movimientos de stock"
+              tabIndex={0}
+              onPointerDown={startTableDrag}
+              onPointerMove={moveTableDrag}
+              onPointerUp={stopTableDrag}
+              onPointerCancel={stopTableDrag}
+              onClickCapture={(event) => {
+                if (!suppressTableClickRef.current) return;
+                event.preventDefault();
+                event.stopPropagation();
+                suppressTableClickRef.current = false;
+              }}
+              onWheel={(event) => {
+                if (event.shiftKey && event.deltaX === 0 && event.deltaY !== 0) {
+                  event.currentTarget.scrollLeft += event.deltaY;
+                  event.preventDefault();
+                }
+              }}
+            >
+              <table
+                ref={tableRef}
+                className="stock-movements-table w-full min-w-[1180px] border-collapse text-left"
+                style={columnWidths ? { tableLayout: 'fixed' } : undefined}
+              >
+                {columnWidths && (
+                  <colgroup>
+                    {columnWidths.map((width, index) => (
+                      <col key={index} style={{ width }} />
+                    ))}
+                  </colgroup>
+                )}
                 <thead>
                   <tr className="border-b border-white/10">
-                    {COLUMNS.map((col) => (
-                      <SortHeader key={col.key} column={col} sort={sort} onSort={onSort} />
+                    {COLUMNS.map((col, index) => (
+                      <SortHeader
+                        key={col.key}
+                        column={col}
+                        sort={sort}
+                        onSort={onSort}
+                        onAutoFit={() => autoFitColumn(index, col)}
+                        onResizeStart={(event) => startColumnResize(index, event)}
+                        onResizeMove={moveColumnResize}
+                        onResizeEnd={stopColumnResize}
+                        onResizeBy={(amount) => resizeColumnBy(index, amount)}
+                      />
                     ))}
-                    <th className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-2 py-3" />
+                    <th className="sticky right-0 z-10 border-l border-white/10 bg-night-900 px-2 py-2" />
                   </tr>
                 </thead>
                 <tbody>
@@ -721,7 +962,7 @@ export default function Home() {
             </div>
             <div className="flex flex-col gap-3 border-t border-white/10 bg-black/20 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs text-slate-500">
-                Mostrando {rangeLabel} registros · los datos se sincronizan automáticamente
+                Mostrando {rangeLabel} registros · arrastrá el borde derecho para cambiar el ancho o hacé doble clic para mostrar el contenido
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <label className="flex items-center gap-2 text-xs text-slate-500">

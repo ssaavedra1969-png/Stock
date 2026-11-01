@@ -158,9 +158,9 @@ export default function IncorporarPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <SectionHero
         icon={IconUpload}
-        title="Incorporar datos"
-        tag="Incorporar"
-        subtitle="Carga masiva desde planillas Excel"
+        title="Importar Excel histórico"
+        tag="Importación"
+        subtitle="Carga masiva desde planillas con el formato de importación compatible"
       >
         <a href={tipoActual.plantilla} download className="btn-ghost" title="Descargar planilla modelo">
           <IconDownload className="h-4 w-4" />
@@ -203,6 +203,7 @@ export default function IncorporarPage() {
           })}
         </div>
         <p className="text-[11px] leading-relaxed text-slate-500">
+          Este importador es para planillas con el formato de abajo; no uses aquí el Excel generado desde PDFs en Remitos.{' '}
           Las dos planillas usan las mismas columnas:{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">REMITOS</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">OBSERVACION</code>,{' '}

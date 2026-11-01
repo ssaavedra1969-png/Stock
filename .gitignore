@@ -43,6 +43,7 @@ next-env.d.ts
 dev*.log
 dev-server*.log
 dev-server*.err.log
+prod*.log
 
 
 # archivos de trabajo local del usuario (no versionar)

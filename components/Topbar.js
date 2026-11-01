@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 
 const SECTION_TITLES = {
-  '/': 'Panel',
+  '/': 'Inicio',
   '/reportes': 'Reportes',
   '/informes': 'Informes',
-  '/incorporar': 'Incorporar',
-  '/tickets': 'Remitos',
+  '/incorporar': 'Importar Excel',
+  '/tickets': 'Cargar Entrada',
 };
 
 const MONTHS = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
