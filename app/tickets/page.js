@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { revisarRegistro, parseNum } from '@/lib/tickets/extract.mjs';
+import { revisarRegistro, parseNum, normalizeRemito } from '@/lib/tickets/extract.mjs';
 import { MATERIALES, RAZONES_SOCIALES } from '@/lib/tickets/base.mjs';
+import { CATALOGO_PRODUCTOS, normalizar } from '@/lib/productos';
+import { evaluarCompletarManual } from '@/lib/importar-remitos-dev';
 import EditorTicket from '@/components/EditorTicket';
 import SectionHero from '@/components/SectionHero';
 import {
@@ -36,7 +38,7 @@ const CENTROS = ['Lujan', 'Campana'];
 const CARGAS = ['Entrada', 'Salida'];
 const EDICIONES_KEY = 'falpat:tickets:ediciones';
 
-const COLUMNAS_TABLA = [...CAMPOS, 'Archivo', 'Estado'];
+const COLUMNAS_TABLA = [...CAMPOS, 'Archivo', 'Estado', 'Base de datos'];
 
 function claveFechaOrden(valor) {
   const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(valor || ''));
@@ -52,7 +54,7 @@ function claveNumeroOrden(valor) {
 }
 
 function compararRegistros(a, b, campo) {
-  if (campo === 'Centro' || campo === 'Carga') return 0;
+  if (campo === 'Centro' || campo === 'Carga' || campo === 'Base de datos') return 0;
   if (campo === 'Fecha') return claveFechaOrden(a.Fecha) - claveFechaOrden(b.Fecha);
   if (campo === 'Neto' || campo === 'Peso Neto') {
     return claveNumeroOrden(a[campo]) - claveNumeroOrden(b[campo]);
@@ -66,6 +68,78 @@ function compararRegistros(a, b, campo) {
 function sinDato(valor) {
   const v = valor === undefined || valor === null ? '' : String(valor).trim();
   return v === '' || v.toUpperCase() === 'N/D';
+}
+
+function claveRemitoEntrada(proveedor, remito) {
+  const supplier = normalizar(proveedor);
+  const number = normalizeRemito(remito)?.toUpperCase();
+  return supplier && number ? `${supplier}|${number}` : '';
+}
+
+function camposVaciosParaCompletar(existing, incoming) {
+  const labels = {
+    fechaRemito: 'Fecha',
+    producto: 'Material',
+    codigoProducto: 'Código',
+    patente: 'Patente',
+    chofer: 'Chofer',
+    nroRemitoProveedor: 'Remito proveedor',
+    pesoProveedor: 'Neto proveedor',
+    pesoBalanza: 'Peso neto',
+    planta: 'Centro',
+    proveedor: 'Proveedor',
+    razonSocial: 'Razón social',
+  };
+  return Object.keys(labels).filter(
+    (field) => sinDato(existing[field]) && !sinDato(incoming[field])
+  ).map((field) => labels[field]);
+}
+
+function toneladasDesdeKg(value) {
+  const kilograms = parseNum(value);
+  if (kilograms === null) return '';
+  return `${(kilograms / 1000).toFixed(3).replace(/\.?0+$/, '')} tn`;
+}
+
+function fechaIsoDesdeTicket(value) {
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(value || '').trim());
+  if (!match) return '';
+  const [, day, month, year] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
+  if (
+    date.getUTCFullYear() !== Number(year) ||
+    date.getUTCMonth() !== Number(month) - 1 ||
+    date.getUTCDate() !== Number(day)
+  ) return '';
+  return date.toISOString().replace(/\.\d{3}Z$/, '.000Z');
+}
+
+function entradaDesdeTicket(record, centro) {
+  const product = String(record.Material || '').trim();
+  const exactCode =
+    CATALOGO_PRODUCTOS.find((item) => item.codigo && normalizar(item.nombre) === normalizar(product))
+      ?.codigo || '';
+  return {
+    carga: 'Entrada',
+    producto: product,
+    codigoProducto: exactCode,
+    fechaRemito: fechaIsoDesdeTicket(record.Fecha),
+    patente: String(record['Pat. Chasis'] || '').trim().toUpperCase(),
+    chofer: String(record.Chofer || '').trim(),
+    nroRemitoProveedor: String(record['N Remito'] || '').trim(),
+    nroRemitoFalpat: '',
+    pesoProveedor: toneladasDesdeKg(record.Neto),
+    pesoBalanza: toneladasDesdeKg(record['Peso Neto']),
+    planta: centro,
+    proveedor: String(record.Proveedor || '').trim(),
+    cliente: '',
+    razonSocial: String(record['Razon Social'] || '').trim(),
+    archivoOrigen: String(record.Archivo || '').trim(),
+  };
+}
+
+function keyConciliacion(record, existing) {
+  return `${record.Archivo || record['N Remito'] || ''}|${existing.id}`;
 }
 
 function tieneFaltantes(registro) {
@@ -96,6 +170,7 @@ function ordenarPorFecha(registros) {
 export default function TicketsPage() {
   const {
     showToast,
+    records: movimientosDb,
     tickets,
     procesarTickets,
     limpiarTickets,
@@ -105,6 +180,7 @@ export default function TicketsPage() {
     agregarChoferes,
     agregarPatentes,
     baseConocimiento,
+    reload,
   } = useApp();
   const inputRef = useRef(null);
   const [files, setFiles] = useState([]);
@@ -121,11 +197,12 @@ export default function TicketsPage() {
   const [leyendoEntrada, setLeyendoEntrada] = useState(false);
   const [clavesPlanilla, setClavesPlanilla] = useState(null); // Set "Proveedor|Remito" del historial
   const [mostrarModalDuplicados, setMostrarModalDuplicados] = useState(false);
-  const [avisoArchivo, setAvisoArchivo] = useState(null);
   const [confirmacionVisual, setConfirmacionVisual] = useState(false);
   const [guardandoAprendizaje, setGuardandoAprendizaje] = useState(false);
   const [progreso, setProgreso] = useState(null);
   const [orden, setOrden] = useState({ campo: '', dir: 'asc' });
+  const [selectedDbMatches, setSelectedDbMatches] = useState([]);
+  const [devEnvironment, setDevEnvironment] = useState(null);
   const opcionesMaterial = useMemo(
     () => [...new Set([...MATERIALES, ...(baseConocimiento?.materiales || [])])],
     [baseConocimiento]
@@ -136,6 +213,21 @@ export default function TicketsPage() {
   );
   const progresoRef = useRef(null);
   const progresoFlush = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/db/import-tickets-dev')
+      .then(async (response) => {
+        const data = await response.json();
+        if (active) setDevEnvironment({ ...data, status: response.status });
+      })
+      .catch((cause) => {
+        if (active) setDevEnvironment({ enabled: false, error: cause.message });
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Recupera ediciones pendientes (por ejemplo, si el guardado falló y se
   // recargó la página). Se guardan sin el File del PDF, que no es serializable.
@@ -229,17 +321,41 @@ export default function TicketsPage() {
   const registros = useMemo(() => {
     const lista = huboEdiciones ? registrosEditados : resultado?.registros || [];
     const claves = clavesPlanilla;
-    const conEstado = claves
-      ? lista.map((r) => ({
-          ...r,
-          Estado: claves.has(`${r.Proveedor || ''}|${r['N Remito'] || ''}`) ? 'DUPLICADO' : 'NUEVO',
-        }))
-      : lista;
+    const registrosBase = lista.map((r) => {
+      const key = claveRemitoEntrada(r.Proveedor, r['N Remito']);
+      const entradaDb = centro ? entradaDesdeTicket(r, centro) : null;
+      const matches = key
+        ? movimientosDb.filter(
+            (record) =>
+              record.carga === 'Entrada' &&
+              claveRemitoEntrada(record.proveedor, record.nroRemitoProveedor) === key
+          )
+        : [];
+      const datosEnriquecimiento =
+        matches.length === 1 && entradaDb
+          ? evaluarCompletarManual(matches[0], entradaDb)
+          : { completar: {}, conflictos: [] };
+      return {
+        ...r,
+        Estado: claves
+          ? claves.has(`${r.Proveedor || ''}|${r['N Remito'] || ''}`)
+            ? 'DUPLICADO'
+            : 'NUEVO'
+          : r.Estado,
+        EntradaDb: entradaDb,
+        CoincidenciasBase: matches,
+        CamposACompletar: matches.length === 1 && entradaDb
+          ? camposVaciosParaCompletar(matches[0], entradaDb)
+          : [],
+        ConflictosBase: datosEnriquecimiento.conflictos,
+      };
+    });
+    const conEstado = registrosBase;
     const ordenados = ordenarPorFecha(conEstado);
     if (!orden.campo) return ordenados;
     const factor = orden.dir === 'asc' ? 1 : -1;
     return [...ordenados].sort((a, b) => factor * compararRegistros(a, b, orden.campo));
-  }, [resultado, registrosEditados, huboEdiciones, clavesPlanilla, orden]);
+  }, [resultado, registrosEditados, huboEdiciones, clavesPlanilla, movimientosDb, centro, orden]);
 
   const registrosVisibles = useMemo(
     () => (soloPendientes ? registros.filter((r) => tieneFaltantes(r)) : registros),
@@ -268,6 +384,34 @@ export default function TicketsPage() {
     if (!resultado) return [];
     return registros.filter((r) => r.Estado === 'DUPLICADO');
   }, [resultado, registros]);
+  const coincidenciasBase = useMemo(
+    () => registros.filter((registro) => registro.CoincidenciasBase?.length > 0),
+    [registros]
+  );
+  const registrosPdfYaCargados = useMemo(
+    () => registros.filter((registro) => registro.CoincidenciasBase?.some(
+      (match) => match.origenCarga === 'pdf' || match.enriquecidoPorPdf
+    )),
+    [registros]
+  );
+  const coincidenciasSinResolver = useMemo(
+    () => registros.filter((registro) => {
+      if (registro.CoincidenciasBase?.length > 1) return true;
+      if (registro.CoincidenciasBase?.length !== 1) return false;
+      const match = registro.CoincidenciasBase[0];
+      if (match.origenCarga === 'pdf' || match.enriquecidoPorPdf) return false;
+      if (!registro.CamposACompletar.length) return false;
+      const key = keyConciliacion(registro, match);
+      return !selectedDbMatches.includes(key);
+    }),
+    [registros, selectedDbMatches]
+  );
+  const registrosNuevosDb = useMemo(
+    () => registros.filter((registro) =>
+      registro.CoincidenciasBase?.length === 0 && registro.Estado !== 'DUPLICADO'
+    ),
+    [registros]
+  );
 
   function addFiles(lista) {
     const nuevos = Array.from(lista).filter((f) => /\.pdf$/i.test(f.name));
@@ -340,6 +484,7 @@ export default function TicketsPage() {
     setCentro('');
     setCarga('');
     setConfirmacionVisual(false);
+    setSelectedDbMatches([]);
     try {
       sessionStorage.removeItem(EDICIONES_KEY);
     } catch {
@@ -431,6 +576,7 @@ export default function TicketsPage() {
       // storage no disponible
     }
     setEditandoIdx(null);
+    setSelectedDbMatches([]);
     progresoRef.current = {
       total: files.length,
       archivos: files.map((f) => f.name),
@@ -494,6 +640,7 @@ export default function TicketsPage() {
       return lista;
     });
     setConfirmacionVisual(false);
+    setSelectedDbMatches([]);
     setHuboEdiciones(true);
     if (irSiguiente && editandoIdx < registrosVisibles.length - 1) {
       setEditandoIdx(editandoIdx + 1);
@@ -662,33 +809,58 @@ export default function TicketsPage() {
       showToast('Seleccioná el Centro y la Carga antes de incorporar', 'error');
       return;
     }
-    if (!carpeta?.handle) {
-      showToast('Elegí la carpeta STOCK antes de incorporar', 'error');
+    if (carga !== 'Entrada') {
+      showToast('La incorporación de remitos de Salida todavía no está habilitada.', 'error');
       return;
     }
+    if (!devEnvironment?.enabled) {
+      showToast('La escritura está bloqueada: esta función solo opera localmente en la rama dev.', 'error');
+      return;
+    }
+    if (coincidenciasSinResolver.length > 0) {
+      showToast('Resolvé las coincidencias con la base o quitá esos registros antes de incorporar.', 'error');
+      return;
+    }
+    const reconciliations = registros
+      .filter((record) => record.CoincidenciasBase?.length === 1)
+      .filter((record) => {
+        const existing = record.CoincidenciasBase[0];
+        return selectedDbMatches.includes(keyConciliacion(record, existing));
+      })
+      .map((record) => ({
+        id: record.CoincidenciasBase[0].id,
+        record: record.EntradaDb,
+      }));
+    const recordsToSave = registrosNuevosDb.map((record) => record.EntradaDb);
+    if (recordsToSave.length === 0 && reconciliations.length === 0) {
+      showToast('No hay Entradas nuevas ni coincidencias seleccionadas para completar.', 'error');
+      return;
+    }
+    const accepted = window.confirm(
+      `¿Confirmás guardar ${recordsToSave.length} Entrada(s) nueva(s) y completar ${reconciliations.length} registro(s) existentes en la base de desarrollo? No se modificará el Excel ni se moverá ningún PDF.`
+    );
+    if (!accepted) return;
+
     setIncorporando(true);
     try {
-      const { incorporarEnCarpeta } = await import('@/lib/tickets/archivo.mjs');
-      const registrosConMeta = registros.map((r) => ({ ...r, Centro: centro, Carga: carga }));
-      const data = await incorporarEnCarpeta(carpeta.handle, registrosConMeta);
-
-      // Claves ya actualizadas que devuelve la incorporación (sin releer el Excel).
-      if (data.claves) setClavesPlanilla(new Set(data.claves));
-
-      let msg = `${data.agregados} fila(s) agregada(s) · Total: ${data.total}`;
-      if (data.duplicados) msg += ` · ${data.duplicados} repetida(s) (PDF archivado igualmente)`;
-      if (data.movidos.length) {
-        msg += ` · ${data.movidos.length} PDF archivado(s)`;
-        if (data.errores.length) msg += ` (${data.errores.length} con error)`;
-      }
-      showToast(msg);
+      const response = await fetch('/api/db/import-tickets-dev', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          confirmar: true,
+          records: recordsToSave,
+          reconciliations,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Error HTTP ${response.status}`);
+      await reload();
+      showToast(
+        `${data.insertados} Entrada(s) nueva(s) agregada(s) · ${data.actualizados} movimiento(s) completado(s) en dev · total ${data.total}`
+      );
       limpiar();
     } catch (err) {
-      if (err?.code === 'ARCHIVO_OCUPADO') {
-        setAvisoArchivo({ nombre: err.nombre || 'Stock-Historico.xlsx' });
-      } else {
-        showToast(err.message || 'Error al incorporar', 'error');
-      }
+      showToast(err.message || 'Error al incorporar en desarrollo', 'error');
     } finally {
       setIncorporando(false);
     }
@@ -700,9 +872,9 @@ export default function TicketsPage() {
     <div className="mx-auto max-w-6xl space-y-3">
       <SectionHero
         icon={IconFileText}
-        title="Remitos"
-        tag="Tickets"
-        subtitle="Cargá, revisá y guardá los remitos en el histórico"
+        title="Cargar Entrada desde PDF"
+        tag="Lectura de remitos"
+        subtitle="Leé los remitos, revisá los datos y prepará la incorporación en desarrollo"
       >
         {(files.length > 0 || hayResultado) && (
           <button type="button" onClick={limpiar} className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={procesando}>
@@ -716,7 +888,7 @@ export default function TicketsPage() {
       <Paso
         n="1"
         titulo="Cargá los remitos"
-        ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK y leé los PDF de Entrada."
+        ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK para leer los PDF de Entrada. La carpeta se usa solo como origen de lectura."
       >
         <div
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
@@ -809,7 +981,7 @@ export default function TicketsPage() {
               {carpeta ? (
                 <>
                   STOCK: <span className="font-mono text-slate-200">{carpeta.nombre}</span> ·
-                  {clavesPlanilla ? `${clavesPlanilla.size} registro(s) en el historial` : ''}
+                  {clavesPlanilla ? `${clavesPlanilla.size} registro(s) de referencia en el histórico (solo lectura)` : ''}
                 </>
               ) : (
                 <>
@@ -857,7 +1029,9 @@ export default function TicketsPage() {
           </label>
           <p className="mb-2 text-[11px] text-slate-500">
             {centro && carga
-              ? <span className="text-emerald-400">Centro y carga seleccionados</span>
+              ? carga === 'Entrada'
+                ? <span className="text-emerald-400">Entrada lista para revisar e incorporar solo en desarrollo</span>
+                : <span className="text-amber-300">La incorporación de remitos de Salida todavía no está habilitada</span>
               : <span className="text-amber-400">Obligatorio para incorporar</span>}
           </p>
         </div>
@@ -878,6 +1052,17 @@ export default function TicketsPage() {
             <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 p-2 text-xs text-amber-100">
               <IconAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>{alertas.length} remito(s) ya existían en el historial.</span>
+            </div>
+          )}
+
+          {coincidenciasBase.length > 0 && (
+            <div className="flex items-start gap-2 rounded-lg border border-sky-400/30 bg-sky-400/[0.08] p-2 text-xs text-sky-100">
+              <IconAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Se encontraron {coincidenciasBase.length} posible(s) coincidencia(s) con la base de movimientos.
+                Revisá la columna «Base de datos»: diferencia cargas manuales identificadas, registros antiguos
+                sin origen y remitos ya incorporados desde PDF. El escaneo no modifica esos registros.
+              </span>
             </div>
           )}
 
@@ -1022,6 +1207,80 @@ export default function TicketsPage() {
                           )}
                         </td>
                         <td className="px-2 py-1">
+                          {r.CoincidenciasBase?.length > 1 ? (
+                            <span
+                              className="inline-flex whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-200"
+                              title="Hay más de un registro con este proveedor y número de remito."
+                            >
+                              Varias coincidencias
+                            </span>
+                          ) : r.CoincidenciasBase?.length === 1 ? (
+                            (() => {
+                              const existing = r.CoincidenciasBase[0];
+                              const manual = existing.origenCarga === 'manual';
+                              const desdePdf = existing.origenCarga === 'pdf' || existing.enriquecidoPorPdf;
+                              const label = desdePdf
+                                ? 'Ya incorporado desde PDF'
+                                : manual
+                                  ? 'Carga manual'
+                                  : 'Origen no identificado';
+                              const selectionKey = keyConciliacion(r, existing);
+                              const selected = selectedDbMatches.includes(selectionKey);
+                              const canComplete = r.CamposACompletar.length > 0 && !desdePdf;
+                              return (
+                                <div className="min-w-[180px] space-y-1">
+                                  <span
+                                    className={`inline-flex whitespace-nowrap rounded border px-1.5 py-0.5 text-[9px] font-semibold ${
+                                      manual
+                                        ? 'border-sky-400/30 bg-sky-400/10 text-sky-200'
+                                        : desdePdf
+                                          ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                                          : 'border-slate-400/20 bg-white/[0.04] text-slate-300'
+                                    }`}
+                                  >
+                                    {label}
+                                  </span>
+                                  {r.CamposACompletar.length > 0 ? (
+                                    <p className="max-w-[260px] whitespace-normal text-[9px] leading-snug text-emerald-300">
+                                      Se pueden completar: {r.CamposACompletar.join(', ')}
+                                    </p>
+                                  ) : (
+                                    <p className="text-[9px] text-slate-500">
+                                      Sin campos vacíos compatibles; se omitirá sin modificarlo.
+                                    </p>
+                                  )}
+                                  {r.ConflictosBase.length > 0 && (
+                                    <p className="max-w-[260px] whitespace-normal text-[9px] leading-snug text-amber-300">
+                                      Datos distintos: {r.ConflictosBase.map((item) => item.campo).join(', ')}. No se sobrescriben.
+                                    </p>
+                                  )}
+                                  {canComplete && (
+                                    <label className="flex items-start gap-1 text-[9px] leading-snug text-slate-300">
+                                      <input
+                                        type="checkbox"
+                                        className="mt-0.5 accent-sky-400"
+                                        checked={selected}
+                                        disabled={incorporando}
+                                        onChange={(event) => {
+                                          setSelectedDbMatches((current) =>
+                                            event.target.checked
+                                              ? [...current, selectionKey]
+                                              : current.filter((key) => key !== selectionKey)
+                                          );
+                                        }}
+                                      />
+                                      Confirmo completar solo campos vacíos
+                                      {!manual && ' · origen no identificado'}
+                                    </label>
+                                  )}
+                                </div>
+                              );
+                            })()
+                          ) : (
+                            <span className="text-[10px] text-slate-600">Sin coincidencia</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-1">
                           <div className="flex items-center gap-0.5">
                             {r.Archivo && tieneFaltantes(r) && (
                               <a
@@ -1075,8 +1334,8 @@ export default function TicketsPage() {
       {/* Paso 3 — Guardar en el servidor */}
       <Paso
         n="3"
-        titulo="Guardá el histórico"
-        ayuda="Solo se incorpora si no hay campos dudosos ni errores y confirmaste la revisión visual de todos los PDF."
+        titulo="Incorporá a la base de desarrollo"
+        ayuda="Solo se guardan Entradas en la rama dev después de revisar los PDF. Esta prueba no modifica el Excel ni mueve archivos."
       >
         <label className="flex items-start gap-2 text-xs text-slate-300">
           <input
@@ -1101,7 +1360,17 @@ export default function TicketsPage() {
 
         <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Requisitos para incorporar
+            Entorno de prueba protegido
+          </p>
+          <p className={`mb-2 text-[10px] font-semibold ${devEnvironment?.enabled ? 'text-emerald-300' : 'text-amber-300'}`}>
+            {devEnvironment
+              ? devEnvironment.enabled
+                ? `Escritura habilitada · local · rama ${devEnvironment.branch}`
+                : `Escritura bloqueada · ${devEnvironment.error || `rama ${devEnvironment.branch}`}`
+              : 'Verificando entorno de desarrollo…'}
+          </p>
+          <p className="mb-2 rounded border border-sky-400/20 bg-sky-400/[0.05] p-2 text-[10px] text-sky-100">
+            Al confirmar, solo se modifica la base de desarrollo. No se escribe en Stock-Historico.xlsx ni se mueve ningún PDF.
           </p>
           <ul className="grid gap-1 sm:grid-cols-2">
             <Requisito
@@ -1121,22 +1390,37 @@ export default function TicketsPage() {
               }
             />
             <Requisito
-              ok={!!carpeta}
-              texto={carpeta ? `Carpeta STOCK: ${carpeta.nombre}` : 'Falta elegir la carpeta STOCK (paso 2)'}
+              ok={!!devEnvironment?.enabled}
+              texto={devEnvironment?.enabled ? `Base protegida · rama ${devEnvironment.branch}` : 'La base dev todavía no está habilitada'}
             />
             <Requisito
-              ok={!!centro && !!carga}
-              texto={centro && carga ? `Centro ${centro} · ${carga}` : 'Falta elegir Centro y Carga'}
+              ok={!!centro && carga === 'Entrada'}
+              texto={centro && carga ? `Centro ${centro} · ${carga}${carga === 'Salida' ? ' (no habilitada)' : ''}` : 'Falta elegir Centro y Carga'}
             />
             <Requisito
               ok={confirmacionVisual}
               texto={confirmacionVisual ? 'Revisión visual confirmada' : 'Falta confirmar la revisión visual'}
             />
             <Requisito
-              ok={registros.length > 0}
-              texto={registros.length > 0 ? `${registros.length} registro(s) listos` : 'Cargá remitos para empezar'}
+              ok={registrosNuevosDb.length + selectedDbMatches.length > 0}
+              texto={`${registrosNuevosDb.length} Entrada(s) nueva(s) · ${selectedDbMatches.length} coincidencia(s) seleccionada(s) para completar`}
             />
           </ul>
+          {coincidenciasSinResolver.length > 0 && (
+            <p className="mt-1 text-[10px] text-amber-200">
+              Hay {coincidenciasSinResolver.length} coincidencia(s) sin resolver. Seleccioná completar campos vacíos o quitá las filas ambiguas.
+            </p>
+          )}
+          {registrosPdfYaCargados.length > 0 && (
+            <p className="mt-1 text-[10px] text-amber-200">
+              Se omitirán {registrosPdfYaCargados.length} remito(s) que ya fueron incorporados desde PDF.
+            </p>
+          )}
+          {nDuplicados > 0 && (
+            <p className="mt-1 text-[10px] text-amber-200">
+              Se omitirán {nDuplicados} remito(s) ya presentes en el Excel histórico de referencia.
+            </p>
+          )}
           {registrosConObservaciones.length > 0 && (
             <p className="mt-1 text-[10px] text-red-300">
               Primero corregí los campos pendientes en la tabla del paso 2; el tilde se habilita cuando no queden
@@ -1173,58 +1457,28 @@ export default function TicketsPage() {
           <button
             type="button"
             onClick={incorporar}
-            disabled={registros.length === 0 || incorporando}
+            disabled={
+              !devEnvironment?.enabled ||
+              carga !== 'Entrada' ||
+              registros.length === 0 ||
+              incorporando ||
+              registrosConObservaciones.length > 0 ||
+              erroresLectura.length > 0 ||
+              !confirmacionVisual ||
+              coincidenciasSinResolver.length > 0 ||
+              registrosNuevosDb.length + selectedDbMatches.length === 0
+            }
             className="btn-primary"
           >
             <IconCheck className="h-4 w-4" />
             {incorporando
               ? 'Incorporando…'
-              : registros.length > 0
-                ? `Incorporar ${registros.length} registro${registros.length === 1 ? '' : 's'}`
-                : 'Incorporar'}
+              : `Guardar en dev (${registrosNuevosDb.length} nueva(s) · ${selectedDbMatches.length} completar)`}
           </button>
         </div>
       </Paso>
 
       {procesando && <ProcessingOverlay progreso={progreso} archivos={files.length} />}
-
-      {avisoArchivo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-night-950/80 backdrop-blur-sm">
-          <div className="card !p-5 w-full max-w-sm mx-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-amber-400/30 bg-amber-400/10">
-                <IconAlert className="h-5 w-5 text-amber-300" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-100">Cerrá el Excel</p>
-                <p className="mt-1 text-[11px] leading-snug text-slate-400">
-                  El archivo <span className="font-mono text-slate-200">{avisoArchivo.nombre}</span>{' '}
-                  está abierto. Cerralo y volvé a intentar.
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 border-t border-white/5 pt-3">
-              <button
-                type="button"
-                onClick={() => setAvisoArchivo(null)}
-                className="btn-ghost !px-3 !py-1.5 !text-xs"
-              >
-                Cerrar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAvisoArchivo(null);
-                  incorporar();
-                }}
-                className="btn-primary"
-              >
-                Reintentar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Editor de ticket — modal con visor de PDF */}
       {editandoIdx !== null && registrosVisibles[editandoIdx] && (

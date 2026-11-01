@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-10-22. Leer esto completo antes de tocar nada._
+_Última actualización: 2026-11-01. Revisar esta guía y la documentación enlazada antes de publicar._
 
 ---
 
@@ -31,14 +31,18 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
 
 - `npm run dev` usa `.env.local` (ignorado por git) con `GITHUB_BRANCH=dev` → trabaja contra
   la rama de prueba, NO toca producción.
-- Verificación rápida de datos: `GET /api/db` debe responder `200` con `records.length === 2908` (dev y main).
+- Verificación rápida de datos: `GET /api/db` debe responder `200`. No uses un conteo
+  histórico fijo como validación: las ramas de datos evolucionan de forma independiente.
 
 ### Proceso al hacer cambios (flujo actual)
 
-1. Probá en `dev` (`.env.local` apunta a `dev`).
-2. Cuando el usuario aprueba → `git add` + `git commit` + `git push origin main`.
-3. Vercel despliega solo desde `main` (ramas: `main` = producción, `dev` = prueba).
- 4. Verificar después del deploy: home, `/informes`, `/reportes`, `/api/db` (2908 records).
+1. Revisá `git status`, la rama activa y la divergencia con `origin/main` y `origin/dev`.
+2. Probá los cambios localmente con `.env.local` apuntando a `GITHUB_BRANCH=dev`.
+3. No sobrescribas ramas remotas divergentes ni empujes todo el trabajo a `main`
+   por comodidad. Conservá el trabajo en una rama de código de desarrollo.
+4. Publicá a `main` únicamente los cambios aprobados para producción; Vercel despliega
+   producción desde `main`. Los cambios exclusivamente dev deben conservar sus guards.
+5. Después del despliegue, comprueba las páginas afectadas y que `/api/db` responda `200`.
 
 ---
 
@@ -64,6 +68,14 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
     período); Excel del General = libro con 5 hojas. PDF/Excel de detalles = formato claro.
   - `app/incorporar/page.js` + `lib/importar.js` → **Incorporar**: carga masiva desde las
     plantillas Excel (Entradas/Salidas) con validación fila por fila, preview y confirmación.
+  - `app/tickets/page.js` + `lib/tickets/ocr.mjs` + `lib/tickets/extract.mjs` → lectura
+    OCR de remitos PDF en el navegador; distingue nuevas Entradas, coincidencias existentes
+    y campos vacíos que podrían completarse.
+  - `app/api/db/import-tickets-dev/route.js` + `app/api/db/import-remitos-dev/route.js` →
+    importaciones de prueba limitadas a ejecución local y `GITHUB_BRANCH=dev`; bloqueadas
+    en Vercel. La guía funcional completa está en `docs/flujo-remitos-pdf.md`.
+  - `app/incorporar-dev/page.js` → vista previa y conciliación de Entradas desde el Excel
+    histórico en dev; no sustituye al flujo de producción.
   - `app/api/db/import/route.js` → API de importación masiva (lotes, dedupe, recalcula productos).
   - `scripts/generar-plantillas.mjs` → regenera `public/plantillas/Plantilla-Entradas.xlsx` y
     `Plantilla-Salidas.xlsx` (se descargan desde /incorporar).
@@ -178,7 +190,8 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
 - **Restaurar**: tomar el contenido de un backup y subirlo a la rama deseada vía la API de
   contenidos de GitHub (PUT a `data/db.json`) o reemplazando el archivo local + commit + push.
 - Verificación de integridad: comparar hash entre local y remoto
-  (`node` + `createHash('sha256')` sobre el contenido) o chequear `GET /api/db` (2908 records).
+  (`node` + `createHash('sha256')` sobre el contenido) o chequear que `GET /api/db`
+  responda `200` y que los conteos coincidan con la rama de datos esperada.
 
 ---
 
@@ -808,7 +821,7 @@ conocimiento con tablas canónicas de Razón Social y Material.
 ### Preparación
 
 1. Clonar `https://github.com/ssaavedra1969-png/Stock.git` o abrir el repo existente en VS Code.
-   La rama de código es `main`; actualizarla con `git pull --ff-only origin main`.
+   Cambiar a la rama de trabajo indicada en el handoff; `main` está reservada para producción.
 2. Instalar Node.js y ejecutar `npm install`.
 3. Crear `.env.local` en la nueva PC (es local, está ignorado por Git y no se copia al clonar).
    Para trabajar en pruebas se necesitan `GITHUB_REPO=ssaavedra1969-png/Stock`,
@@ -832,6 +845,23 @@ conocimiento con tablas canónicas de Razón Social y Material.
 - `.env.local`, PDFs temporales y archivos de trabajo local no se versionan. Los originales de
   `Entrada` no deben modificarse durante la revisión. Aprender un dato confirmado no incorpora
   el movimiento al histórico ni autoriza a mover el PDF.
+
+### Estado del flujo de remitos PDF (2026-11-01)
+
+- La conciliación por PDF busca Entradas por proveedor y número de remito normalizados.
+- Un registro existente con origen manual o histórico no identificado puede completarse
+  solamente en campos vacíos y después de confirmación explícita. Los campos con valores
+  distintos se muestran como conflictos y no se reemplazan.
+- Los movimientos con origen PDF, las coincidencias múltiples y las Salidas no se incorporan
+  como si fueran una Entrada nueva.
+- Los registros existentes que no tienen `origenCarga` se etiquetan como origen no
+  identificado; no se puede afirmar que sean manuales sin confirmación.
+- Las pruebas realizadas fueron de lectura/previsualización o peticiones rechazadas. No se
+  confirmó una escritura PDF ni se alteró el Excel o se movió un PDF.
+- La conciliación de una Entrada manual con campos vacíos y una escritura controlada de una
+  Entrada nueva siguen pendientes de una prueba explícita autorizada.
+- Consultar [docs/flujo-remitos-pdf.md](./docs/flujo-remitos-pdf.md) para reglas, límites,
+  rutas y estado detallado de validación.
 
 ### Checklist al retomar
 

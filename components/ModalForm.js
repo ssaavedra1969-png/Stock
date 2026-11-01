@@ -279,7 +279,7 @@ export default function ModalForm() {
           <div>
             <h2 className="omx-step-title flex items-center gap-2 text-base">
               <IconBox className="h-5 w-5 text-falpat" />
-              {isEdit ? 'Editar registro' : 'Nuevo registro'}
+              {isEdit ? `Editar ${carga}` : `Nueva ${carga}`}
             </h2>
             <p className="omx-step-help mt-0.5 text-xs">Stock de materiales · GRUPO FALPAT SRL</p>
           </div>
@@ -296,41 +296,54 @@ export default function ModalForm() {
         <form onSubmit={handleSubmit} noValidate className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 space-y-7 overflow-y-auto px-5 py-5 sm:px-8">
             {/* 1. Tipo de movimiento */}
-            <Section icon={<IconArrowUpRight className="h-3.5 w-3.5" />} title="Tipo de movimiento">
-              <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-black/40 p-1">
-                <button
-                  type="button"
-                  onClick={() => switchCarga('Entrada')}
-                  className={cn(
-                    'flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold uppercase tracking-wider transition',
-                    isEntrada
-                      ? 'bg-falpat text-night-950 shadow-glow'
-                      : 'text-slate-400 hover:text-slate-200'
-                  )}
-                >
-                  <IconArrowUpRight className="h-4 w-4" />
-                  Entrada
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchCarga('Salida')}
-                  className={cn(
-                    'flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold uppercase tracking-wider transition',
-                    !isEntrada
-                      ? 'bg-volt text-night-950 shadow-[0_0_18px_-4px_rgba(255,214,10,0.6)]'
-                      : 'text-slate-400 hover:text-slate-200'
-                  )}
-                >
-                  <IconArrowDownLeft className="h-4 w-4" />
-                  Salida
-                </button>
+            {defaultCarga || isEdit ? (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                  {isEntrada ? 'Entrada de material' : 'Salida de material'}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {isEntrada
+                    ? 'Ingreso a la planta con remito del proveedor.'
+                    : 'Despacho desde la planta con destino al cliente.'}
+                </p>
               </div>
-              <p className="text-xs text-slate-500">
-                {isEntrada
-                  ? 'Ingreso de material a la planta (con remito del proveedor).'
-                  : 'Despacho de material desde la planta (con cliente).'}
-              </p>
-            </Section>
+            ) : (
+              <Section icon={<IconArrowUpRight className="h-3.5 w-3.5" />} title="Tipo de movimiento">
+                <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-black/40 p-1">
+                  <button
+                    type="button"
+                    onClick={() => switchCarga('Entrada')}
+                    className={cn(
+                      'flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold uppercase tracking-wider transition',
+                      isEntrada
+                        ? 'bg-falpat text-night-950 shadow-glow'
+                        : 'text-slate-400 hover:text-slate-200'
+                    )}
+                  >
+                    <IconArrowUpRight className="h-4 w-4" />
+                    Entrada
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchCarga('Salida')}
+                    className={cn(
+                      'flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-bold uppercase tracking-wider transition',
+                      !isEntrada
+                        ? 'bg-volt text-night-950 shadow-[0_0_18px_-4px_rgba(255,214,10,0.6)]'
+                        : 'text-slate-400 hover:text-slate-200'
+                    )}
+                  >
+                    <IconArrowDownLeft className="h-4 w-4" />
+                    Salida
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {isEntrada
+                    ? 'Ingreso de material a la planta (con remito del proveedor).'
+                    : 'Despacho de material desde la planta (con cliente).'}
+                </p>
+              </Section>
+            )}
 
             {/* 2. Producto */}
             <Section icon={<IconBox className="h-3.5 w-3.5" />} title="Producto">
