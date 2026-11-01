@@ -83,7 +83,7 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
   - `app/reportes/page.js` → **Reportes**: el informe original (filtros tipo/planta/búsqueda/
     períodos rápidos, etiqueta Viajes), tabla por producto ordenable al hacer clic en "Producto".
   - `context/AppContext.js` → carga global de datos + estado de edición (`openEdit`, `updateRecord`).
-  - `components/ModalForm.js` → alta/edición (autocompleta código por producto, unidad automática).
+  - `components/ModalForm.js` → alta/edición (autocompleta código y unidad por producto; sugiere chofer/patente y completa el campo relacionado solo si existe una asociación única en los movimientos guardados).
   - `lib/api.js` → funciones HTTP (`getRecords`, `createRecord`, `updateRecord`, `deleteRecord`).
   - `lib/utils.js` → `toMillis`, `formatDate`, `normalizeText`, `parseWeight` (SOLO suma tn), `cn`.
   - `lib/productos.js` → catálogo código → nombre → unidad.
@@ -820,13 +820,10 @@ conocimiento con tablas canónicas de Razón Social y Material.
 
 ### Handoff actual (2026-11-01)
 
-- Rama de trabajo publicada: `work/falpat-stock-2026-11-01`.
-- Esta rama contiene el código y la documentación de esta tanda. Para continuarla, cambiar a
-  esa rama; no reemplazar `main` ni `dev`.
-- La compilación de Vercel Preview terminó correctamente. El acceso al preview está protegido
-  por Vercel y puede requerir iniciar sesión.
-- `main` de producción no se actualizó. Los endpoints de importación PDF de prueba siguen
-  bloqueados en Vercel por diseño.
+- El flujo de remitos PDF y su documentación se integraron en `main` mediante el PR #1.
+- El autocompletado vinculado de chofer/patente para Entrada y Salida se documenta en
+  `README.md`; publicar su cambio de código en `main` actualiza producción en Vercel.
+- Los endpoints de importación PDF de prueba siguen bloqueados en Vercel por diseño.
 
 ### Preparación
 

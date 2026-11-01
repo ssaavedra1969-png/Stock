@@ -12,7 +12,7 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { AppContext } from '@/context/AppContext';
 import Autocomplete from './Autocomplete';
-import { cn, todayISO, toMillis } from '@/lib/utils';
+import { cn, normalizeText, todayISO, toMillis } from '@/lib/utils';
 import {
   unidadPorCodigo,
   unidadPorNombre,
@@ -111,6 +111,7 @@ export default function ModalForm() {
     updateRecord,
     editingRecord,
     uniqueValues,
+    records,
     defaultCarga,
   } = useContext(AppContext);
   const [carga, setCarga] = useState('Entrada');
@@ -118,6 +119,36 @@ export default function ModalForm() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const isEdit = Boolean(editingRecord);
+
+  const vehicleAssociations = useMemo(() => {
+    const driversByPlate = new Map();
+    const platesByDriver = new Map();
+    const plateKey = (value) => normalizeText(value).replace(/\s+/g, '');
+    const addAssociation = (map, key, valueKey, value) => {
+      if (!key || !valueKey) return;
+      if (!map.has(key)) map.set(key, new Map());
+      map.get(key).set(valueKey, value);
+    };
+
+    for (const record of records) {
+      const plate = String(record.patente || '').trim();
+      const driver = String(record.chofer || '').trim();
+      if (!plate || !driver) continue;
+
+      addAssociation(driversByPlate, plateKey(plate), normalizeText(driver), driver);
+      addAssociation(platesByDriver, normalizeText(driver), plateKey(plate), plate);
+    }
+
+    const getUniqueValue = (map, key) => {
+      const values = map.get(key);
+      return values?.size === 1 ? values.values().next().value : '';
+    };
+
+    return {
+      driverForPlate: (plate) => getUniqueValue(driversByPlate, plateKey(plate)),
+      plateForDriver: (driver) => getUniqueValue(platesByDriver, normalizeText(driver)),
+    };
+  }, [records]);
 
   const requiredFields = useMemo(() => {
     const common = [
@@ -164,6 +195,26 @@ export default function ModalForm() {
       setForm((f) => ({ ...f, [key]: value }));
       if (errors[key]) setErrors((er) => ({ ...er, [key]: undefined }));
     };
+  }
+
+  function onPatenteChange(valueOrEvent) {
+    const value = typeof valueOrEvent === 'string' ? valueOrEvent : valueOrEvent.target.value;
+    setForm((current) => ({
+      ...current,
+      patente: value,
+      chofer: vehicleAssociations.driverForPlate(value) || current.chofer,
+    }));
+    if (errors.patente) setErrors((er) => ({ ...er, patente: undefined }));
+  }
+
+  function onChoferChange(valueOrEvent) {
+    const value = typeof valueOrEvent === 'string' ? valueOrEvent : valueOrEvent.target.value;
+    setForm((current) => ({
+      ...current,
+      chofer: value,
+      patente: vehicleAssociations.plateForDriver(value) || current.patente,
+    }));
+    if (errors.chofer) setErrors((er) => ({ ...er, chofer: undefined }));
   }
 
   // Al elegir un producto del catálogo, completa el código automáticamente
@@ -406,7 +457,7 @@ export default function ModalForm() {
                   <Autocomplete
                     options={uniqueValues.patente}
                     value={form.patente}
-                    onChange={setField('patente')}
+                    onChange={onPatenteChange}
                     error={errors.patente}
                     placeholder="Ej: AB123CD"
                   />
@@ -421,7 +472,7 @@ export default function ModalForm() {
                   <Autocomplete
                     options={uniqueValues.chofer}
                     value={form.chofer}
-                    onChange={setField('chofer')}
+                    onChange={onChoferChange}
                     error={errors.chofer}
                     placeholder="Nombre y apellido"
                   />
