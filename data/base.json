@@ -33,14 +33,17 @@
     ],
     "VIVMAS": [
       "AI417ZZ"
+    ],
+    "QCHOA": [
+      "AG894ER"
     ]
   },
   "choferes": {
     "GARCIA": "GARCIA CRISTIAN",
     "OCHOA": "OCHOA ANIBAL",
-    "PRIMITERRA": "PRIMITERRA TONINO",
+    "PRIMITERRA": "PRIMITERRA TONING",
     "AGUERO": "AGUERO TOMAS AGUSTIN",
-    "LEDESMA": "LEDESMA CAMILD",
+    "LEDESMA": "LEDESMA CAMILO",
     "WILBERGER": "WILBERGER JUAN",
     "PIACENTINI": "PIACENTINI ALEJANDRO MIGUEL",
     "TOLOSA": "TOLOSA CESAR",
@@ -76,7 +79,9 @@
     "SPO|65971": "AG894ER",
     "SPO|65975": "AE403QQ",
     "AVE|168440": "AI417ZZ",
-    "LCE|112297": "AH919KE"
+    "LCE|112297": "AH919KE",
+    "SPO|65982": "AG266CJ",
+    "SPO|65983": "AG894ER"
   },
   "correccionesPorTicket": {
     "AVE|165420": {
@@ -228,6 +233,56 @@
       "Peso Neto": 35280,
       "Chofer": "LEDESMA CAMILD",
       "Pat. Chasis": "AH919KE"
+    },
+    "SPO|65982": {
+      "Fecha": "13/10/2026",
+      "N Remito": "65982",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA FINA",
+      "Neto": 36280,
+      "Peso Neto": 36480,
+      "Chofer": "GARCIA CRISTIAN",
+      "Pat. Chasis": "AG266CJ"
+    },
+    "SPO|65983": {
+      "Fecha": "13/10/2026",
+      "N Remito": "65983",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 36680,
+      "Peso Neto": 37320,
+      "Chofer": "QCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
+    },
+    "LCE|112316": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112316",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": 35220,
+      "Peso Neto": 35020,
+      "Chofer": "PRIMITERRA TONING",
+      "Pat. Chasis": "AH702XY"
+    },
+    "LCE|112333": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112333",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35460,
+      "Peso Neto": 35280,
+      "Chofer": "AGUERD TOMAS AGUSTIN",
+      "Pat. Chasis": "AH702YZ"
+    },
+    "AVE|2740550": {
+      "Fecha": "14/10/2026",
+      "N Remito": "2740550",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "CTO AVELLANEDA",
+      "Neto": 35250,
+      "Peso Neto": 35360,
+      "Chofer": "TOLOSA CESAR",
+      "Pat. Chasis": "AH784OY"
     }
   },
   "correccionesPorArchivo": {
@@ -390,6 +445,56 @@
       "Peso Neto": 35280,
       "Chofer": "LEDESMA CAMILD",
       "Pat. Chasis": "AH919KE"
+    },
+    "SPO|IMG-261019124142-001.PDF": {
+      "Fecha": "13/10/2026",
+      "N Remito": "65982",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA FINA",
+      "Neto": 36280,
+      "Peso Neto": 36480,
+      "Chofer": "GARCIA CRISTIAN",
+      "Pat. Chasis": "AG266CJ"
+    },
+    "SPO|IMG-261019124251-001.PDF": {
+      "Fecha": "13/10/2026",
+      "N Remito": "65983",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 36680,
+      "Peso Neto": 37320,
+      "Chofer": "QCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
+    },
+    "LCE|IMG-261019122048-001.PDF": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112316",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": 35220,
+      "Peso Neto": 35020,
+      "Chofer": "PRIMITERRA TONING",
+      "Pat. Chasis": "AH702XY"
+    },
+    "LCE|IMG-261019122226-001.PDF": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112333",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35460,
+      "Peso Neto": 35280,
+      "Chofer": "AGUERD TOMAS AGUSTIN",
+      "Pat. Chasis": "AH702YZ"
+    },
+    "AVE|IMG-261019122814-001.PDF": {
+      "Fecha": "14/10/2026",
+      "N Remito": "2740550",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "CTO AVELLANEDA",
+      "Neto": 35250,
+      "Peso Neto": 35360,
+      "Chofer": "TOLOSA CESAR",
+      "Pat. Chasis": "AH784OY"
     }
   },
   "reglasLectura": {
@@ -402,7 +507,11 @@
     "SPO|Material|LI DESCELPOIOR IE AREAW FINK EN CROREZERA RIS TELA GULES MINERA": "ARENA FINA",
     "AVE|Pat. Chasis|ALS171": "AI417ZZ",
     "LCE|Razon Social|ARENERA CANELONES": "GRUPO FALPAT SRL",
-    "LCE|Razon Social|GRUPO FALPAT SRL": "ARENERA CANELONES"
+    "LCE|Razon Social|GRUPO FALPAT SRL": "ARENERA CANELONES",
+    "SPO|Material|PLS 3 PIPA AK FIG MM ER A ORT TALK GULIA MIN RA": "ARENA FINA",
+    "SPO|Material|ECRIPS ITN OF RREHA HBCULS I EN CABECERM RID TALN GUIA HINARS": "ARENA MODULO 1.8-1.9",
+    "LCE|Material|PIEDRA PARTIDA 10 30": "PIEDRA PARTIDA 6/12",
+    "AVE|Razon Social|ARENERA CANELONES": "GRUPO FALPAT SRL"
   },
   "razonesSociales": [
     "ALMAJO NORTE",
