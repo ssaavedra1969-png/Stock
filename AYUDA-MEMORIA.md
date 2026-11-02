@@ -877,9 +877,10 @@ Después de elegir la carpeta STOCK y revisar los registros, el botón de confir
 `incorporarEnCarpeta`: agrega solo remitos nuevos a `Salida\Stock-Historico.xlsx` y mueve los PDF
 de `Entrada` a `procesados`. Se validó el flujo con carpetas simuladas: agrega una fila no
 duplicada, conserva las existentes, archiva los PDF y rechaza una carpeta sin `Salida`. No se
-escribió en el histórico real ni se movió ningún PDF durante esta validación. El cambio está en
-el árbol local; falta publicarlo para que aparezca en Vercel. El estado OCR abierto en el navegador
-no se debe refrescar hasta decidir cómo continuar con esa tanda.
+escribió en el histórico real ni se movió ningún PDF durante esta validación. El cambio se publicó
+en `main` y se verificó en Vercel: `/tickets` ya muestra “Incorporar al histórico”. Falta probar
+una escritura autorizada desde la PC de oficina con acceso real al compartido. La pestaña antigua
+con estado OCR debe mantenerse abierta; para usar el cambio, abrir `/tickets` en una pestaña nueva.
 
 - La conciliación por PDF busca Entradas por proveedor y número de remito normalizados.
 - Un registro existente con origen manual o histórico no identificado puede completarse
