@@ -37,24 +37,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "f3fbcfe8-be23-48a1-b592-008ca9d7ca18",
-      "createdAt": "2026-11-02T15:17:41.676Z",
-      "carga": "Entrada",
-      "producto": "ARENA GRANITICA 0/6",
-      "codigoProducto": "",
-      "fechaRemito": "2026-09-18T12:00:00.000Z",
-      "patente": "AH702XY",
-      "chofer": "PRIMITERRA TONINO",
-      "nroRemitoProveedor": "111660",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.98 tn",
-      "pesoBalanza": "35.72 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "d9171aec-fb08-44a8-bb45-27689107408a",
       "createdAt": "2026-11-02T15:17:41.676Z",
       "carga": "Entrada",
@@ -51332,12 +51314,12 @@
   ],
   "productos": [
     "ARENA F.C/MINIMA 1000 TDA",
-    "ARENA GRANITICA 0/6",
     "PIEDRA PARTIDA 6/20",
     "CEMENTO",
     "ARENA MODULO 1.8-1.9",
     "ARENA FINA",
     "PIEDRA PARTIDA 6/12",
+    "ARENA GRANITICA 0/6",
     "PIEDRA 6-20",
     "PIEDRA 0-6",
     "CPF 40 AVELLANEDA",
