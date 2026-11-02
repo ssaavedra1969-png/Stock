@@ -1,6 +1,24 @@
 {
   "records": [
     {
+      "id": "94dd7fa3-bb99-49ce-ab3b-6f8e0e2de785",
+      "createdAt": "2026-11-02T16:11:14.211Z",
+      "carga": "Entrada",
+      "producto": "PIEDRA PARTIDA 6/20",
+      "codigoProducto": "",
+      "fechaRemito": "2026-09-18T12:00:00.000Z",
+      "patente": "AH784OW",
+      "chofer": "WILBERGER JUAN",
+      "nroRemitoProveedor": "111675",
+      "nroRemitoFalpat": "",
+      "pesoProveedor": "35.92 tn",
+      "pesoBalanza": "35.56 tn",
+      "planta": "Lujan",
+      "proveedor": "LCE",
+      "cliente": "",
+      "razonSocial": "ALMAJO NORTE"
+    },
+    {
       "id": "8a51b9f5-0568-4315-a9c4-1c577414b8da",
       "createdAt": "2026-11-02T16:03:51.322Z",
       "carga": "Entrada",
