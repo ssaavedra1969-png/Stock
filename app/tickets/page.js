@@ -866,9 +866,8 @@ export default function TicketsPage() {
       setConfirmacionVisual(false);
       return;
     }
-    if (!resultado) return;
     setConfirmacionVisual(true);
-    if (!devEnvironment?.enabled) return;
+    if (!devEnvironment?.enabled || !resultado) return;
     if (guardandoAprendizaje) return;
 
     setGuardandoAprendizaje(true);
