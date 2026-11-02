@@ -135,6 +135,7 @@ export default function TicketsPage() {
   const [idsEdicion, setIdsEdicion] = useState([]);
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [incorporando, setIncorporando] = useState(false);
+  const [ultimaIncorporacion, setUltimaIncorporacion] = useState(null);
   const [centro, setCentro] = useState('');
   const [carga, setCarga] = useState('');
   const [carpeta, setCarpeta] = useState(null); // { handle, nombre } — carpeta STOCK
@@ -488,6 +489,7 @@ export default function TicketsPage() {
 
   async function procesar() {
     if (files.length === 0) return;
+    setUltimaIncorporacion(null);
     setRegistrosEditados([]);
     setHuboEdiciones(false);
     try {
@@ -752,6 +754,13 @@ export default function TicketsPage() {
         _file: files.find((file) => file.name === record.Archivo),
       }));
       const data = await incorporarEnCarpeta(carpeta.handle, registrosConMeta);
+      setUltimaIncorporacion({
+        agregados: data.agregados,
+        duplicados: data.duplicados,
+        movidos: data.movidos.length,
+        total: registrosConMeta.length,
+        errores: data.errores,
+      });
       if (data.claves) setClavesPlanilla(new Set(data.claves));
       const erroresMovimiento = data.errores
         .slice(0, 3)
@@ -1191,6 +1200,22 @@ export default function TicketsPage() {
             <span className="font-semibold"> Salida\Stock-Historico.xlsx</span> y mueve los PDF de Entrada a procesados.
             No modifica la base de movimientos de la aplicación.
           </p>
+          {ultimaIncorporacion && (
+            <p
+              role="status"
+              className={`mb-2 rounded border p-2 text-xs ${
+                ultimaIncorporacion.errores.length
+                  ? 'border-amber-400/30 bg-amber-400/[0.08] text-amber-100'
+                  : 'border-emerald-400/30 bg-emerald-400/[0.08] text-emerald-100'
+              }`}
+            >
+              Última carga confirmada: {ultimaIncorporacion.agregados} fila(s) agregada(s) al Excel,
+              {' '}{ultimaIncorporacion.duplicados} duplicada(s) omitida(s) y{' '}
+              {ultimaIncorporacion.movidos} de {ultimaIncorporacion.total} PDF(s) archivado(s).
+              {ultimaIncorporacion.errores.length > 0 &&
+                ` ${ultimaIncorporacion.errores.length} PDF(s) no pudieron archivarse; revisá el aviso antes de reintentar.`}
+            </p>
+          )}
           <ul className="grid gap-1 sm:grid-cols-2">
             <Requisito
               ok={erroresLectura.length === 0}
@@ -1222,7 +1247,11 @@ export default function TicketsPage() {
             />
             <Requisito
               ok={registros.length > 0}
-              texto={`${nNuevos} remito(s) nuevo(s) · ${nDuplicados} repetido(s)`}
+              texto={
+                registros.length > 0
+                  ? `${nNuevos} remito(s) nuevo(s) · ${nDuplicados} repetido(s)`
+                  : 'Sin remitos en la tanda actual'
+              }
             />
           </ul>
           {nDuplicados > 0 && (
@@ -1280,7 +1309,9 @@ export default function TicketsPage() {
             <IconCheck className="h-4 w-4" />
             {incorporando
               ? 'Guardando histórico…'
-              : `Guardar en histórico (${nNuevos} nuevo(s) · ${nDuplicados} repetido(s))`}
+              : registros.length > 0
+                ? `Guardar en histórico (${nNuevos} nuevo(s) · ${nDuplicados} repetido(s))`
+                : 'Sin registros para incorporar'}
           </button>
         </div>
       </Paso>

@@ -177,6 +177,12 @@ base; no uses producción para preparar datos de prueba.
   no por el nombre del archivo PDF. Así, nombres de archivo repetidos no hacen
   que guardar afecte o vuelva a abrir otro registro; “Guardar y siguiente”
   conserva el orden visible al iniciar la edición.
+- Tras una incorporación correcta, la pantalla limpia la tanda ya procesada.
+  Los contadores de la tanda vacía ya no se presentan como una carga con cero
+  remitos: queda visible el resumen de la última operación con filas agregadas,
+  duplicados omitidos y PDFs archivados. Un error al archivar PDFs se mantiene
+  indicado para evitar que se interprete como una operación completamente
+  terminada.
 - Las correcciones aprendidas se cotejan con el texto OCR original y las
   específicas por remito/archivo tienen prioridad sobre la lectura general.
 
