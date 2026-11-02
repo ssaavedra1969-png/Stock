@@ -11,6 +11,26 @@ contiene 49 registros en total y los 15 remitos de la tanda están presentes
 una sola vez. La modificación del archivo fue a las 10:40:42. No se modificó
 `data/db.json`.
 
+**Incidente de interfaz al 2026-11-02, 16:43:** se informó que el Excel recibía
+filas, pero la pantalla mostraba `0 nuevo(s) · 0 repetido(s)`. La revisión del
+código identificó que, tras una incorporación sin errores, la página limpiaba
+la tanda y volvía a calcular los contadores sobre la lista vacía. Esto podía
+mostrar ceros aunque la operación anterior hubiera agregado filas. Se corrigió
+la interfaz para conservar el resumen devuelto por la operación (filas
+agregadas, duplicados omitidos y PDFs archivados), mostrar un estado claro para
+una tanda vacía y deshabilitar Guardar cuando no hay registros. El fix quedó en
+el commit `beef00a` de `main`; Vercel informó el despliegue de producción como
+**Ready**. No se volvió a escribir en el Excel como parte del diagnóstico.
+
+**Pendiente para retomar:** refrescar `/tickets` para recibir la versión
+publicada y revisar una incorporación normal. Después de guardar, comprobar el
+resumen de la última operación contra el Excel y los PDF archivados. El resumen
+de incorporación es el resultado de la operación; el conteo previo es una
+referencia y el Excel se vuelve a leer al guardar. No repetir una tanda solo
+porque los contadores previos y el resultado parezcan distintos: primero
+verificar filas y archivos ya procesados. No se confirmó aún con una nueva
+operación real que la interfaz publicada muestre el resumen correcto.
+
 El checklist de las secciones A-D de abajo es **exclusivamente para probar las
 APIs experimentales que escriben en la base `dev`**. No es el procedimiento
 para actualizar el Excel histórico y sus instrucciones de preparación (incluido

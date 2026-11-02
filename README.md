@@ -67,9 +67,11 @@ Este es el circuito habitual para guardar remitos en el archivo histórico:
    Aceptá el segundo mensaje de confirmación. La página agrega los remitos
    nuevos al Excel y mueve los PDF de `Entrada` a `procesados`.
 5. Esperá el resultado en pantalla: debe informar cuántas filas se agregaron y
-   cuántos PDF se archivaron. Si hubo errores, leé el detalle y no cierres ni
-   refresques esa pestaña; verificá el Excel y los PDF antes de decidir si hay
-   que reintentar.
+   cuántos PDF se archivaron. Después de una carga exitosa, el resumen queda
+   visible aunque la tanda se limpie; una tanda vacía indica que no hay remitos
+   para incorporar y no permite volver a guardar. Si hubo errores, leé el
+   detalle y no cierres ni refresques esa pestaña; verificá el Excel y los PDF
+   antes de decidir si hay que reintentar.
 
 El guardado se realiza desde el navegador con permiso explícito sobre la carpeta
 elegida; Vercel no necesita montar ni acceder al recurso compartido. Los
