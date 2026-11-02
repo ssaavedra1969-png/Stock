@@ -1,7 +1,7 @@
 # Flujo de remitos PDF y conciliación
 
 **Estado:** implementación de prueba, solo para Entradas.
-**Última revisión:** 2026-11-01.
+**Última revisión:** 2026-11-02.
 
 Esta guía describe el flujo experimental que concilia remitos con
 `data/db.json` en desarrollo. **No describe el guardado operativo en el Excel
@@ -51,6 +51,30 @@ PDF corresponde a ese movimiento antes de completar datos.
 
 - El escáner extrae del documento y de la balanza fecha, proveedor, número de
   remito, razón social, material, pesos, chofer y patente.
+- Para la fecha del movimiento coteja `FECHA`, `ENTRADA` y `SALIDA` del ticket
+  de balanza, elige la fecha coincidente con más lecturas y, si hay empate,
+  prioriza `ENTRADA`. La fecha del ticket prevalece sobre la impresa en el
+  remito del proveedor; las discrepancias se marcan para revisión. Si el OCR
+  genera una fecha a más de 300 días de un nombre de archivo fechado, se usa
+  la fecha del archivo como corrección de respaldo.
+- Antes de iniciar el OCR, la pantalla `/tickets` espera la respuesta válida de
+  `/api/base` y la carga de movimientos guardados. Si alguna fuente no se puede
+  cargar, detiene el proceso y muestra el error en vez de continuar sin ella.
+- Las correlaciones verificadas de chofer y patente ayudan a completar un
+  chofer ausente y a señalar discrepancias. Si el nombre no se obtiene completo,
+  se vuelve a leer la zona del transportista del PDF. Una asociación ambigua no
+  se usa para completar el campo; las lecturas dudosas quedan marcadas para
+  revisión. El editor permite desplegar y filtrar choferes y patentes guardados.
+- Las reglas aprendidas se cotejan con el texto OCR original, antes de la
+  normalización del campo. Las correcciones específicas por remito o archivo
+  tienen prioridad sobre la lectura general.
+- Esta asistencia se aplica únicamente a la lectura nueva del PDF. No modifica
+  movimientos ya guardados, el Excel histórico, `data/db.json` ni `data/base.json`.
+- Para lecturas de LCE y SPOSITO se vuelven a consultar zonas específicas del
+  remito y de la balanza cuando la primera pasada no alcanza para confirmar
+  material o datos del transportista. Los pesos ya reconocidos como plausibles
+  se conservan; una lectura dudosa no debe reemplazarse silenciosamente por un
+  valor inventado.
 - El Centro debe seleccionarse en la pantalla; no se deduce exclusivamente de
   un nombre de empresa que aparezca en el documento.
 - Los pesos se normalizan a toneladas para la base, manteniendo separados el
@@ -126,3 +150,49 @@ Compara la vista previa, comprueba los conflictos, selecciona explícitamente la
 conciliación y revisa el resultado después de la escritura solo si el usuario
 autoriza esa prueba. Antes y después, confirma la rama `dev` y los conteos de la
 base; no uses producción para preparar datos de prueba.
+
+## Mejoras de OCR y edición (2026-11-02)
+
+- El reconocimiento de fechas del ticket de balanza compara `FECHA`, `ENTRADA`
+  y `SALIDA`: elige la fecha que más se repite y, ante empate, prioriza
+  `ENTRADA`. La fecha del remito del proveedor queda como referencia de revisión,
+  no desplaza una fecha de operación confirmada por la balanza. Los nombres de
+  archivo `YYYYMMDD_...` también sirven para detectar/corregir fechas OCR
+  incompatibles.
+- Se ajustaron las zonas OCR de encabezado, remito, material y pesos para los
+  formatos LCE, SPOSITO y Cemento Avellaneda. El peso neto válido de la página
+  completa se conserva sin disparar recortes extra. Los cambios de recorte se
+  basan en la inspección visual de los formatos; requieren validación contra
+  los PDF reales antes de considerarse verificados.
+- La lectura del transportista usa las asociaciones conocidas de chofer y
+  patente para resolver lecturas incompletas. Si el OCR agrega texto basura a
+  un nombre guardado, se normaliza al nombre conocido y se deja una observación
+  para revisar; no se usa una asociación ambigua para completar datos.
+- El procesamiento espera a que la base de conocimiento y los movimientos
+  estén cargados. Una respuesta de base ausente o inválida produce un error
+  explícito, en lugar de iniciar el OCR sin conocimiento.
+- Los campos Chofer y Patente del editor ofrecen listas desplegables filtrables
+  alimentadas por la base conocida y los registros de la tanda.
+- La secuencia de edición se conserva por la identidad interna del registro,
+  no por el nombre del archivo PDF. Así, nombres de archivo repetidos no hacen
+  que guardar afecte o vuelva a abrir otro registro; “Guardar y siguiente”
+  conserva el orden visible al iniciar la edición.
+- Las correcciones aprendidas se cotejan con el texto OCR original y las
+  específicas por remito/archivo tienen prioridad sobre la lectura general.
+
+### Verificación y límites
+
+- `npm run lint`, `npm run build` y `git diff --check` finalizaron correctamente.
+  Lint/build informan un aviso preexistente de dependencias de `useEffect` en
+  `app/tickets/page.js`.
+- Se ejecutaron comprobaciones puntuales con lecturas simuladas para el consenso
+  de fecha, conservación de peso neto, normalización del chofer y recuperación
+  de patente/conocimiento.
+- Una previsualización anterior de ocho PDF del 21/09 señaló campos OCR que
+  necesitaban mejora. La siguiente corrida local quedó en 0% y no permitió
+  confirmar la lectura integral corregida de esos ocho archivos. Por eso, este
+  cambio no afirma que la tanda real haya quedado validada ni autoriza su
+  incorporación automática.
+- No se modificaron movimientos existentes, `data/db.json`, `data/base.json`,
+  planillas Excel ni los PDF originales. No se renombraron ni movieron archivos
+  como parte de estos cambios.

@@ -92,6 +92,27 @@ function ordenarPorFecha(registros) {
   });
 }
 
+function opcionesUnicas(valores) {
+  const opciones = new Map();
+  for (const valor of valores) {
+    const limpio = String(valor ?? '').trim();
+    if (!limpio || limpio.toUpperCase() === 'N/D') continue;
+    const clave = limpio.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+    if (!opciones.has(clave)) opciones.set(clave, limpio);
+  }
+  return [...opciones.values()].sort((a, b) => a.localeCompare(b, 'es', {
+    sensitivity: 'base',
+    numeric: true,
+  }));
+}
+
+function identificarRegistros(registros) {
+  return registros.map((registro, index) => ({
+    ...registro,
+    _editorId: registro._editorId || `ticket-${index}`,
+  }));
+}
+
 export default function TicketsPage() {
   const {
     showToast,
@@ -111,6 +132,7 @@ export default function TicketsPage() {
   const [registrosEditados, setRegistrosEditados] = useState([]);
   const [huboEdiciones, setHuboEdiciones] = useState(false);
   const [editandoIdx, setEditandoIdx] = useState(null);
+  const [idsEdicion, setIdsEdicion] = useState([]);
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [incorporando, setIncorporando] = useState(false);
   const [centro, setCentro] = useState('');
@@ -246,7 +268,9 @@ export default function TicketsPage() {
   const errorMsg = tickets.error;
 
   const registros = useMemo(() => {
-    const lista = huboEdiciones ? registrosEditados : resultado?.registros || [];
+    const lista = identificarRegistros(
+      huboEdiciones ? registrosEditados : resultado?.registros || []
+    );
     const claves = clavesPlanilla;
     const conEstado = lista.map((r) => ({
       ...r,
@@ -261,6 +285,26 @@ export default function TicketsPage() {
     const factor = orden.dir === 'asc' ? 1 : -1;
     return [...ordenados].sort((a, b) => factor * compararRegistros(a, b, orden.campo));
   }, [resultado, registrosEditados, huboEdiciones, clavesPlanilla, orden]);
+
+  const opcionesChofer = useMemo(
+    () => opcionesUnicas([
+      ...Object.values(baseConocimiento?.choferes || {}),
+      ...registros.map((record) => record.Chofer || record.chofer),
+    ]),
+    [baseConocimiento, registros]
+  );
+  const opcionesPatente = useMemo(
+    () => opcionesUnicas([
+      ...Object.values(baseConocimiento?.patentes || {}).flat(),
+      ...Object.values(baseConocimiento?.patentesPorTicket || {}),
+      ...registros.flatMap((record) => [
+        record['Pat. Chasis'],
+        record.patente,
+        record.patenteChasis,
+      ]),
+    ]),
+    [baseConocimiento, registros]
+  );
 
   const registrosVisibles = useMemo(
     () => (soloPendientes ? registros.filter((r) => tieneFaltantes(r)) : registros),
@@ -464,18 +508,20 @@ export default function TicketsPage() {
       const nuevos = data.nuevos ?? 0;
       const dup = data.duplicados ?? 0;
       showToast(`Procesado: ${nuevos} nuevo(s), ${dup} duplicado(s)`);
-    } catch {
-      showToast('Error al procesar los remitos', 'error');
+    } catch (err) {
+      showToast(err.message || 'Error al procesar los remitos', 'error');
     }
   }
 
   function iniciarEdicion(idx) {
     setConfirmacionVisual(false);
+    setIdsEdicion(registrosVisibles.map((registro) => registro._editorId));
     setEditandoIdx(idx);
   }
 
   function cancelarEdicion() {
     setEditandoIdx(null);
+    setIdsEdicion([]);
   }
 
   function cambiarOrden(campo) {
@@ -504,22 +550,23 @@ export default function TicketsPage() {
       'Peso Neto': normalizarNumero(form['Peso Neto']),
     };
     setRegistrosEditados((prev) => {
-      const base = resultado?.registros || [];
+      const base = identificarRegistros(resultado?.registros || []);
       const lista = prev.length > 0 ? [...prev] : [...base];
       const revision = { ...(form._revision || {}) };
       for (const campo of Object.keys(formNormalizado)) delete revision[campo];
       const editado = { ...formNormalizado, _revision: revision };
       if (Object.keys(revision).length === 0) delete editado._revision;
-      const indiceReal = lista.findIndex((r) => r.Archivo === editado.Archivo);
+      const indiceReal = lista.findIndex((r) => r._editorId === editado._editorId);
       if (indiceReal >= 0) lista[indiceReal] = editado;
       return lista;
     });
     setConfirmacionVisual(false);
     setHuboEdiciones(true);
-    if (irSiguiente && editandoIdx < registrosVisibles.length - 1) {
+    if (irSiguiente && editandoIdx < idsEdicion.length - 1) {
       setEditandoIdx(editandoIdx + 1);
     } else {
       setEditandoIdx(null);
+      setIdsEdicion([]);
     }
 
     const material = String(form.Material || '').trim();
@@ -607,11 +654,11 @@ export default function TicketsPage() {
     }
   }
 
-  function eliminarRegistro(archivo) {
+  function eliminarRegistro(editorId) {
     setRegistrosEditados((prev) => {
-      const base = resultado?.registros || [];
+      const base = identificarRegistros(resultado?.registros || []);
       const lista = prev.length > 0 ? [...prev] : [...base];
-      const indiceReal = lista.findIndex((r) => r.Archivo === archivo);
+      const indiceReal = lista.findIndex((r) => r._editorId === editorId);
       if (indiceReal >= 0) lista.splice(indiceReal, 1);
       return lista;
     });
@@ -635,10 +682,12 @@ export default function TicketsPage() {
         ...Object.fromEntries(CAMPOS.map((c) => [c, r[c]])),
         Archivo: r.Archivo,
       }));
-      const originales = new Map((resultado.registros || []).map((r) => [r.Archivo, r]));
+      const originales = new Map(
+        identificarRegistros(resultado.registros || []).map((r) => [r._editorId, r])
+      );
       const camposCorregibles = CAMPOS.filter((c) => !['Proveedor', 'Centro', 'Carga'].includes(c));
       const correcciones = registros.flatMap((corregido) => {
-        const original = originales.get(corregido.Archivo);
+        const original = originales.get(corregido._editorId);
         if (!original) return [];
         const cambios = Object.fromEntries(
           camposCorregibles
@@ -990,7 +1039,7 @@ export default function TicketsPage() {
                     {registrosVisibles.map((r, i) => {
                       const dudosos = revisarRegistro(r);
                       return (
-                      <tr key={i} className="border-t border-white/5">
+                      <tr key={r._editorId} className="border-t border-white/5">
                         {CAMPOS.map((c) => {
                           if (c === 'Centro' || c === 'Carga') {
                             const v = c === 'Centro' ? centro : carga;
@@ -1079,7 +1128,7 @@ export default function TicketsPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => eliminarRegistro(r.Archivo)}
+                              onClick={() => eliminarRegistro(r._editorId)}
                               className="rounded p-0.5 text-slate-400 hover:bg-white/5 hover:text-red-300"
                               title="Eliminar"
                             >
@@ -1239,16 +1288,18 @@ export default function TicketsPage() {
       {procesando && <ProcessingOverlay progreso={progreso} archivos={files.length} />}
 
       {/* Editor de ticket — modal con visor de PDF */}
-      {editandoIdx !== null && registrosVisibles[editandoIdx] && (
+      {editandoIdx !== null && idsEdicion[editandoIdx] && (
         <EditorTicket
-          registro={registrosVisibles[editandoIdx]}
+          registro={registros.find((registro) => registro._editorId === idsEdicion[editandoIdx])}
           index={editandoIdx}
-          total={registrosVisibles.length}
+          total={idsEdicion.length}
           pendientes={registrosConObservaciones.length}
           centro={centro}
           carga={carga}
           materiales={opcionesMaterial}
           razones={opcionesRazon}
+          choferes={opcionesChofer}
+          patentes={opcionesPatente}
           onClose={cancelarEdicion}
           onSave={guardarEdicion}
           onNavigate={(nuevoIdx) => setEditandoIdx(nuevoIdx)}

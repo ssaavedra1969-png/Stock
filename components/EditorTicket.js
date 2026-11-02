@@ -28,8 +28,8 @@ const CAMPOS_FORM = [
   { key: 'Material', label: 'Material', list: [...MATERIALES_OK], ancho: 2 },
   { key: 'Neto', label: 'Neto (kg)', mono: true },
   { key: 'Peso Neto', label: 'Peso Neto (kg)', mono: true },
-  { key: 'Chofer', label: 'Chofer', ancho: 2 },
-  { key: 'Pat. Chasis', label: 'Patente chasis', mono: true },
+  { key: 'Chofer', label: 'Chofer', ancho: 2, opciones: 'choferes' },
+  { key: 'Pat. Chasis', label: 'Patente chasis', mono: true, opciones: 'patentes' },
 ];
 
 function listaId(campo) {
@@ -134,6 +134,8 @@ export default function EditorTicket({
   carga,
   materiales,
   razones,
+  choferes,
+  patentes,
   onClose,
   onSave,
   onNavigate,
@@ -325,7 +327,11 @@ export default function EditorTicket({
                     ? materiales || campo.list
                     : campo.key === 'Razon Social'
                       ? razones || campo.list
-                      : campo.list;
+                      : campo.opciones === 'choferes'
+                        ? choferes || []
+                        : campo.opciones === 'patentes'
+                          ? patentes || []
+                          : campo.list;
                 return (
                   <label key={campo.key} className={campo.ancho === 2 ? 'sm:col-span-2' : ''}>
                     <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">

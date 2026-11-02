@@ -53,6 +53,11 @@ export function AppProvider({ children }) {
   // va poblando sola con cada incorporacion.
   const [baseConocimiento, setBaseConocimiento] = useState({});
   const baseRef = useRef(baseConocimiento);
+  const baseCargadaRef = useRef(false);
+  const cargaBaseRef = useRef(null);
+  const registrosCargadosRef = useRef(false);
+  const cargaRegistrosRef = useRef(null);
+  const errorRegistrosRef = useRef(null);
   useEffect(() => {
     baseRef.current = baseConocimiento;
   }, [baseConocimiento]);
@@ -64,6 +69,98 @@ export function AppProvider({ children }) {
     recordsRef.current = records;
   }, [records]);
 
+  const loadRecords = useCallback(async () => {
+    if (cargaRegistrosRef.current) return cargaRegistrosRef.current;
+
+    const carga = (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { records: data, productos: prods } = await fetchState();
+
+        // Ordenar por fecha de remito (mas reciente primero); empates por createdAt
+        data.sort((a, b) => {
+          const fa = toMillis(a.fechaRemito) || 0;
+          const fb = toMillis(b.fechaRemito) || 0;
+          if (fa !== fb) return fb - fa;
+          const ca = a.createdAt ? toMillis(a.createdAt) || 0 : 0;
+          const cb = b.createdAt ? toMillis(b.createdAt) || 0 : 0;
+          return cb - ca;
+        });
+
+        setRecords(data);
+        recordsRef.current = data;
+        setProductos(prods);
+        registrosCargadosRef.current = true;
+        errorRegistrosRef.current = null;
+      } catch (err) {
+        console.error('Error leyendo datos:', err);
+        errorRegistrosRef.current = err;
+        setError(err.message || 'No se pudieron leer los datos.');
+      } finally {
+        setLoading(false);
+      }
+    })();
+
+    cargaRegistrosRef.current = carga;
+    try {
+      await carga;
+    } finally {
+      if (cargaRegistrosRef.current === carga) cargaRegistrosRef.current = null;
+    }
+  }, []);
+
+  const cargarRegistrosParaOCR = useCallback(async () => {
+    if (!registrosCargadosRef.current) {
+      await loadRecords();
+    }
+    if (!registrosCargadosRef.current) {
+      throw new Error(
+        `No se pudieron cargar los movimientos para completar la base de conocimiento. ${
+          errorRegistrosRef.current?.message || ''
+        }`.trim()
+      );
+    }
+    return recordsRef.current;
+  }, [loadRecords]);
+
+  // Carga inicial.
+  useEffect(() => {
+    loadRecords();
+  }, [loadRecords]);
+
+  // La base de conocimiento debe estar lista antes de comenzar el OCR.
+  // Comparte una única lectura entre el arranque de la página y el primer PDF.
+  const cargarBaseConocimiento = useCallback(async () => {
+    if (baseCargadaRef.current) return baseRef.current;
+    if (!cargaBaseRef.current) {
+      cargaBaseRef.current = fetchBase()
+        .then((base) => {
+          if (!base || typeof base !== 'object' || Array.isArray(base)) {
+            throw new Error('El servidor devolvió una base de conocimiento inválida.');
+          }
+          baseRef.current = base;
+          baseCargadaRef.current = true;
+          setBaseConocimiento(base);
+          return base;
+        })
+        .catch((err) => {
+          console.error('Error leyendo la base de conocimiento:', err);
+          throw new Error(
+            `No se pudo cargar la base de conocimiento; no se inició el OCR para evitar completar datos a ciegas. ${err.message || ''}`.trim()
+          );
+        })
+        .finally(() => {
+          cargaBaseRef.current = null;
+        });
+    }
+    return cargaBaseRef.current;
+  }, []);
+
+  useEffect(() => {
+    cargarBaseConocimiento().catch(() => {});
+  }, [cargarBaseConocimiento]);
+
   const procesarTickets = useCallback(async (files, options = {}) => {
     setTickets({ procesando: true, resultado: null, error: '' });
     try {
@@ -73,7 +170,11 @@ export function AppProvider({ children }) {
         import('@/lib/tickets/ocr.mjs'),
         import('@/lib/tickets/extract.mjs'),
       ]);
-      const base = unirBase(baseRef.current, learnFromRecords(recordsRef.current));
+      const [conocimiento, registrosConocidos] = await Promise.all([
+        cargarBaseConocimiento(),
+        cargarRegistrosParaOCR(),
+      ]);
+      const base = unirBase(learnFromRecords(registrosConocidos), conocimiento);
       const data = await procesarArchivos(files, { base, onProgress: options.onProgress });
       setTickets({ procesando: false, resultado: data, error: '' });
       return data;
@@ -82,7 +183,7 @@ export function AppProvider({ children }) {
       setTickets({ procesando: false, resultado: null, error: msg });
       throw err;
     }
-  }, []);
+  }, [cargarBaseConocimiento, cargarRegistrosParaOCR]);
 
   const limpiarTickets = useCallback(() => {
     setTickets({ procesando: false, resultado: null, error: '' });
@@ -93,50 +194,6 @@ export function AppProvider({ children }) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2800);
   }, []);
-
-  const loadRecords = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { records: data, productos: prods } = await fetchState();
-
-      // Ordenar por fecha de remito (mas reciente primero); empates por createdAt
-      data.sort((a, b) => {
-        const fa = toMillis(a.fechaRemito) || 0;
-        const fb = toMillis(b.fechaRemito) || 0;
-        if (fa !== fb) return fb - fa;
-        const ca = a.createdAt ? toMillis(a.createdAt) || 0 : 0;
-        const cb = b.createdAt ? toMillis(b.createdAt) || 0 : 0;
-        return cb - ca;
-      });
-
-      setRecords(data);
-      setProductos(prods);
-    } catch (err) {
-      console.error('Error leyendo datos:', err);
-      setError(err.message || 'No se pudieron leer los datos.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Carga inicial.
-  useEffect(() => {
-    loadRecords();
-  }, [loadRecords]);
-
-  // Base de conocimiento (data/base.json): se lee una vez al iniciar.
-  const loadBase = useCallback(async () => {
-    try {
-      setBaseConocimiento(await fetchBase());
-    } catch (err) {
-      console.error('Error leyendo la base de conocimiento:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadBase();
-  }, [loadBase]);
 
   // Aprende de los tickets incorporados y actualiza la base persistida.
   const guardarBase = useCallback(async (filas, correcciones = []) => {
