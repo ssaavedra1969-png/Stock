@@ -86,13 +86,16 @@ esa tanda, abrí otra pestaña de `/tickets`, elegí `STOCK` y leé allí los PD
 `Entrada`; mantené la pestaña original abierta como respaldo. No uses
 **Guardar en dev** para actualizar el Excel histórico.
 
-Este circuito no escribe en `data/db.json`. **Importar Excel** (`/incorporar`)
-es otro flujo: carga planillas a la base de movimientos de la aplicación y no
-reemplaza ni actualiza `Stock-Historico.xlsx`.
-
 **Importar Excel** (`/incorporar`) es un flujo separado para cargar planillas a
 la base de movimientos de la aplicación; no reemplaza ni actualiza
 `Stock-Historico.xlsx`.
+
+La sección acepta tanto la plantilla de importación como el propio
+`Salida\Stock-Historico.xlsx`: detecta sus columnas, toma `Carga` como tipo de
+movimiento y convierte los pesos de kg a tn. Antes de guardar muestra las filas
+nuevas, las ya cargadas y los errores. Solo incorpora las nuevas; la API vuelve
+a comprobar duplicados al guardar, por lo que volver a subir el histórico no
+crea movimientos repetidos. El Excel compartido no se modifica.
 
 ## Datos y publicación
 

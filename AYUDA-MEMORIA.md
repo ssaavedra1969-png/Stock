@@ -920,6 +920,23 @@ conocimiento con tablas canónicas de Razón Social y Material.
 - Consultar [docs/flujo-remitos-pdf.md](./docs/flujo-remitos-pdf.md) para reglas, límites,
   rutas y estado detallado de validación.
 
+**Actualización 2026-11-02 — importación directa del histórico:**
+
+- Se confirmó que `Stock-Historico.xlsx` tiene 49 filas de Entrada. Esas 49 filas se importaron
+  en producción por `/incorporar`; la base pasó de 2.959 a 3.008 movimientos. La verificación
+  posterior encontró cada remito una sola vez y cotejó fecha, producto, proveedor, centro,
+  pesos, chofer, patente y razón social.
+- Para no preparar otro Excel de conversión en futuras cargas, `/incorporar` ahora reconoce
+  directamente los encabezados del histórico, convierte los pesos de kg a tn y deduce Entrada
+  o Salida desde la columna `Carga`.
+- La pantalla previsualiza qué filas son nuevas, repetidas o inválidas. El navegador compara
+  con la base y el endpoint vuelve a deduplicar al guardar, evitando repetir movimientos si
+  otra persona importó entretanto o se vuelve a cargar el histórico. El archivo compartido
+  no se modifica.
+- El cambio de código está pendiente de aprobación/publicación en `main`; producción todavía
+  no ofrece la importación directa hasta que se despliegue. Como los 49 remitos ya se cargaron,
+  la vista previa de esa misma planilla debe marcarlos como ya cargados, no como nuevos.
+
 ### Checklist al retomar
 
 1. Leer esta guía y revisar `git status --short --branch` y `git log --oneline -5`.

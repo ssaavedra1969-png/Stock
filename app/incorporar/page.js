@@ -75,6 +75,7 @@ export default function IncorporarPage() {
   const [resultado, setResultado] = useState(null);
 
   const tipoActual = TIPOS.find((t) => t.value === tipo);
+  const cargaAnalisis = analisis?.carga || tipo;
   const resumen = useMemo(
     () => (analisis ? resumenPorProducto(analisis.nuevos) : []),
     [analisis]
@@ -109,12 +110,13 @@ export default function IncorporarPage() {
     setLeyendo(true);
     try {
       const rows = await leerFilasExcel(file);
-      const { records: parseados, descartadas } = parsearFilas(rows, tipo);
+      const { records: parseados, descartadas, carga: cargaDetectada } = parsearFilas(rows, tipo);
+      setTipo(cargaDetectada);
       if (parseados.length === 0 && descartadas.length === 0) {
         throw new Error('No se encontraron filas con datos en la primera hoja.');
       }
       const { nuevos, duplicados } = separarNuevos(parseados, records);
-      setAnalisis({ total: parseados.length, descartadas, nuevos, duplicados });
+      setAnalisis({ total: parseados.length, descartadas, nuevos, duplicados, carga: cargaDetectada });
       setArchivoNombre(file.name);
     } catch (err) {
       setErrorArchivo(err.message || 'No se pudo leer el archivo.');
@@ -126,20 +128,21 @@ export default function IncorporarPage() {
 
   async function importar() {
     if (!analisis || analisis.nuevos.length === 0) return;
+    const carga = analisis.carga;
     setImportando(true);
     try {
       const res = await fetch('/api/db/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ carga: tipo, records: analisis.nuevos }),
+        body: JSON.stringify({ carga, records: analisis.nuevos }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || `Error ${res.status} al importar.`);
-      setResultado(data);
+      setResultado({ ...data, carga });
       setAnalisis(null);
       setArchivoNombre('');
       if (inputRef.current) inputRef.current.value = '';
-      showToast(`Importación OK: ${data.insertados} ${tipo.toLowerCase()}s guardadas`);
+      showToast(`Importación OK: ${data.insertados} ${carga.toLowerCase()}s guardadas`);
       reload();
     } catch (err) {
       setErrorArchivo(err.message || 'No se pudo importar.');
@@ -166,7 +169,7 @@ export default function IncorporarPage() {
         icon={IconUpload}
         title="Importar Excel histórico"
         tag="Importación"
-        subtitle="Carga masiva desde planillas con el formato de importación compatible"
+        subtitle="Cargá la plantilla de movimientos o directamente Stock-Historico.xlsx; el sistema reconoce el formato y revisa duplicados"
       >
         <a href={tipoActual.plantilla} download className="btn-ghost" title="Descargar planilla modelo">
           <IconDownload className="h-4 w-4" />
@@ -209,7 +212,11 @@ export default function IncorporarPage() {
           })}
         </div>
         <p className="text-[11px] leading-relaxed text-slate-500">
-          Este importador acepta la plantilla modelo y el Excel descargado desde Remitos. Las columnas base son:{' '}
+          Este importador acepta la plantilla modelo, el Excel descargado desde Remitos y directamente{' '}
+          <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">Stock-Historico.xlsx</code>. En el
+          histórico convierte los pesos de kg a tn y usa la columna Carga para identificar Entradas o Salidas.
+          Antes de importar, compara fecha, remito, producto, cantidad y proveedor/cliente contra la base y
+          vuelve a comprobar duplicados al guardar. Las columnas del formato de movimientos son:{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">REMITOS</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">OBSERVACION</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">FECHA</code>,{' '}
@@ -264,7 +271,7 @@ export default function IncorporarPage() {
         <div className="card flex items-start gap-3 border-emerald-500/30 bg-emerald-500/10 !p-4">
           <IconCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
           <div className="text-sm text-emerald-100">
-            Importación completada: <strong>{resultado.insertados}</strong> {tipo.toLowerCase()}s nuevas guardadas
+            Importación completada: <strong>{resultado.insertados}</strong> {resultado.carga.toLowerCase()}s nuevas guardadas
             {resultado.duplicados > 0 && <> · {resultado.duplicados} repetidas ignoradas</>} · total en la base:{' '}
             {resultado.total.toLocaleString('es-AR')} registros.
             <span className="mt-1 block text-[11px] text-emerald-200/70">
@@ -295,7 +302,7 @@ export default function IncorporarPage() {
           {/* Conteos */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat label="Filas leídas" value={fmtNum(analisis.total)} cls="text-slate-100" />
-            <Stat label={`Nuevas (${tipo})`} value={fmtNum(analisis.nuevos.length)} cls="text-emerald-400" />
+            <Stat label={`Nuevas (${cargaAnalisis})`} value={fmtNum(analisis.nuevos.length)} cls="text-emerald-400" />
             <Stat label="Ya cargadas" value={fmtNum(analisis.duplicados.length)} cls="text-amber-400" />
             <Stat label="Con error" value={fmtNum(analisis.descartadas.length)} cls={analisis.descartadas.length ? 'text-red-400' : 'text-slate-400'} />
           </div>
@@ -305,7 +312,7 @@ export default function IncorporarPage() {
               <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
                 {analisis.duplicados.length} fila(s) ya existen en la base (misma fecha, remito, producto,
-                cantidad y {tipo === 'Entrada' ? 'proveedor' : 'cliente'}) y se van a ignorar.
+                cantidad y {cargaAnalisis === 'Entrada' ? 'proveedor' : 'cliente'}) y se van a ignorar.
               </span>
             </div>
           )}
@@ -370,7 +377,7 @@ export default function IncorporarPage() {
                       <th className="px-3 py-2 font-semibold">Remito</th>
                       <th className="px-3 py-2 font-semibold">Cód.</th>
                       <th className="px-3 py-2 font-semibold">Producto</th>
-                      <th className="px-3 py-2 font-semibold">{tipo === 'Entrada' ? 'Proveedor' : 'Cliente'}</th>
+                      <th className="px-3 py-2 font-semibold">{cargaAnalisis === 'Entrada' ? 'Proveedor' : 'Cliente'}</th>
                       <th className="px-3 py-2 font-semibold">CD</th>
                       <th className="px-3 py-2 text-right font-semibold">Cantidad</th>
                       {incluyeDetallesRemito && (
@@ -387,10 +394,10 @@ export default function IncorporarPage() {
                     {analisis.nuevos.slice(0, PREVIEW_MAX).map((r, i) => (
                       <tr key={i} className="border-t border-white/5">
                         <td className="whitespace-nowrap px-3 py-1.5 text-slate-400">{formatDate(r.fechaRemito)}</td>
-                        <td className="px-3 py-1.5 font-mono text-xs text-slate-300">{tipo === 'Entrada' ? r.nroRemitoProveedor : r.nroRemitoFalpat}</td>
+                        <td className="px-3 py-1.5 font-mono text-xs text-slate-300">{cargaAnalisis === 'Entrada' ? r.nroRemitoProveedor : r.nroRemitoFalpat}</td>
                         <td className="px-3 py-1.5 font-mono text-xs text-falpat-soft">{r.codigoProducto || '—'}</td>
                         <td className="px-3 py-1.5 text-slate-300">{r.producto}</td>
-                        <td className="px-3 py-1.5 text-slate-400">{tipo === 'Entrada' ? r.proveedor : r.cliente}</td>
+                        <td className="px-3 py-1.5 text-slate-400">{cargaAnalisis === 'Entrada' ? r.proveedor : r.cliente}</td>
                         <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs text-slate-300">{r.planta || 'Lujan'}</td>
                         <td className="whitespace-nowrap px-3 py-1.5 text-right font-mono tabular-nums text-slate-200">{r.pesoBalanza}</td>
                         {incluyeDetallesRemito && (
