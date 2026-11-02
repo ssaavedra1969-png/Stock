@@ -23,8 +23,11 @@ escrituras en producción. La prueba integral con datos de `dev` sigue pendiente
 4. Iniciar `npm run dev`, abrir la URL local e inspeccionar `/api/db` y `/api/base`
    en modo de solo lectura. Si la carga falla, detener la prueba; no cambiar a
    `main` para resolverla.
-5. No importar archivos ni confirmar formularios antes de haber revisado los
-   datos y obtener autorización explícita para cada escritura controlada en dev.
+5. El usuario ya indicó que se haga la prueba integral en desarrollo; no hace
+   falta pedir confirmación de nuevo para cada escritura normal prevista en las
+   secciones C y D. Si los datos no permiten confirmar la identidad del
+   movimiento, hay una ambigüedad o aparece una operación fuera del checklist,
+   detenerse y consultar antes de continuar.
 
 ## A. Formularios Entrada y Salida (sin guardar)
 
@@ -65,7 +68,8 @@ autorización.
 
 ## C. Conciliación de un registro existente (escritura dev controlada)
 
-Solo después de validar la vista previa y obtener autorización explícita:
+Solo después de validar la vista previa y confirmar que la identidad del
+movimiento y la coincidencia son seguras:
 
 - Elegir un movimiento dev cuya identidad proveedor/remito haya sido confirmada
   y que tenga al menos un campo vacío compatible.
@@ -83,7 +87,8 @@ entre varias coincidencias.
 
 ## D. Una Entrada nueva (escritura dev controlada)
 
-Solo con autorización explícita e independiente para esta prueba:
+La prueba integral solicitada incluye una Entrada nueva controlada en dev, si
+se encuentra un PDF validado sin coincidencia:
 
 - Seleccionar un PDF validado que no tenga coincidencia en dev.
 - Revisar todos los campos y su correspondencia con el esquema antes de
