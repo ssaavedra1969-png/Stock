@@ -55,24 +55,6 @@
       "razonSocial": "ALMAJO NORTE"
     },
     {
-      "id": "92cd28d9-f3e7-4179-8c78-af9aaff36f75",
-      "createdAt": "2026-11-02T15:17:41.676Z",
-      "carga": "Entrada",
-      "producto": "PIEDRA PARTIDA 6/20",
-      "codigoProducto": "",
-      "fechaRemito": "2026-09-18T12:00:00.000Z",
-      "patente": "AH125AF",
-      "chofer": "GARCIA JORGE ALBERTO",
-      "nroRemitoProveedor": "111674",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.16 tn",
-      "pesoBalanza": "35.26 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": "",
-      "razonSocial": "ALMAJO NORTE"
-    },
-    {
       "id": "7f7d489b-05ee-429f-81d1-e23e6915a607",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
