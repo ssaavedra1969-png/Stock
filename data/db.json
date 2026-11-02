@@ -1,24 +1,6 @@
 {
   "records": [
     {
-      "id": "897e3e61-6846-468b-b9e9-6e8ffc1d0fb3",
-      "createdAt": "2026-11-02T15:17:41.676Z",
-      "carga": "Entrada",
-      "producto": "ARENA F.C/MINIMA 1000 TDA",
-      "codigoProducto": "",
-      "fechaRemito": "2026-09-18T12:00:00.000Z",
-      "patente": "AD794XI",
-      "chofer": "OCHOA ANIBAL",
-      "nroRemitoProveedor": "105601",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "36.2 tn",
-      "pesoBalanza": "37.02 tn",
-      "planta": "Lujan",
-      "proveedor": "SPOSITO",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "7f7d489b-05ee-429f-81d1-e23e6915a607",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
@@ -51205,7 +51187,6 @@
     }
   ],
   "productos": [
-    "ARENA F.C/MINIMA 1000 TDA",
     "PIEDRA PARTIDA 6/20",
     "ARENA MODULO 1.8-1.9",
     "ARENA FINA",
