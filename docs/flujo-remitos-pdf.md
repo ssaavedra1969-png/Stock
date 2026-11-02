@@ -3,6 +3,10 @@
 **Estado:** implementación de prueba, solo para Entradas.
 **Última revisión:** 2026-11-01.
 
+La prueba integral pendiente se ejecuta en desarrollo desde la oficina. Consulta
+[`prueba-integral-oficina.md`](./prueba-integral-oficina.md) para el checklist,
+los límites de escritura y el orden recomendado.
+
 ## Objetivo
 
 Leer un remito PDF de Entrada y compararlo con la base para distinguir:
@@ -95,6 +99,12 @@ Al probar el escáner:
   consultada no tenían `origenCarga`; las coincidencias se mostraron como
   históricas no identificadas. No se debe inferir que esos registros fueron
   manuales sin confirmación.
+- El 2026-11-01, el autocompletado de Chofer/Patente se verificó en el formulario
+  productivo sin guardar un registro. La lista se alimenta de movimientos y de
+  `data/base.json`: la base productiva consultada contenía 15 opciones de cada
+  tipo, mientras que los movimientos consultados no tenían esos dos campos.
+  La prueba pendiente es validar el flujo completo de trabajo en la oficina con
+  la rama de datos `dev`, no volver a probar ni escribir en producción.
 
 ## Continuación de pruebas
 

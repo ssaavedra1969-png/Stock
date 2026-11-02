@@ -68,5 +68,8 @@ solo prepara el formulario; los datos se guardan al confirmar el registro.
 - [docs/flujo-remitos-pdf.md](./docs/flujo-remitos-pdf.md): detección de
   coincidencias, conciliación de campos vacíos y límites de seguridad del flujo
   PDF.
+- [docs/prueba-integral-oficina.md](./docs/prueba-integral-oficina.md): lista de
+  verificación para probar en desarrollo los formularios y el flujo de remitos
+  desde la oficina.
 - [AGENTS.md](./AGENTS.md): instrucciones prácticas del entorno Windows usado
   para el desarrollo.

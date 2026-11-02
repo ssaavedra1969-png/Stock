@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-11-01. Revisar esta guía y la documentación enlazada antes de publicar._
+_Última actualización: 2026-11-01. Estado de publicación y prueba integral para retomar desde la oficina._
 
 ---
 
@@ -820,15 +820,27 @@ conocimiento con tablas canónicas de Razón Social y Material.
 
 ### Handoff actual (2026-11-01)
 
-- El flujo de remitos PDF y su documentación se integraron en `main` mediante el PR #1.
-- El autocompletado vinculado de chofer/patente para Entrada y Salida se documenta en
-  `README.md`; publicar su cambio de código en `main` actualiza producción en Vercel.
-- Los endpoints de importación PDF de prueba siguen bloqueados en Vercel por diseño.
+- El código y la documentación del flujo de remitos PDF están en `main` (PR #1).
+- El formulario ahora sugiere choferes y patentes desde movimientos y `data/base.json`.
+  Como los movimientos de producción consultados no tienen esos campos pero la base de
+  remitos sí, el catálogo se toma de ambas fuentes. Una asociación única permite completar
+  el otro campo; las ambiguas no se resuelven automáticamente (PR #2 y corrección PR #3).
+- Los PR #2 y #3 están fusionados en `main`; Vercel confirmó el deployment de producción
+  **Ready**. La página y la apertura del formulario respondieron correctamente.
+- En una comprobación controlada del formulario productivo se vieron sugerencias de ambos
+  catálogos y se verificó el autocompletado al elegir un chofer. Se cerró el formulario sin
+  guardar: no se crearon ni modificaron movimientos.
+- `npm run lint` pasó. Permanece el warning preexistente de dependencias de `useEffect` en
+  `app/tickets/page.js`.
+- Falta la prueba integral funcional desde la oficina, exclusivamente en desarrollo y con
+  `GITHUB_BRANCH=dev`. Seguir [docs/prueba-integral-oficina.md](./docs/prueba-integral-oficina.md).
+- Los endpoints de importación PDF/Excel de prueba siguen bloqueados en Vercel por diseño;
+  publicar el código no habilita escrituras operativas en producción.
 
 ### Preparación
 
 1. Clonar `https://github.com/ssaavedra1969-png/Stock.git` o abrir el repo existente en VS Code.
-   Cambiar a la rama de trabajo indicada en el handoff; `main` está reservada para producción.
+   Actualizar `main`, que contiene el código y la documentación publicados al cierre de esta sesión.
 2. Instalar Node.js y ejecutar `npm install`.
 3. Crear `.env.local` en la nueva PC (es local, está ignorado por Git y no se copia al clonar).
    Para trabajar en pruebas se necesitan `GITHUB_REPO=ssaavedra1969-png/Stock`,
@@ -874,7 +886,12 @@ conocimiento con tablas canónicas de Razón Social y Material.
 
 1. Leer esta guía y revisar `git status --short --branch` y `git log --oneline -5`.
 2. Confirmar que `.env.local` está configurado sin mostrar su contenido.
-3. Iniciar la app y abrir `/tickets`; comprobar que carga la base de conocimiento de `dev`.
-4. Continuar con un PDF por vez: compartir lo que leyó el OCR y guardar solo campos confirmados.
-5. Para validar cambios, ejecutar lint en los archivos modificados y `npm run build`; no correr
+3. Confirmar con `Select-String -Path .env.local -Pattern '^GITHUB_BRANCH='` que el valor es
+   `dev`; no mostrar ni compartir el token.
+4. Leer y seguir [docs/prueba-integral-oficina.md](./docs/prueba-integral-oficina.md). Empezar
+   por las comprobaciones sin escritura y detenerse ante cualquier duda sobre el registro o PDF.
+5. Iniciar la app y abrir `/tickets`; comprobar que carga la base de conocimiento de `dev`.
+6. Continuar con un PDF por vez: compartir lo que leyó el OCR y guardar solo campos confirmados
+   tras comprobar la identidad del movimiento.
+7. Para validar cambios, ejecutar lint en los archivos modificados y `npm run build`; no correr
    build y servidor dev simultáneamente en el mismo directorio `.next`.
