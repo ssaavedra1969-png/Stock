@@ -76,6 +76,9 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
     en Vercel. La guía funcional completa está en `docs/flujo-remitos-pdf.md`.
   - `app/incorporar-dev/page.js` → vista previa y conciliación de Entradas desde el Excel
     histórico en dev; no sustituye al flujo de producción.
+  - `app/incorporar-historico/page.js` → importación específica de `Stock-Historico.xlsx`
+    en producción. La vista previa se revisa antes de confirmar; la API solo escribe
+    cuando corre en Vercel con `GITHUB_BRANCH=main`. No usar `/incorporar` para este Excel.
   - `app/api/db/import/route.js` → API de importación masiva (lotes, dedupe, recalcula productos).
   - `scripts/generar-plantillas.mjs` → regenera `public/plantillas/Plantilla-Entradas.xlsx` y
     `Plantilla-Salidas.xlsx` (se descargan desde /incorporar).

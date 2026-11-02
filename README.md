@@ -47,6 +47,20 @@ tildes y espacios en la patente. Si hay más de una asociación, no se elige
 ninguna automáticamente para evitar asignaciones ambiguas. El autocompletado
 solo prepara el formulario; los datos se guardan al confirmar el registro.
 
+## Importar `Stock-Historico.xlsx` en producción
+
+La sección **Importar Stock histórico** (`/incorporar-historico`) es el flujo
+específico para ese archivo; no uses el importador Excel genérico. Analiza las
+filas en el navegador y muestra una previsualización. Solo procesa filas con
+`Carga = Entrada`; errores, filas de otro tipo y conflictos de remito bloquean
+la confirmación. Las coincidencias existentes solo se actualizan si se eligen
+explícitamente y se completan campos vacíos, sin reemplazar datos existentes.
+
+La escritura requiere confirmar el resumen y solo se habilita en Vercel con
+`GITHUB_BRANCH=main`. El endpoint vuelve a validar el archivo y los conflictos
+contra la base actual antes de guardar en `data/db.json`. La página local
+`/incorporar-dev` sigue reservada a pruebas en `dev`; no la uses para producción.
+
 ## Datos y publicación
 
 - `GITHUB_BRANCH` selecciona la rama de datos que usan las APIs. En desarrollo,

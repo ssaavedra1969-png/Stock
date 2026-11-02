@@ -9,6 +9,13 @@ visual e interactiva: se abrieron sugerencias y se eligió un chofer para
 comprobar la patente asociada, pero se cerró el formulario sin guardar. No hubo
 escrituras en producción. La prueba integral con datos de `dev` sigue pendiente.
 
+La carga de `Stock-Historico.xlsx` en producción tiene una página separada,
+`/incorporar-historico`, con previsualización y confirmación explícita. No usar
+para este archivo la importación Excel genérica (`/incorporar`), que espera otro
+formato. La nueva ruta de producción requiere Vercel y `GITHUB_BRANCH=main`;
+antes de confirmar, revisar el resumen, los remitos coincidentes y cualquier
+campo que se proponga completar.
+
 ## Preparación segura
 
 1. Actualizar/clonar `main` del repositorio y revisar `git status --short --branch`.

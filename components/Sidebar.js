@@ -182,6 +182,7 @@ function NavigationLinks({ collapsed, openModal, onNavigate }) {
       </NavGroup>
       <NavGroup title="Importación" collapsed={collapsed}>
         <NavItem icon={<IconUpload className="h-[18px] w-[18px]" />} label="Importar Excel" href="/incorporar" collapsed={collapsed} onNavigate={onNavigate} />
+        <NavItem icon={<IconFileText className="h-[18px] w-[18px]" />} label="Importar Stock histórico" href="/incorporar-historico" collapsed={collapsed} onNavigate={onNavigate} />
       </NavGroup>
       <NavGroup title="Análisis" collapsed={collapsed}>
         <NavItem icon={<IconPieChart className="h-[18px] w-[18px]" />} label="Reportes" href="/reportes" collapsed={collapsed} onNavigate={onNavigate} />
