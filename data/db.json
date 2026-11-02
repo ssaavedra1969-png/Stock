@@ -109,24 +109,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "b9371fb5-4cd2-4160-85f2-3f9131615123",
-      "createdAt": "2026-11-02T15:17:41.676Z",
-      "carga": "Entrada",
-      "producto": "CEMENTO",
-      "codigoProducto": "",
-      "fechaRemito": "2026-09-18T12:00:00.000Z",
-      "patente": "AH784OY",
-      "chofer": "TOLOSA CESAR",
-      "nroRemitoProveedor": "2735015",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.07 tn",
-      "pesoBalanza": "35.1 tn",
-      "planta": "Lujan",
-      "proveedor": "CEMENTO AVELLANEDA",
-      "cliente": "",
-      "razonSocial": "GRUPO FALPAT SRL"
-    },
-    {
       "id": "7f7d489b-05ee-429f-81d1-e23e6915a607",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
@@ -51315,10 +51297,10 @@
   "productos": [
     "ARENA F.C/MINIMA 1000 TDA",
     "PIEDRA PARTIDA 6/20",
-    "CEMENTO",
     "ARENA MODULO 1.8-1.9",
     "ARENA FINA",
     "PIEDRA PARTIDA 6/12",
+    "CEMENTO",
     "ARENA GRANITICA 0/6",
     "PIEDRA 6-20",
     "PIEDRA 0-6",
