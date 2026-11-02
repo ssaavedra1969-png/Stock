@@ -83,7 +83,7 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
   - `app/reportes/page.js` → **Reportes**: el informe original (filtros tipo/planta/búsqueda/
     períodos rápidos, etiqueta Viajes), tabla por producto ordenable al hacer clic en "Producto".
   - `context/AppContext.js` → carga global de datos + estado de edición (`openEdit`, `updateRecord`).
-  - `components/ModalForm.js` → alta/edición (autocompleta código y unidad por producto; sugiere chofer/patente y completa el campo relacionado solo si existe una asociación única en los movimientos guardados).
+  - `components/ModalForm.js` → alta/edición (autocompleta código y unidad por producto; sugiere chofer/patente desde movimientos y `data/base.json`, y completa el campo relacionado solo si existe una asociación única).
   - `lib/api.js` → funciones HTTP (`getRecords`, `createRecord`, `updateRecord`, `deleteRecord`).
   - `lib/utils.js` → `toMillis`, `formatDate`, `normalizeText`, `parseWeight` (SOLO suma tn), `cn`.
   - `lib/productos.js` → catálogo código → nombre → unidad.

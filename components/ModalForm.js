@@ -112,6 +112,7 @@ export default function ModalForm() {
     editingRecord,
     uniqueValues,
     records,
+    baseConocimiento,
     defaultCarga,
   } = useContext(AppContext);
   const [carga, setCarga] = useState('Entrada');
@@ -119,6 +120,34 @@ export default function ModalForm() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const isEdit = Boolean(editingRecord);
+
+  const { choferOptions, patenteOptions } = useMemo(() => {
+    const choferes = new Set(uniqueValues.chofer);
+    const patentes = new Set(uniqueValues.patente);
+    const baseChoferes = baseConocimiento?.choferes || {};
+    const basePatentes = baseConocimiento?.patentes || {};
+
+    for (const chofer of Object.values(baseChoferes)) {
+      const value = String(chofer || '').trim();
+      if (value) choferes.add(value);
+    }
+
+    for (const values of Object.values(basePatentes)) {
+      const lista = Array.isArray(values) ? values : [values];
+      for (const patente of lista) {
+        const value = String(patente || '').trim();
+        if (value) patentes.add(value);
+      }
+    }
+
+    const sortOptions = (values) =>
+      [...values].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+    return {
+      choferOptions: sortOptions(choferes),
+      patenteOptions: sortOptions(patentes),
+    };
+  }, [baseConocimiento, uniqueValues.chofer, uniqueValues.patente]);
 
   const vehicleAssociations = useMemo(() => {
     const driversByPlate = new Map();
@@ -139,6 +168,21 @@ export default function ModalForm() {
       addAssociation(platesByDriver, normalizeText(driver), plateKey(plate), plate);
     }
 
+    const baseChoferes = baseConocimiento?.choferes || {};
+    const basePatentes = baseConocimiento?.patentes || {};
+    for (const [apellido, rawPlates] of Object.entries(basePatentes)) {
+      const driver = String(baseChoferes[apellido] || '').trim();
+      const plates = Array.isArray(rawPlates) ? rawPlates : [rawPlates];
+      for (const rawPlate of plates) {
+        const plate = String(rawPlate || '').trim();
+        if (!plate) continue;
+        if (driver) {
+          addAssociation(driversByPlate, plateKey(plate), normalizeText(driver), driver);
+          addAssociation(platesByDriver, normalizeText(driver), plateKey(plate), plate);
+        }
+      }
+    }
+
     const getUniqueValue = (map, key) => {
       const values = map.get(key);
       return values?.size === 1 ? values.values().next().value : '';
@@ -148,7 +192,7 @@ export default function ModalForm() {
       driverForPlate: (plate) => getUniqueValue(driversByPlate, plateKey(plate)),
       plateForDriver: (driver) => getUniqueValue(platesByDriver, normalizeText(driver)),
     };
-  }, [records]);
+  }, [baseConocimiento, records]);
 
   const requiredFields = useMemo(() => {
     const common = [
@@ -455,7 +499,7 @@ export default function ModalForm() {
                   error={errors.patente}
                 >
                   <Autocomplete
-                    options={uniqueValues.patente}
+                    options={patenteOptions}
                     value={form.patente}
                     onChange={onPatenteChange}
                     error={errors.patente}
@@ -470,7 +514,7 @@ export default function ModalForm() {
                   error={errors.chofer}
                 >
                   <Autocomplete
-                    options={uniqueValues.chofer}
+                    options={choferOptions}
                     value={form.chofer}
                     onChange={onChoferChange}
                     error={errors.chofer}
