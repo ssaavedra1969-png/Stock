@@ -9,12 +9,11 @@ visual e interactiva: se abrieron sugerencias y se eligió un chofer para
 comprobar la patente asociada, pero se cerró el formulario sin guardar. No hubo
 escrituras en producción. La prueba integral con datos de `dev` sigue pendiente.
 
-La carga de `Stock-Historico.xlsx` en producción tiene una página separada,
-`/incorporar-historico`, con previsualización y confirmación explícita. No usar
-para este archivo la importación Excel genérica (`/incorporar`), que espera otro
-formato. La nueva ruta de producción requiere Vercel y `GITHUB_BRANCH=main`;
-antes de confirmar, revisar el resumen, los remitos coincidentes y cualquier
-campo que se proponga completar.
+En producción, `/tickets` puede agregar las Entradas revisadas directamente al
+`Stock-Historico.xlsx` de la carpeta compartida seleccionada mediante permisos
+del navegador (Chrome/Edge). Vercel no accede al recurso SMB por sí mismo. Esa
+operación actualiza solo el Excel; no guarda movimientos en `data/db.json` ni
+mueve PDFs. El importador Excel genérico (`/incorporar`) espera otro formato.
 
 ## Preparación segura
 

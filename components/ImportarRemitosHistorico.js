@@ -16,11 +16,8 @@ function number(value) {
   return Number(value).toLocaleString('es-AR', { maximumFractionDigits: 2 });
 }
 
-export default function ImportarRemitosHistorico({ mode = 'dev' }) {
-  const isProduction = mode === 'production';
-  const endpoint = isProduction
-    ? '/api/db/import-remitos-production'
-    : '/api/db/import-remitos-dev';
+export default function ImportarRemitosHistorico() {
+  const endpoint = '/api/db/import-remitos-dev';
   const { records, loading, reload, showToast } = useApp();
   const inputRef = useRef(null);
   const [fileName, setFileName] = useState('');
@@ -84,7 +81,7 @@ export default function ImportarRemitosHistorico({ mode = 'dev' }) {
       .filter((item) => selectedMatches.includes(item.existing.id))
       .map((item) => ({ id: item.existing.id, record: item.incoming }));
     const accepted = window.confirm(
-      `Confirmás agregar ${analysis.records.length} Entrada(s) nueva(s) y completar ${reconciliations.length} registro(s) existente(s) en ${isProduction ? 'PRODUCCIÓN (main)' : 'la rama dev'}?`
+      `Confirmás agregar ${analysis.records.length} Entrada(s) nueva(s) y completar ${reconciliations.length} registro(s) existente(s) en la rama dev?`
     );
     if (!accepted) return;
 
@@ -112,7 +109,7 @@ export default function ImportarRemitosHistorico({ mode = 'dev' }) {
         `${data.insertados} Entrada(s) nueva(s) y ${data.actualizados} registro(s) existente(s) completado(s) en ${data.branch}`
       );
     } catch (cause) {
-      setError(cause.message || `Falló la importación a ${isProduction ? 'producción' : 'dev'}.`);
+      setError(cause.message || 'Falló la importación a dev.');
     } finally {
       setBusy(false);
     }
@@ -130,9 +127,9 @@ export default function ImportarRemitosHistorico({ mode = 'dev' }) {
     <div className="mx-auto max-w-7xl space-y-5">
       <SectionHero
         icon={IconUpload}
-        title={isProduction ? 'Importar histórico de Entradas' : 'Prueba de importación de Entradas'}
-        tag={isProduction ? 'Producción · main' : 'Solo desarrollo'}
-        subtitle={`Previsualiza Stock-Historico.xlsx antes de guardar en ${isProduction ? 'producción' : 'dev'}`}
+        title="Prueba de importación de Entradas"
+        tag="Solo desarrollo"
+        subtitle="Previsualiza Stock-Historico.xlsx antes de guardar en dev"
       />
 
       <section className="card space-y-4 border-amber-400/30">
@@ -142,12 +139,10 @@ export default function ImportarRemitosHistorico({ mode = 'dev' }) {
           </span>
           <div>
             <h2 className="text-sm font-bold text-slate-100">
-              {isProduction ? 'Producción protegida' : 'Entorno protegido'}
+              Entorno protegido
             </h2>
             <p className="mt-1 text-xs text-slate-400">
-              {isProduction
-                ? 'La importación solo se habilita en Vercel cuando GITHUB_BRANCH es exactamente main.'
-                : 'La importación se bloquea si la app corre en Vercel o si GITHUB_BRANCH no es exactamente dev.'}
+              La importación se bloquea si la app corre en Vercel o si GITHUB_BRANCH no es exactamente dev.
               Solo se procesan filas con Carga = Entrada.
             </p>
             <p className={`mt-2 text-xs font-semibold ${environment?.enabled ? 'text-emerald-400' : 'text-amber-300'}`}>
@@ -184,8 +179,8 @@ export default function ImportarRemitosHistorico({ mode = 'dev' }) {
 
       {result && (
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-          Importación completada: {result.insertados} Entrada(s) nueva(s) y {result.actualizados} registro(s) existente(s) completado(s) · total {isProduction ? 'producción' : 'dev'} {result.total} ·
-          rama {result.branch}.{isProduction ? ' La base de producción fue actualizada.' : ' No se modificó producción.'}
+          Importación completada: {result.insertados} Entrada(s) nueva(s) y {result.actualizados} registro(s) existente(s) completado(s) · total dev {result.total} ·
+          rama {result.branch}. No se modificó producción.
         </div>
       )}
 
@@ -367,8 +362,8 @@ export default function ImportarRemitosHistorico({ mode = 'dev' }) {
             </p>
             <button type="button" className="btn-primary" onClick={importEntries} disabled={!canImport}>
               {selectedMatches.length > 0
-                ? `Confirmar cambios solo en ${isProduction ? 'producción' : 'dev'} (${analysis.records.length} nueva(s) · ${selectedMatches.length} completar)`
-                : `Confirmar e importar solo a ${isProduction ? 'producción' : 'dev'}`}
+                ? `Confirmar cambios solo en dev (${analysis.records.length} nueva(s) · ${selectedMatches.length} completar)`
+                : 'Confirmar e importar solo a dev'}
             </button>
           </div>
         </section>

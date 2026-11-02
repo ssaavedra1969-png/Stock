@@ -70,15 +70,14 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
     plantillas Excel (Entradas/Salidas) con validación fila por fila, preview y confirmación.
   - `app/tickets/page.js` + `lib/tickets/ocr.mjs` + `lib/tickets/extract.mjs` → lectura
     OCR de remitos PDF en el navegador; distingue nuevas Entradas, coincidencias existentes
-    y campos vacíos que podrían completarse.
+    y campos vacíos que podrían completarse. En Vercel, las Entradas revisadas se agregan
+    desde el navegador autorizado al `Stock-Historico.xlsx` en la carpeta compartida; no se
+    guardan como movimientos en la base ni se mueven los PDF.
   - `app/api/db/import-tickets-dev/route.js` + `app/api/db/import-remitos-dev/route.js` →
     importaciones de prueba limitadas a ejecución local y `GITHUB_BRANCH=dev`; bloqueadas
     en Vercel. La guía funcional completa está en `docs/flujo-remitos-pdf.md`.
   - `app/incorporar-dev/page.js` → vista previa y conciliación de Entradas desde el Excel
     histórico en dev; no sustituye al flujo de producción.
-  - `app/incorporar-historico/page.js` → importación específica de `Stock-Historico.xlsx`
-    en producción. La vista previa se revisa antes de confirmar; la API solo escribe
-    cuando corre en Vercel con `GITHUB_BRANCH=main`. No usar `/incorporar` para este Excel.
   - `app/api/db/import/route.js` → API de importación masiva (lotes, dedupe, recalcula productos).
   - `scripts/generar-plantillas.mjs` → regenera `public/plantillas/Plantilla-Entradas.xlsx` y
     `Plantilla-Salidas.xlsx` (se descargan desde /incorporar).

@@ -47,19 +47,19 @@ tildes y espacios en la patente. Si hay más de una asociación, no se elige
 ninguna automáticamente para evitar asignaciones ambiguas. El autocompletado
 solo prepara el formulario; los datos se guardan al confirmar el registro.
 
-## Importar `Stock-Historico.xlsx` en producción
+## Actualizar `Stock-Historico.xlsx` desde producción
 
-La sección **Importar Stock histórico** (`/incorporar-historico`) es el flujo
-específico para ese archivo; no uses el importador Excel genérico. Analiza las
-filas en el navegador y muestra una previsualización. Solo procesa filas con
-`Carga = Entrada`; errores, filas de otro tipo y conflictos de remito bloquean
-la confirmación. Las coincidencias existentes solo se actualizan si se eligen
-explícitamente y se completan campos vacíos, sin reemplazar datos existentes.
+En `/tickets`, la carpeta STOCK se selecciona desde el navegador (Chrome o
+Edge). En Vercel, después de revisar las Entradas, el botón de producción
+agrega las filas nuevas directamente al `Stock-Historico.xlsx` de la carpeta
+compartida seleccionada. La escritura ocurre en el navegador autorizado, no en
+el servidor Vercel, que no tiene acceso directo al recurso SMB.
 
-La escritura requiere confirmar el resumen y solo se habilita en Vercel con
-`GITHUB_BRANCH=main`. El endpoint vuelve a validar el archivo y los conflictos
-contra la base actual antes de guardar en `data/db.json`. La página local
-`/incorporar-dev` sigue reservada a pruebas en `dev`; no la uses para producción.
+La aplicación vuelve a leer el Excel antes de guardar, valida sus columnas,
+omite remitos ya presentes y pide confirmación del número de altas. Esta
+operación modifica solo el Excel histórico: no escribe en `data/db.json` ni
+mueve/archiva los PDFs. Cerrá el Excel de escritorio antes de guardar para
+evitar bloqueos. El botón de guardar en dev continúa limitado al entorno local.
 
 ## Datos y publicación
 

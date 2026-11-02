@@ -187,6 +187,9 @@ export default function TicketsPage() {
   const [arrastrando, setArrastrando] = useState(false);
   const [registrosEditados, setRegistrosEditados] = useState([]);
   const [huboEdiciones, setHuboEdiciones] = useState(false);
+  const [exportandoExcel, setExportandoExcel] = useState(false);
+  const [guardandoHistorico, setGuardandoHistorico] = useState(false);
+  const [historicoGuardado, setHistoricoGuardado] = useState(null);
   const [editandoIdx, setEditandoIdx] = useState(null);
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [incorporando, setIncorporando] = useState(false);
@@ -203,6 +206,8 @@ export default function TicketsPage() {
   const [orden, setOrden] = useState({ campo: '', dir: 'asc' });
   const [selectedDbMatches, setSelectedDbMatches] = useState([]);
   const [devEnvironment, setDevEnvironment] = useState(null);
+  const isProductionVercel =
+    devEnvironment?.environment === 'vercel' && devEnvironment?.branch === 'main';
   const opcionesMaterial = useMemo(
     () => [...new Set([...MATERIALES, ...(baseConocimiento?.materiales || [])])],
     [baseConocimiento]
@@ -240,6 +245,8 @@ export default function TicketsPage() {
         setRegistrosEditados(data.registrosEditados);
         setHuboEdiciones(true);
       }
+      if (typeof data?.centro === 'string') setCentro(data.centro);
+      if (typeof data?.carga === 'string') setCarga(data.carga);
     } catch {
       // storage no disponible: se ignora
     }
@@ -249,11 +256,14 @@ export default function TicketsPage() {
     if (!huboEdiciones || registrosEditados.length === 0) return;
     try {
       const limpios = registrosEditados.map(({ _file, ...r }) => r);
-      sessionStorage.setItem(EDICIONES_KEY, JSON.stringify({ registrosEditados: limpios }));
+      sessionStorage.setItem(
+        EDICIONES_KEY,
+        JSON.stringify({ registrosEditados: limpios, centro, carga })
+      );
     } catch {
       // storage lleno o no disponible: se ignora
     }
-  }, [registrosEditados, huboEdiciones]);
+  }, [registrosEditados, huboEdiciones, centro, carga]);
 
   useEffect(() => () => {
     if (progresoFlush.current) clearTimeout(progresoFlush.current);
@@ -481,6 +491,7 @@ export default function TicketsPage() {
     setHuboEdiciones(false);
     setEditandoIdx(null);
     setSoloPendientes(false);
+    setHistoricoGuardado(null);
     setCentro('');
     setCarga('');
     setConfirmacionVisual(false);
@@ -491,6 +502,110 @@ export default function TicketsPage() {
       // storage no disponible
     }
     if (inputRef.current) inputRef.current.value = '';
+  }
+
+  async function descargarExcelCorregido() {
+    if (erroresLectura.length > 0 || registrosConObservaciones.length > 0) {
+      showToast('Corregí los campos pendientes antes de descargar el Excel.', 'error');
+      return;
+    }
+    if (!centro || carga !== 'Entrada') {
+      showToast('Seleccioná el Centro y confirmá Carga = Entrada antes de descargar.', 'error');
+      return;
+    }
+
+    setExportandoExcel(true);
+    try {
+      const XLSX = await import('xlsx');
+      const headers = [...CAMPOS];
+      const exportables = registros.filter((record) => record.Estado !== 'DUPLICADO');
+      if (exportables.length === 0) {
+        throw new Error('No hay Entradas nuevas para descargar.');
+      }
+
+      const rows = exportables.map((record) =>
+        headers.map((field) => {
+          if (field === 'Centro') return centro;
+          if (field === 'Carga') return carga;
+          if (field === 'Neto' || field === 'Peso Neto') {
+            return normalizarNumero(record[field]);
+          }
+          return record[field] ?? '';
+        })
+      );
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      worksheet['!cols'] = headers.map((header) => ({ wch: Math.max(12, header.length + 4) }));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock Historico');
+      XLSX.writeFile(workbook, `Stock-Historico-Corregido-${ahora()}.xlsx`);
+      showToast(`Excel descargado · ${exportables.length} Entrada(s)${registros.length > exportables.length ? ` · ${registros.length - exportables.length} duplicado(s) omitido(s)` : ''}`);
+    } catch (err) {
+      showToast(err.message || 'No se pudo generar el Excel corregido.', 'error');
+    } finally {
+      setExportandoExcel(false);
+    }
+  }
+
+  async function guardarEnHistorico() {
+    if (!carpeta?.handle) {
+      showToast('Elegí primero la carpeta STOCK para escribir en el Excel compartido.', 'error');
+      return;
+    }
+    if (!confirmacionVisual || guardandoAprendizaje) {
+      showToast('Confirmá primero que revisaste los registros contra sus PDF.', 'error');
+      return;
+    }
+    if (erroresLectura.length > 0 || registrosConObservaciones.length > 0) {
+      showToast('Corregí los campos pendientes antes de actualizar el histórico.', 'error');
+      return;
+    }
+    if (!centro || carga !== 'Entrada') {
+      showToast('Seleccioná el centro y confirmá Carga = Entrada antes de guardar.', 'error');
+      return;
+    }
+
+    setGuardandoHistorico(true);
+    try {
+      const {
+        prepararIncorporacionHistorico,
+        guardarIncorporacionHistorico,
+      } = await import('@/lib/tickets/archivo.mjs');
+      const exportables = registros
+        .filter((record) => record.Estado !== 'DUPLICADO')
+        .map((record) => ({
+          ...Object.fromEntries(CAMPOS.map((field) => [field, record[field] ?? ''])),
+          Centro: centro,
+          Carga: carga,
+        }));
+      if (exportables.length === 0) {
+        throw new Error('No hay Entradas nuevas para agregar al Excel.');
+      }
+
+      const preparacion = await prepararIncorporacionHistorico(carpeta.handle, exportables);
+      if (preparacion.appendRows.length === 0) {
+        const onlyDuplicates = await guardarIncorporacionHistorico(preparacion);
+        setHistoricoGuardado(onlyDuplicates);
+        showToast(`Los ${onlyDuplicates.duplicados} remitos ya estaban en ${onlyDuplicates.nombre}.`);
+        return;
+      }
+
+      const accepted = window.confirm(
+        `Se agregarán ${preparacion.appendRows.length} Entrada(s) nuevas a ${preparacion.nombre} en la carpeta compartida. ` +
+        `${preparacion.duplicados} duplicada(s) se omitirán. No se modificarán la base de stock ni los PDF. ¿Continuar?`
+      );
+      if (!accepted) return;
+
+      const resultadoExcel = await guardarIncorporacionHistorico(preparacion);
+      setHistoricoGuardado(resultadoExcel);
+      setClavesPlanilla(new Set(preparacion.claves));
+      showToast(
+        `Excel actualizado: ${resultadoExcel.agregados} Entrada(s) agregada(s) · ${resultadoExcel.duplicados} duplicada(s) omitida(s).`
+      );
+    } catch (err) {
+      showToast(err.message || 'No se pudo actualizar Stock-Historico.xlsx.', 'error');
+    } finally {
+      setGuardandoHistorico(false);
+    }
   }
 
   async function elegirCarpeta() {
@@ -536,7 +651,7 @@ export default function TicketsPage() {
       setCarpeta({ handle, nombre: handle.name });
       const { rows } = await leerPlanillaDeCarpeta(handle);
       setClavesPlanilla(clavesDeFilas(rows && rows.length ? rows : [CAMPOS]));
-      showToast(`Carpeta STOCK lista: ${handle.name}${nota} · todo automático (histórico + mover PDFs)`);
+      showToast(`Carpeta STOCK lista: ${handle.name}${nota} · el Excel se actualiza solo al confirmarlo`);
     } catch (err) {
       if (err?.name !== 'AbortError') showToast(err.message || 'No se pudo abrir la carpeta', 'error');
     } finally {
@@ -752,10 +867,8 @@ export default function TicketsPage() {
       return;
     }
     if (!resultado) return;
-    // La confirmación es local e inmediata: si falla el guardado de la base
-    // de lectura (por ejemplo, sin permiso de escritura en GitHub) igual se
-    // puede incorporar. El aprendizaje se reintenta en la próxima tanda.
     setConfirmacionVisual(true);
+    if (!devEnvironment?.enabled) return;
     if (guardandoAprendizaje) return;
 
     setGuardandoAprendizaje(true);
@@ -874,7 +987,7 @@ export default function TicketsPage() {
         icon={IconFileText}
         title="Cargar Entrada desde PDF"
         tag="Lectura de remitos"
-        subtitle="Leé los remitos, revisá los datos y prepará la incorporación en desarrollo"
+        subtitle="Leé y corregí los remitos; desde producción podés agregarlos al Excel histórico compartido"
       >
         {(files.length > 0 || hayResultado) && (
           <button type="button" onClick={limpiar} className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={procesando}>
@@ -888,7 +1001,7 @@ export default function TicketsPage() {
       <Paso
         n="1"
         titulo="Cargá los remitos"
-        ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK para leer los PDF de Entrada. La carpeta se usa solo como origen de lectura."
+        ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK para leer los PDF de Entrada y acceder al Excel histórico compartido."
       >
         <div
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
@@ -1100,15 +1213,34 @@ export default function TicketsPage() {
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   {registrosVisibles.length} de {registros.length} registros — revisá todos contra sus PDF antes de exportar
                 </p>
-                <label className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  <input
-                    type="checkbox"
-                    checked={soloPendientes}
-                    onChange={(e) => setSoloPendientes(e.target.checked)}
-                    className="accent-amber-400"
-                  />
-                  Solo pendientes ({registrosConObservaciones.length})
-                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={soloPendientes}
+                      onChange={(e) => setSoloPendientes(e.target.checked)}
+                      className="accent-amber-400"
+                    />
+                    Solo pendientes ({registrosConObservaciones.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={descargarExcelCorregido}
+                    disabled={
+                      exportandoExcel ||
+                      procesando ||
+                      erroresLectura.length > 0 ||
+                      registrosConObservaciones.length > 0 ||
+                      !centro ||
+                      carga !== 'Entrada'
+                    }
+                    className="btn-ghost !px-2.5 !py-1.5 text-[10px] disabled:cursor-not-allowed disabled:opacity-40"
+                    title="Descarga las Entradas corregidas sin escribir en la base ni mover archivos"
+                  >
+                    <IconDownload className="h-3.5 w-3.5" />
+                    {exportandoExcel ? 'Generando…' : 'Descargar Excel corregido'}
+                  </button>
+                </div>
               </div>
               <div className="table-scroll rounded-lg border border-white/10">
                 <table className="w-full text-xs">
@@ -1334,8 +1466,8 @@ export default function TicketsPage() {
       {/* Paso 3 — Guardar en el servidor */}
       <Paso
         n="3"
-        titulo="Incorporá a la base de desarrollo"
-        ayuda="Solo se guardan Entradas en la rama dev después de revisar los PDF. Esta prueba no modifica el Excel ni mueve archivos."
+        titulo="Guardar las Entradas revisadas"
+        ayuda="En producción, agregá las Entradas corregidas al Excel compartido. En desarrollo, podés guardarlas en la base dev."
       >
         <label className="flex items-start gap-2 text-xs text-slate-300">
           <input
@@ -1354,10 +1486,66 @@ export default function TicketsPage() {
           <span>
             {guardandoAprendizaje
               ? 'Guardando lo aprendido…'
-              : 'Confirmo que revisé cada registro contra su PDF original. Al tildar, además guardo las correcciones en la base de lectura para las próximas tandas.'}
+              : isProductionVercel
+                ? 'Confirmo que revisé cada registro contra su PDF original. En producción, esta confirmación solo habilita la escritura al Excel histórico; no guarda movimientos en la base.'
+                : 'Confirmo que revisé cada registro contra su PDF original. En desarrollo, al tildar también guardo las correcciones en la base de lectura para las próximas tandas.'}
           </span>
         </label>
 
+        {isProductionVercel ? (
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Excel histórico de producción
+            </p>
+            <p className="mb-2 rounded border border-sky-400/20 bg-sky-400/[0.05] p-2 text-[10px] text-sky-100">
+              Se escribe desde este navegador en el Stock-Historico.xlsx de la carpeta compartida seleccionada.
+              No se modifica la base de stock ni se mueven los PDF.
+            </p>
+            <Requisito
+              ok={!!carpeta?.handle}
+              texto={carpeta?.handle ? `Carpeta compartida seleccionada · ${carpeta.nombre}` : 'Elegí la carpeta STOCK compartida'}
+            />
+            <Requisito
+              ok={erroresLectura.length === 0 && registrosConObservaciones.length === 0}
+              texto={erroresLectura.length
+                ? `${erroresLectura.length} PDF(s) con error`
+                : registrosConObservaciones.length
+                  ? `${registrosConObservaciones.length} registro(s) con campos pendientes`
+                  : 'Todos los campos completos'}
+            />
+            {historicoGuardado && (
+              <p className="mt-2 text-[11px] font-semibold text-emerald-300">
+                Excel actualizado: {historicoGuardado.agregados} Entrada(s) agregada(s), {historicoGuardado.duplicados} duplicada(s) omitida(s) · {historicoGuardado.nombre} · {historicoGuardado.total} filas de datos.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={guardarEnHistorico}
+              disabled={
+                !carpeta?.handle ||
+                !confirmacionVisual ||
+                guardandoAprendizaje ||
+                guardandoHistorico ||
+                procesando ||
+                registros.length === 0 ||
+                erroresLectura.length > 0 ||
+                registrosConObservaciones.length > 0 ||
+                !centro ||
+                carga !== 'Entrada' ||
+                !!historicoGuardado
+              }
+              className="btn-primary mt-3 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <IconCheck className="h-4 w-4" />
+              {guardandoHistorico
+                ? 'Actualizando Excel…'
+                : historicoGuardado
+                  ? 'Excel histórico actualizado'
+                  : 'Agregar Entradas al Excel histórico'}
+            </button>
+          </div>
+        ) : (
+        <>
         <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
             Entorno de prueba protegido
@@ -1476,6 +1664,8 @@ export default function TicketsPage() {
               : `Guardar en dev (${registrosNuevosDb.length} nueva(s) · ${selectedDbMatches.length} completar)`}
           </button>
         </div>
+        </>
+        )}
       </Paso>
 
       {procesando && <ProcessingOverlay progreso={progreso} archivos={files.length} />}
