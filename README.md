@@ -49,16 +49,46 @@ solo prepara el formulario; los datos se guardan al confirmar el registro.
 
 ## Cargar remitos PDF al histórico compartido
 
-En `/tickets`, elegí la carpeta `STOCK` compartida, leé los PDF de `Entrada`,
-revisá cada registro y confirmá la incorporación. La sección actualiza
-`Salida\Stock-Historico.xlsx` y archiva los PDF en `procesados`. La escritura
-se realiza desde el navegador, usando el permiso explícito para la carpeta que
-seleccionó el operador; no depende de que Vercel tenga acceso a la red.
+Este es el circuito habitual para guardar remitos en el archivo histórico:
 
-Usá Chrome o Edge en una PC con acceso a la carpeta compartida. Cerrá el Excel
-histórico antes de confirmar la carga. Los remitos repetidos no se agregan de
-nuevo, aunque sus PDF también se archivan. Este circuito no escribe en
-`data/db.json`.
+1. En Chrome o Edge de una PC que tenga acceso a la carpeta compartida, abrí
+   `/tickets`. La página debe mostrar **Incorporar al histórico**. Si muestra
+   **Guardar en dev** o **Descargar para Importar Excel**, es una versión
+   anterior: no uses esos botones.
+2. Elegí la carpeta `STOCK` que contiene `Entrada`, `Salida` y `procesados`;
+   concedé al navegador permiso de lectura y escritura. Confirmá que la pantalla
+   indica que leyó el histórico y cuántos registros contiene.
+3. Elegí el centro y `Entrada`; hacé clic en **Leer PDFs de Entrada** y esperá
+   a que termine el OCR. Revisá cada fila contra su PDF y corregí o quitá las
+   filas con observaciones. Tildá la confirmación visual solo después de revisar
+   toda la tanda.
+4. Cerrá `Salida\Stock-Historico.xlsx` si está abierto en Excel. En la misma
+   pestaña que tiene los registros revisados, confirmá **Guardar en histórico**.
+   Aceptá el segundo mensaje de confirmación. La página agrega los remitos
+   nuevos al Excel y mueve los PDF de `Entrada` a `procesados`.
+5. Esperá el resultado en pantalla: debe informar cuántas filas se agregaron y
+   cuántos PDF se archivaron. Si hubo errores, leé el detalle y no cierres ni
+   refresques esa pestaña; verificá el Excel y los PDF antes de decidir si hay
+   que reintentar.
+
+El guardado se realiza desde el navegador con permiso explícito sobre la carpeta
+elegida; Vercel no necesita montar ni acceder al recurso compartido. Los
+remitos repetidos se omiten del Excel, pero sus PDF también se archivan. Si el
+resultado no está claro, no recargues ni vuelvas a procesar la tanda: verificá
+primero `STOCK\Salida\Stock-Historico.xlsx` y `STOCK\procesados`. El guardado
+reconoce al reintentar un PDF idéntico ya archivado y el Excel deduplica por
+proveedor y número de remito.
+
+**Protegé la pestaña original:** el resultado del OCR y los archivos PDF
+seleccionados viven en la memoria de esa pestaña. No pulses F5 ni la cierres
+hasta terminar y verificar el guardado. Para usar una versión nueva sin perder
+esa tanda, abrí otra pestaña de `/tickets`, elegí `STOCK` y leé allí los PDF de
+`Entrada`; mantené la pestaña original abierta como respaldo. No uses
+**Guardar en dev** para actualizar el Excel histórico.
+
+Este circuito no escribe en `data/db.json`. **Importar Excel** (`/incorporar`)
+es otro flujo: carga planillas a la base de movimientos de la aplicación y no
+reemplaza ni actualiza `Stock-Historico.xlsx`.
 
 **Importar Excel** (`/incorporar`) es un flujo separado para cargar planillas a
 la base de movimientos de la aplicación; no reemplaza ni actualiza

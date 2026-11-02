@@ -1,19 +1,50 @@
 # Prueba integral desde la oficina
 
-**Objetivo:** validar los formularios y el flujo de remitos con los datos de
-desarrollo antes de considerar cerrada la tanda.
+**Objetivo:** separar y probar sin confusiones el circuito operativo del Excel
+histórico y las APIs experimentales de movimientos en desarrollo.
 
-**Estado al 2026-11-02:** el flujo operativo de `/tickets` vuelve a escribir
-desde el navegador en `STOCK\Salida\Stock-Historico.xlsx` y archiva los PDF en
-`STOCK\procesados`, mediante el permiso de carpeta que concede el operador.
-Esto no modifica `data/db.json`. La prueba integral de las APIs experimentales
-de importación directa a la base `dev` sigue pendiente y es un circuito
-separado; no usarla para cargar el histórico.
+**Resultado real al 2026-11-02:** se restauró y publicó el flujo habitual de
+`/tickets`. Desde una pestaña nueva en Vercel se leyeron los 15 PDF corregidos
+y se confirmó **Guardar en histórico**. La verificación de solo lectura del
+archivo compartido confirmó que `Stock-Historico.xlsx` abre correctamente,
+contiene 49 registros en total y los 15 remitos de la tanda están presentes
+una sola vez. La modificación del archivo fue a las 10:40:42. No se modificó
+`data/db.json`.
 
-Para operar el histórico desde la PC de la oficina, usar Chrome o Edge, elegir
-la carpeta compartida `STOCK`, revisar los PDF de `Entrada` y confirmar solo
-cuando todos los datos estén verificados. Cerrar `Stock-Historico.xlsx` antes
-de confirmar. No hace falta usar **Importar Excel** para actualizar ese archivo.
+El checklist de las secciones A-D de abajo es **exclusivamente para probar las
+APIs experimentales que escriben en la base `dev`**. No es el procedimiento
+para actualizar el Excel histórico y sus instrucciones de preparación (incluido
+`GITHUB_BRANCH=dev`) no aplican al circuito habitual. Para el uso operativo,
+seguí [Cargar remitos PDF al histórico compartido](../README.md#cargar-remitos-pdf-al-historico-compartido).
+
+### Proteccion de una tanda abierta y recuperacion
+
+- Los PDF seleccionados y el resultado del OCR viven en la memoria de la
+  pestaña que los leyó. No pulsar F5 ni cerrar esa pestaña mientras no se haya
+  confirmado y verificado la carga.
+- Si la pantalla abierta muestra **Guardar en dev** o **Descargar para Importar
+  Excel**, corresponde a la versión anterior del flujo. No confirmar desde esa
+  pestaña para guardar el histórico.
+- Para conservar la tanda visible mientras se abre la versión actualizada:
+  abrir `/tickets` en otra pestaña, seleccionar la carpeta `STOCK` y leer allí
+  los PDF de `Entrada`. Revisar la tanda nueva y confirmar desde esa pestaña;
+  mantener la pestaña original abierta hasta verificar el Excel.
+- Antes de guardar, comprobar que la carpeta elegida es `STOCK`, que aparece
+  el conteo del histórico y que la pantalla ofrece **Guardar en histórico**.
+  Cerrar el Excel si está abierto en Excel y conceder al navegador permiso de
+  escritura.
+- Al confirmar, el navegador agrega remitos no duplicados a
+  `STOCK\Salida\Stock-Historico.xlsx` y pasa los PDF de `Entrada` a
+  `STOCK\procesados`. Los duplicados no generan filas nuevas, pero sus PDF
+  también se archivan.
+- Verificar el mensaje final y, si hace falta, comprobar el Excel en modo de
+  solo lectura: que abra, que el conteo haya aumentado según las filas nuevas
+  y que los números de remito de la tanda estén presentes una sola vez.
+- Si la operación devuelve un error o el resultado es incierto, no refrescar,
+  cerrar ni volver a procesar a ciegas. Preservar la pestaña, leer el detalle y
+  verificar primero Excel y `procesados`. El reintento deduplica las filas y
+  reconoce copias idénticas que ya se movieron; aun así, confirmar que se
+  reintentará la misma tanda.
 
 ## Preparación segura
 

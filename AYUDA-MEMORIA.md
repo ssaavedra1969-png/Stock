@@ -834,8 +834,11 @@ conocimiento con tablas canónicas de Razón Social y Material.
   guardar: no se crearon ni modificaron movimientos.
 - `npm run lint` pasó. Permanece el warning preexistente de dependencias de `useEffect` en
   `app/tickets/page.js`.
-- Falta la prueba integral funcional desde la oficina, exclusivamente en desarrollo y con
-  `GITHUB_BRANCH=dev`. Seguir [docs/prueba-integral-oficina.md](./docs/prueba-integral-oficina.md).
+- Sigue pendiente la prueba de las APIs experimentales que escriben/concilián movimientos en
+  `data/db.json` de desarrollo (`GITHUB_BRANCH=dev`). Es distinta del guardado operativo en el
+  Excel histórico, que se completó y verificó el 2026-11-02. Ver
+  [docs/prueba-integral-oficina.md](./docs/prueba-integral-oficina.md) para mantener separados
+  ambos circuitos.
 - Los endpoints experimentales de importación PDF a `data/db.json` siguen bloqueados en
   Vercel por diseño. Esto es independiente de `/tickets`: el histórico compartido se
   actualiza desde el navegador del operador, que debe tener acceso y conceder permiso a
@@ -872,15 +875,34 @@ conocimiento con tablas canónicas de Razón Social y Material.
 
 ### Estado del flujo de remitos PDF (2026-11-01)
 
-**Actualización 2026-11-02:** `/tickets` incorpora al histórico compartido desde el navegador.
-Después de elegir la carpeta STOCK y revisar los registros, el botón de confirmación llama a
-`incorporarEnCarpeta`: agrega solo remitos nuevos a `Salida\Stock-Historico.xlsx` y mueve los PDF
-de `Entrada` a `procesados`. Se validó el flujo con carpetas simuladas: agrega una fila no
-duplicada, conserva las existentes, archiva los PDF y rechaza una carpeta sin `Salida`. No se
-escribió en el histórico real ni se movió ningún PDF durante esta validación. El cambio se publicó
-en `main` y se verificó en Vercel: `/tickets` ya muestra “Incorporar al histórico”. Falta probar
-una escritura autorizada desde la PC de oficina con acceso real al compartido. La pestaña antigua
-con estado OCR debe mantenerse abierta; para usar el cambio, abrir `/tickets` en una pestaña nueva.
+**Actualización 2026-11-02 — circuito operativo del histórico completado:**
+
+- Se restauró el comportamiento habitual: la sección `/tickets` escribe desde el navegador
+  autorizado a `STOCK\Salida\Stock-Historico.xlsx` y archiva los PDF de `STOCK\Entrada` en
+  `STOCK\procesados`. No usa `/incorporar`, no escribe `data/db.json` y no depende de que el
+  servidor Vercel tenga acceso de red.
+- Se publicó en `main` y se verificó la pantalla productiva. La pestaña nueva muestra
+  **Incorporar al histórico**; la versión vieja mostraba **Guardar en dev** y no debía usarse
+  para actualizar el Excel.
+- Para no perder el OCR que ya estaba en memoria, se mantuvo abierta la pestaña original y se
+  abrió `/tickets` en otra pestaña. En la nueva se eligió `STOCK`, se leyeron los 15 PDF de
+  `Entrada`, se revisaron las filas y se confirmó **Guardar en histórico**.
+- Verificación posterior, en solo lectura: `Stock-Historico.xlsx` abre correctamente, tiene
+  49 registros y los 15 remitos de la tanda están presentes exactamente una vez. Última
+  modificación: 2026-11-02 10:40:42. En `procesados` se encontraron 15 PDF modificados durante
+  el guardado (10:40:42–10:40:52). Quedó 1 PDF en `Entrada`; no se lo incluyó ni modificó.
+- Pruebas automatizadas con carpetas simuladas: agrega una fila nueva y conserva filas previas,
+  omite duplicados, archiva nuevos y repetidos, rechaza una carpeta sin `Salida` y permite
+  reintentar un archivado parcial sin duplicar filas ni copias idénticas. `npm run lint` y
+  `npm run build` pasan; persiste el warning preexistente de dependencias del `useEffect` en
+  `app/tickets/page.js`.
+- Próxima tanda: seguir el procedimiento de
+  [README.md](./README.md#cargar-remitos-pdf-al-historico-compartido). No refrescar ni cerrar la
+  pestaña que contiene una lectura OCR sin guardar. Si se abre una pestaña nueva para obtener
+  la versión actual, conservar la anterior como respaldo, volver a elegir la carpeta y leer allí
+  los PDF de `Entrada`. Confirmar solo desde una página que muestre **Guardar en histórico**.
+
+**Flujo experimental separado: escritura/conciliación en `data/db.json` (solo dev):**
 
 - La conciliación por PDF busca Entradas por proveedor y número de remito normalizados.
 - Un registro existente con origen manual o histórico no identificado puede completarse
@@ -890,8 +912,9 @@ con estado OCR debe mantenerse abierta; para usar el cambio, abrir `/tickets` en
   como si fueran una Entrada nueva.
 - Los registros existentes que no tienen `origenCarga` se etiquetan como origen no
   identificado; no se puede afirmar que sean manuales sin confirmación.
-- Las pruebas realizadas fueron de lectura/previsualización o peticiones rechazadas. No se
-  confirmó una escritura PDF ni se alteró el Excel o se movió un PDF.
+- Las pruebas de esta API experimental fueron de lectura/previsualización o peticiones
+  rechazadas. No se confirmó una escritura PDF en `data/db.json`; esto es independiente del
+  guardado operativo al Excel histórico, que sí se completó el 2026-11-02.
 - La conciliación de una Entrada manual con campos vacíos y una escritura controlada de una
   Entrada nueva siguen pendientes de una prueba explícita autorizada.
 - Consultar [docs/flujo-remitos-pdf.md](./docs/flujo-remitos-pdf.md) para reglas, límites,

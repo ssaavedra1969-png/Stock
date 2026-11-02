@@ -9,6 +9,11 @@ histórico.** Para el circuito habitual de la oficina, `/tickets` escribe
 `Stock-Historico.xlsx` y archiva los PDF con permiso de carpeta del navegador;
 no usa estas APIs ni requiere `GITHUB_BRANCH=dev`.
 
+El procedimiento paso a paso, incluyendo cómo preservar una tanda abierta en
+otra pestaña y verificar/reintentar el guardado, está en
+[`prueba-integral-oficina.md`](./prueba-integral-oficina.md#proteccion-de-una-tanda-abierta-y-recuperacion)
+y en [el README](../README.md#cargar-remitos-pdf-al-historico-compartido).
+
 La prueba integral pendiente se ejecuta en desarrollo desde la oficina. Consulta
 [`prueba-integral-oficina.md`](./prueba-integral-oficina.md) para el checklist,
 los límites de escritura y el orden recomendado.
