@@ -1,24 +1,6 @@
 {
   "records": [
     {
-      "id": "c9028c1a-7120-4d8c-8120-e65a899a0705",
-      "createdAt": "2026-11-02T15:17:41.676Z",
-      "carga": "Entrada",
-      "producto": "ARENA F.C/MINIMA 1000 TDA",
-      "codigoProducto": "",
-      "fechaRemito": "2026-09-18T12:00:00.000Z",
-      "patente": "AE403QQ",
-      "chofer": "GARCIA CRISTIAN",
-      "nroRemitoProveedor": "105600",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.76 tn",
-      "pesoBalanza": "36.44 tn",
-      "planta": "Lujan",
-      "proveedor": "SPOSITO",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "897e3e61-6846-468b-b9e9-6e8ffc1d0fb3",
       "createdAt": "2026-11-02T15:17:41.676Z",
       "carga": "Entrada",
