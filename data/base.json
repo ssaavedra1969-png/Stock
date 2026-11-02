@@ -10,7 +10,8 @@
       "AH702YZ"
     ],
     "GARCIA": [
-      "AG266CJ"
+      "AG266CJ",
+      "AE403QQ"
     ],
     "DIERICKX": [
       "AH604EL"
@@ -44,6 +45,9 @@
     ],
     "TOLOSA": [
       "AH784OY"
+    ],
+    "ORTIZ": [
+      "AH439NY"
     ]
   },
   "choferes": {
@@ -53,15 +57,16 @@
     "GARCIA": "GARCIA CRISTIAN",
     "DIERICKX": "DIERICKX CARLOS",
     "RODRIGUEZ": "RODRIGUEZ MATIAS",
-    "ALONSO": "ALONSO MIGUEL",
+    "ALONSO": "ALONSO MIGLIEL",
     "OCHOA": "OCHOA ANIBAL",
     "PIACENTINI": "PIACENTINI ALEJANDRO MIGUEL",
     "JUAN": "JUAN MANUEL WLBERGER",
     "LEDESMA": "LEDESMA CAMILO",
     "QCHOA": "QCHOA ANIBAL",
-    "VIVAS": "VIVAS ARNALDO LEONEL",
+    "VIVAS": "VIVAS LEONEL",
     "AGUERO": "AGUERO TOMAS AGUSTIN",
-    "TOLOSA": "TOLOSA CESAR"
+    "TOLOSA": "TOLOSA CESAR",
+    "ORTIZ": "ORTIZ CRISTIAN"
   },
   "netos": {},
   "patentesPorTicket": {
@@ -99,7 +104,22 @@
     "AVE|274550": "AH784OY",
     "LCE|112242": "AH919KE",
     "LCE|112246": "AH702XY",
-    "AVE|186403": "AH702XX"
+    "AVE|186403": "AH702XX",
+    "AVE|183774": "AH919IQ",
+    "SPO|85970": "AE403QQ",
+    "SPO|65971": "AG894ER",
+    "SPO|65975": "AE403QQ",
+    "SPO|65976": "AG894ER",
+    "LCE|112193": "AH439NY",
+    "LCE|112212": "AH702XY",
+    "LCE|112222": "AI417ZZ",
+    "LCE|112230": "AH784OW",
+    "AVE|168323": "AH919KE",
+    "AVE|165342": "AH702XX",
+    "AVE|2740129": "AH784OY",
+    "AVE|165420": "AH919IQ",
+    "AVE|168437": "AH784OX",
+    "AVE|166440": "AI417ZZ"
   },
   "correccionesPorTicket": {
     "LCE|112392": {
@@ -451,6 +471,156 @@
       "Peso Neto": "35.660",
       "Chofer": "ALONSO MIGUEL",
       "Pat. Chasis": "AH702XX"
+    },
+    "AVE|183774": {
+      "Fecha": "08/10/2026",
+      "N Remito": "183774",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35940,
+      "Peso Neto": 36000,
+      "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
+      "Pat. Chasis": "AH919IQ"
+    },
+    "SPO|85970": {
+      "Fecha": "09/10/2026",
+      "N Remito": "85970",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 35980,
+      "Peso Neto": 36440,
+      "Chofer": "GARCIA CRISTIAN",
+      "Pat. Chasis": "AE403QQ"
+    },
+    "SPO|65971": {
+      "Fecha": "09/10/2026",
+      "N Remito": "65971",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 36200,
+      "Peso Neto": 36880,
+      "Chofer": "OCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
+    },
+    "SPO|65975": {
+      "Fecha": "09/10/2026",
+      "N Remito": "65975",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA FINA",
+      "Neto": 37180,
+      "Peso Neto": 37540,
+      "Chofer": "GARCIA CRISTIAN",
+      "Pat. Chasis": "AE403QQ"
+    },
+    "SPO|65976": {
+      "Fecha": "09/10/2026",
+      "N Remito": "65976",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 36780,
+      "Peso Neto": 37280,
+      "Chofer": "OCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
+    },
+    "LCE|112193": {
+      "Fecha": "09/10/2026",
+      "N Remito": "112193",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35900,
+      "Peso Neto": 35500,
+      "Chofer": "ORTIZ CRISTIAN",
+      "Pat. Chasis": "AH439NY"
+    },
+    "LCE|112212": {
+      "Fecha": "09/10/2026",
+      "N Remito": "112212",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": 34900,
+      "Peso Neto": 34700,
+      "Chofer": "PRIMITERRA TONINO",
+      "Pat. Chasis": "AH702XY"
+    },
+    "LCE|112222": {
+      "Fecha": "09/10/2026",
+      "N Remito": "112222",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 41140,
+      "Peso Neto": 40820,
+      "Chofer": "VIVAS LEONEL",
+      "Pat. Chasis": "AI417ZZ"
+    },
+    "LCE|112230": {
+      "Fecha": "09/10/2026",
+      "N Remito": "112230",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": 36360,
+      "Peso Neto": 36060,
+      "Chofer": "WILBERGER JUAN",
+      "Pat. Chasis": "AH784OW"
+    },
+    "AVE|168323": {
+      "Fecha": "09/10/2026",
+      "N Remito": "168323",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 36140,
+      "Peso Neto": 36360,
+      "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
+    },
+    "AVE|165342": {
+      "Fecha": "09/10/2026",
+      "N Remito": "165342",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 34920,
+      "Peso Neto": 35280,
+      "Chofer": "ALONSO MIGLIEL",
+      "Pat. Chasis": "AH702XX"
+    },
+    "AVE|2740129": {
+      "Fecha": "09/10/2026",
+      "N Remito": "2740129",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "CEMENTO",
+      "Neto": 35080,
+      "Peso Neto": 35460,
+      "Chofer": "TOLOSA CESAR",
+      "Pat. Chasis": "AH784OY"
+    },
+    "AVE|165420": {
+      "Fecha": "10/10/2026",
+      "N Remito": "165420",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35300,
+      "Peso Neto": 35280,
+      "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
+      "Pat. Chasis": "AH919IQ"
+    },
+    "AVE|168437": {
+      "Fecha": "10/10/2026",
+      "N Remito": "168437",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 34980,
+      "Peso Neto": 34980,
+      "Chofer": "RODRIGUEZ MATIAS",
+      "Pat. Chasis": "AH784OX"
+    },
+    "AVE|166440": {
+      "Fecha": "10/10/2026",
+      "N Remito": "166440",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35610,
+      "Peso Neto": 35680,
+      "Chofer": "VIVAS LEONEL",
+      "Pat. Chasis": "AI417ZZ"
     }
   },
   "correccionesPorArchivo": {
@@ -913,6 +1083,156 @@
       "Peso Neto": "35.660",
       "Chofer": "ALONSO MIGUEL",
       "Pat. Chasis": "AH702XX"
+    },
+    "AVE|IMG-261019135918-001.PDF": {
+      "Fecha": "08/10/2026",
+      "N Remito": "183774",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35940,
+      "Peso Neto": 36000,
+      "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
+      "Pat. Chasis": "AH919IQ"
+    },
+    "SPO|IMG-261019134459-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "85970",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 35980,
+      "Peso Neto": 36440,
+      "Chofer": "GARCIA CRISTIAN",
+      "Pat. Chasis": "AE403QQ"
+    },
+    "SPO|IMG-261019134610-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "65971",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 36200,
+      "Peso Neto": 36880,
+      "Chofer": "OCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
+    },
+    "SPO|IMG-261019134800-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "65975",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA FINA",
+      "Neto": 37180,
+      "Peso Neto": 37540,
+      "Chofer": "GARCIA CRISTIAN",
+      "Pat. Chasis": "AE403QQ"
+    },
+    "SPO|IMG-261019134906-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "65976",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 36780,
+      "Peso Neto": 37280,
+      "Chofer": "OCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
+    },
+    "LCE|IMG-261019135032-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "112193",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35900,
+      "Peso Neto": 35500,
+      "Chofer": "ORTIZ CRISTIAN",
+      "Pat. Chasis": "AH439NY"
+    },
+    "LCE|IMG-261019135205-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "112212",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": 34900,
+      "Peso Neto": 34700,
+      "Chofer": "PRIMITERRA TONINO",
+      "Pat. Chasis": "AH702XY"
+    },
+    "LCE|IMG-261019135324-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "112222",
+      "Razon Social": "ALMAJO NORTE",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 41140,
+      "Peso Neto": 40820,
+      "Chofer": "VIVAS LEONEL",
+      "Pat. Chasis": "AI417ZZ"
+    },
+    "LCE|IMG-261019135436-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "112230",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/12",
+      "Neto": 36360,
+      "Peso Neto": 36060,
+      "Chofer": "WILBERGER JUAN",
+      "Pat. Chasis": "AH784OW"
+    },
+    "AVE|IMG-261019135602-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "168323",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 36140,
+      "Peso Neto": 36360,
+      "Chofer": "LEDESMA CAMILO",
+      "Pat. Chasis": "AH919KE"
+    },
+    "AVE|IMG-261019135703-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "165342",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 34920,
+      "Peso Neto": 35280,
+      "Chofer": "ALONSO MIGLIEL",
+      "Pat. Chasis": "AH702XX"
+    },
+    "AVE|IMG-261019140016-001.PDF": {
+      "Fecha": "09/10/2026",
+      "N Remito": "2740129",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "CEMENTO",
+      "Neto": 35080,
+      "Peso Neto": 35460,
+      "Chofer": "TOLOSA CESAR",
+      "Pat. Chasis": "AH784OY"
+    },
+    "AVE|IMG-261019132635-001.PDF": {
+      "Fecha": "10/10/2026",
+      "N Remito": "165420",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35300,
+      "Peso Neto": 35280,
+      "Chofer": "PIACENTINI ALEJANDRO MIGUEL",
+      "Pat. Chasis": "AH919IQ"
+    },
+    "AVE|IMG-261019132735-001.PDF": {
+      "Fecha": "10/10/2026",
+      "N Remito": "168437",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 34980,
+      "Peso Neto": 34980,
+      "Chofer": "RODRIGUEZ MATIAS",
+      "Pat. Chasis": "AH784OX"
+    },
+    "AVE|IMG-261019132830-001.PDF": {
+      "Fecha": "10/10/2026",
+      "N Remito": "166440",
+      "Razon Social": "ARENERA CANELONES",
+      "Material": "PIEDRA PARTIDA 6/20",
+      "Neto": 35610,
+      "Peso Neto": 35680,
+      "Chofer": "VIVAS LEONEL",
+      "Pat. Chasis": "AI417ZZ"
     }
   },
   "reglasLectura": {
@@ -942,11 +1262,19 @@
     "LCE|Material|ARENA GRANITICA 0 6": "PIEDRA PARTIDA 6/20",
     "LCE|Chofer|VIVAS ARNALDO LEONEL TA": "VIVAS ARNALDO LEONEL",
     "LCE|Chofer|AGLUERD TOMAS AGUSTIN J F": "AGUERO TOMAS AGUSTIN",
-    "AVE|Razon Social|ALMAJO NORTE": "ARENERA CANELONES"
+    "AVE|Razon Social|ALMAJO NORTE": null,
+    "SPO|Material|D AZRIP ITN AREAL AINURPO 1 B I EN CABECERA RIO TALA GUIA MINCCA": "ARENA MODULO 1.8-1.9",
+    "SPO|Material|LI DESCELPOIOR IE AREAW FINK EN CROREZERA RIS TELA GULES MINERA": "ARENA FINA",
+    "SPO|Material|NEWTA TC ONE ALS NESSRIPAIAN ER LK BI MIO TALM RAERL MOULD 1 4 1 GUISE HAREES": "ARENA MODULO 1.8-1.9",
+    "LCE|Pat. Chasis|AH430NY": "AH439NY",
+    "LCE|Chofer|WIVES ARNALDO LEONEL NO EL": "VIVAS LEONEL",
+    "LCE|Chofer|WILBERGER JUAN MANUEL": "WILBERGER JUAN",
+    "AVE|Chofer|VIVMAS LEONEL": "VIVAS LEONEL"
   },
   "razonesSociales": [
     "ALMAJO NORTE",
-    "ARENERA CANELONES"
+    "ARENERA CANELONES",
+    "GRUPO FALPAT SRL"
   ],
   "materiales": [
     "ARENA MODULO 1.8-1.9",
