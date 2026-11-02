@@ -1,24 +1,6 @@
 {
   "records": [
     {
-      "id": "7c5d32d3-2b67-4f0e-bd46-d9ab3c6e7d71",
-      "createdAt": "2026-11-02T15:17:41.676Z",
-      "carga": "Entrada",
-      "producto": "PIEDRA PARTIDA 6/20",
-      "codigoProducto": "",
-      "fechaRemito": "2026-09-18T15:00:00.000Z",
-      "patente": "AH784OW",
-      "chofer": "WILBERGER JUAN",
-      "nroRemitoProveedor": "111675",
-      "nroRemitoFalpat": ".",
-      "pesoProveedor": "35.92 tn",
-      "pesoBalanza": "35.56 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": "",
-      "razonSocial": "ALMAJO NORTE"
-    },
-    {
       "id": "c9028c1a-7120-4d8c-8120-e65a899a0705",
       "createdAt": "2026-11-02T15:17:41.676Z",
       "carga": "Entrada",
@@ -51349,9 +51331,9 @@
     }
   ],
   "productos": [
-    "PIEDRA PARTIDA 6/20",
     "ARENA F.C/MINIMA 1000 TDA",
     "ARENA GRANITICA 0/6",
+    "PIEDRA PARTIDA 6/20",
     "CEMENTO",
     "ARENA MODULO 1.8-1.9",
     "ARENA FINA",
