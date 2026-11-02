@@ -945,7 +945,7 @@ export default function TicketsPage() {
         icon={IconFileText}
         title="Cargar Entrada desde PDF"
         tag="Lectura de remitos"
-        subtitle="Leé y corregí los remitos; desde producción podés agregarlos al Excel histórico compartido"
+        subtitle="Leé y corregí los remitos; después descargá el Excel para importarlos a producción"
       >
         {(files.length > 0 || hayResultado) && (
           <button type="button" onClick={limpiar} className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={procesando}>
@@ -959,7 +959,7 @@ export default function TicketsPage() {
       <Paso
         n="1"
         titulo="Cargá los remitos"
-        ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK para leer los PDF de Entrada y acceder al Excel histórico compartido."
+        ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK para leer los PDF de Entrada y consultar duplicados en el histórico."
       >
         <div
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
