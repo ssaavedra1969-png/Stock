@@ -93,9 +93,12 @@ la base de movimientos de la aplicación; no reemplaza ni actualiza
 La sección acepta tanto la plantilla de importación como el propio
 `Salida\Stock-Historico.xlsx`: detecta sus columnas, toma `Carga` como tipo de
 movimiento y convierte los pesos de kg a tn. Antes de guardar muestra las filas
-nuevas, las ya cargadas y los errores. Solo incorpora las nuevas; la API vuelve
-a comprobar duplicados al guardar, por lo que volver a subir el histórico no
-crea movimientos repetidos. El Excel compartido no se modifica.
+nuevas, las ya cargadas y los errores. Para detectar un remito ya cargado usa el
+tipo de movimiento, el proveedor/cliente y el número de remito, aunque hayan
+cambiado la fecha, el producto o la cantidad. Los registros existentes se
+ignoran y nunca se actualizan desde el Excel. Si falta el número de remito,
+aplica la comparación detallada anterior. La API repite la verificación al
+guardar. El Excel compartido no se modifica.
 
 ## Datos y publicación
 

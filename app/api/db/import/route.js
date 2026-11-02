@@ -9,6 +9,7 @@
 // Devuelve: { ok, insertados, duplicados, total }
 // ============================================================
 import { readDb, writeDb } from '@/lib/github';
+import { claveDedupe } from '@/lib/importar';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,13 +50,6 @@ function sanitizar(rec, carga) {
   };
 }
 
-// Clave anti-duplicados identica a la de scripts/import-*.mjs.
-function clave(rec) {
-  return rec.carga === 'Entrada'
-    ? `${rec.fechaRemito}|${rec.producto}|${rec.nroRemitoProveedor}|${rec.pesoBalanza}|${rec.proveedor}`
-    : `${rec.fechaRemito}|${rec.producto}|${rec.nroRemitoFalpat}|${rec.pesoBalanza}|${rec.cliente}`;
-}
-
 export async function POST(request) {
   let body;
   try {
@@ -92,10 +86,10 @@ export async function POST(request) {
     const createdAt = new Date().toISOString();
     const { db } = await writeDb((current) => {
       const base = Array.isArray(current.records) ? current.records : [];
-      const existentes = new Set(base.map(clave));
+      const existentes = new Set(base.map(claveDedupe));
       const nuevos = [];
       for (const rec of limpios) {
-        const k = clave(rec);
+        const k = claveDedupe(rec);
         if (existentes.has(k)) continue;
         existentes.add(k);
         nuevos.push({ id: makeId(), createdAt, ...rec });

@@ -215,8 +215,10 @@ export default function IncorporarPage() {
           Este importador acepta la plantilla modelo, el Excel descargado desde Remitos y directamente{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">Stock-Historico.xlsx</code>. En el
           histórico convierte los pesos de kg a tn y usa la columna Carga para identificar Entradas o Salidas.
-          Antes de importar, compara fecha, remito, producto, cantidad y proveedor/cliente contra la base y
-          vuelve a comprobar duplicados al guardar. Las columnas del formato de movimientos son:{' '}
+          Antes de importar, identifica duplicados por tipo de movimiento, proveedor/cliente y número de remito,
+          aunque hayan cambiado la fecha, el producto o la cantidad; los registros existentes no se actualizan.
+          Si falta el número de remito, compara los demás datos. La API vuelve a comprobar duplicados al guardar.
+          Las columnas del formato de movimientos son:{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">REMITOS</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">OBSERVACION</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">FECHA</code>,{' '}
@@ -311,8 +313,9 @@ export default function IncorporarPage() {
             <div className="flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-[13px] text-amber-100">
               <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                {analisis.duplicados.length} fila(s) ya existen en la base (misma fecha, remito, producto,
-                cantidad y {cargaAnalisis === 'Entrada' ? 'proveedor' : 'cliente'}) y se van a ignorar.
+                {analisis.duplicados.length} fila(s) ya tienen el mismo número de remito para ese
+                {cargaAnalisis === 'Entrada' ? ' proveedor' : ' cliente'} y se van a ignorar sin modificar
+                los datos existentes.
               </span>
             </div>
           )}
