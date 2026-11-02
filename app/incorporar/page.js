@@ -79,6 +79,12 @@ export default function IncorporarPage() {
     () => (analisis ? resumenPorProducto(analisis.nuevos) : []),
     [analisis]
   );
+  const incluyeDetallesRemito = useMemo(
+    () => Boolean(analisis?.nuevos.some((record) =>
+      record.pesoProveedor || record.chofer || record.patente || record.razonSocial
+    )),
+    [analisis]
+  );
 
   function reset() {
     setAnalisis(null);
@@ -203,16 +209,16 @@ export default function IncorporarPage() {
           })}
         </div>
         <p className="text-[11px] leading-relaxed text-slate-500">
-          Este importador es para planillas con el formato de abajo; no uses aquí el Excel generado desde PDFs en Remitos.{' '}
-          Las dos planillas usan las mismas columnas:{' '}
+          Este importador acepta la plantilla modelo y el Excel descargado desde Remitos. Las columnas base son:{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">REMITOS</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">OBSERVACION</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">FECHA</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">CODIGO DEL PRODUCTO</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">DESCRIPCION</code>,{' '}
           <code className="rounded bg-white/5 px-1 py-0.5 text-slate-300">CANTIDAD KG</code>. Lo que cambia es
-          quién va en OBSERVACION y a qué pertenece el remito. Usá la plantilla como referencia: tiene una hoja
-          CARGA vacía, una hoja EJEMPLO y una hoja AYUDA con el catálogo y las unidades.
+          quién va en OBSERVACION y a qué pertenece el remito. También reconoce las columnas opcionales
+          NETO, CHOFER, PAT. CHASIS y RAZON SOCIAL que agrega la descarga de Remitos. Usá la plantilla como
+          referencia: tiene una hoja CARGA vacía, una hoja EJEMPLO y una hoja AYUDA con el catálogo y las unidades.
         </p>
       </div>
 
@@ -367,6 +373,14 @@ export default function IncorporarPage() {
                       <th className="px-3 py-2 font-semibold">{tipo === 'Entrada' ? 'Proveedor' : 'Cliente'}</th>
                       <th className="px-3 py-2 font-semibold">CD</th>
                       <th className="px-3 py-2 text-right font-semibold">Cantidad</th>
+                      {incluyeDetallesRemito && (
+                        <>
+                          <th className="px-3 py-2 text-right font-semibold">Neto proveedor</th>
+                          <th className="px-3 py-2 font-semibold">Chofer</th>
+                          <th className="px-3 py-2 font-semibold">Patente</th>
+                          <th className="px-3 py-2 font-semibold">Razón social</th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -379,6 +393,14 @@ export default function IncorporarPage() {
                         <td className="px-3 py-1.5 text-slate-400">{tipo === 'Entrada' ? r.proveedor : r.cliente}</td>
                         <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs text-slate-300">{r.planta || 'Lujan'}</td>
                         <td className="whitespace-nowrap px-3 py-1.5 text-right font-mono tabular-nums text-slate-200">{r.pesoBalanza}</td>
+                        {incluyeDetallesRemito && (
+                          <>
+                            <td className="whitespace-nowrap px-3 py-1.5 text-right font-mono tabular-nums text-slate-200">{r.pesoProveedor || '—'}</td>
+                            <td className="whitespace-nowrap px-3 py-1.5 text-slate-400">{r.chofer || '—'}</td>
+                            <td className="whitespace-nowrap px-3 py-1.5 font-mono text-slate-400">{r.patente || '—'}</td>
+                            <td className="whitespace-nowrap px-3 py-1.5 text-slate-400">{r.razonSocial || '—'}</td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>

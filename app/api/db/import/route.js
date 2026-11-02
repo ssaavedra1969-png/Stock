@@ -36,15 +36,16 @@ function sanitizar(rec, carga) {
     producto,
     codigoProducto: str(rec.codigoProducto).toUpperCase(),
     fechaRemito,
-    patente: str(rec.patente),
+    patente: str(rec.patente).toUpperCase(),
     chofer: str(rec.chofer),
     nroRemitoProveedor: carga === 'Entrada' ? str(rec.nroRemitoProveedor) : '',
     nroRemitoFalpat: carga === 'Salida' ? str(rec.nroRemitoFalpat) : '',
-    pesoProveedor: '',
+    pesoProveedor: str(rec.pesoProveedor),
     pesoBalanza,
     planta: str(rec.planta) || 'Lujan',
     proveedor: carga === 'Entrada' ? str(rec.proveedor) : '',
     cliente: carga === 'Salida' ? str(rec.cliente) : '',
+    razonSocial: carga === 'Entrada' ? str(rec.razonSocial) : '',
   };
 }
 

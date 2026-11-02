@@ -47,19 +47,18 @@ tildes y espacios en la patente. Si hay más de una asociación, no se elige
 ninguna automáticamente para evitar asignaciones ambiguas. El autocompletado
 solo prepara el formulario; los datos se guardan al confirmar el registro.
 
-## Actualizar `Stock-Historico.xlsx` desde producción
+## Importar remitos PDF a producción
 
-En `/tickets`, la carpeta STOCK se selecciona desde el navegador (Chrome o
-Edge). En Vercel, después de revisar las Entradas, el botón de producción
-agrega las filas nuevas directamente al `Stock-Historico.xlsx` de la carpeta
-compartida seleccionada. La escritura ocurre en el navegador autorizado, no en
-el servidor Vercel, que no tiene acceso directo al recurso SMB.
+En `/tickets`, revisá los remitos y descargá **Descargar para Importar Excel**.
+El archivo resultante usa la hoja `CARGA` y el formato que acepta `/incorporar`.
+Después, elegí **Entradas** en **Importar Excel**, subí el archivo, revisá la
+vista previa y confirmá la importación. En Vercel, esa confirmación guarda los
+movimientos en la base de producción mediante el flujo existente.
 
-La aplicación vuelve a leer el Excel antes de guardar, valida sus columnas,
-omite remitos ya presentes y pide confirmación del número de altas. Esta
-operación modifica solo el Excel histórico: no escribe en `data/db.json` ni
-mueve/archiva los PDFs. Cerrá el Excel de escritorio antes de guardar para
-evitar bloqueos. El botón de guardar en dev continúa limitado al entorno local.
+El Excel generado conserva remito, proveedor, fecha, producto, centro y peso de
+balanza, además de Neto, chofer, patente y razón social. No modifica
+`Stock-Historico.xlsx` en la carpeta compartida; ese archivo es distinto del
+Excel de importación.
 
 ## Datos y publicación
 

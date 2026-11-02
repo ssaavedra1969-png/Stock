@@ -101,6 +101,11 @@ function toneladasDesdeKg(value) {
   return `${(kilograms / 1000).toFixed(3).replace(/\.?0+$/, '')} tn`;
 }
 
+function valorImportableDesdeKg(value) {
+  const kilograms = parseNum(value);
+  return kilograms === null ? '' : Number((kilograms / 1000).toFixed(3));
+}
+
 function fechaIsoDesdeTicket(value) {
   const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(value || '').trim());
   if (!match) return '';
@@ -188,8 +193,6 @@ export default function TicketsPage() {
   const [registrosEditados, setRegistrosEditados] = useState([]);
   const [huboEdiciones, setHuboEdiciones] = useState(false);
   const [exportandoExcel, setExportandoExcel] = useState(false);
-  const [guardandoHistorico, setGuardandoHistorico] = useState(false);
-  const [historicoGuardado, setHistoricoGuardado] = useState(null);
   const [editandoIdx, setEditandoIdx] = useState(null);
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [incorporando, setIncorporando] = useState(false);
@@ -491,7 +494,6 @@ export default function TicketsPage() {
     setHuboEdiciones(false);
     setEditandoIdx(null);
     setSoloPendientes(false);
-    setHistoricoGuardado(null);
     setCentro('');
     setCarga('');
     setConfirmacionVisual(false);
@@ -504,7 +506,7 @@ export default function TicketsPage() {
     if (inputRef.current) inputRef.current.value = '';
   }
 
-  async function descargarExcelCorregido() {
+  async function descargarExcelParaImportar() {
     if (erroresLectura.length > 0 || registrosConObservaciones.length > 0) {
       showToast('Corregí los campos pendientes antes de descargar el Excel.', 'error');
       return;
@@ -517,94 +519,51 @@ export default function TicketsPage() {
     setExportandoExcel(true);
     try {
       const XLSX = await import('xlsx');
-      const headers = [...CAMPOS];
+      const headers = [
+        'REMITOS',
+        'OBSERVACION',
+        'FECHA',
+        'CODIGO DEL PRODUCTO',
+        'DESCRIPCION',
+        'CANTIDAD KG',
+        'CENTRO DE DISTRIBUCION',
+        'NETO',
+        'CHOFER',
+        'PAT. CHASIS',
+        'RAZON SOCIAL',
+      ];
       const exportables = registros.filter((record) => record.Estado !== 'DUPLICADO');
       if (exportables.length === 0) {
         throw new Error('No hay Entradas nuevas para descargar.');
       }
 
       const rows = exportables.map((record) =>
-        headers.map((field) => {
-          if (field === 'Centro') return centro;
-          if (field === 'Carga') return carga;
-          if (field === 'Neto' || field === 'Peso Neto') {
-            return normalizarNumero(record[field]);
-          }
-          return record[field] ?? '';
-        })
+        [
+          record['N Remito'] ?? '',
+          record.Proveedor ?? '',
+          record.Fecha ?? '',
+          CATALOGO_PRODUCTOS.find(
+            (item) => item.codigo && normalizar(item.nombre) === normalizar(record.Material)
+          )?.codigo || '',
+          record.Material ?? '',
+          valorImportableDesdeKg(record['Peso Neto']),
+          centro,
+          valorImportableDesdeKg(record.Neto),
+          record.Chofer ?? '',
+          record['Pat. Chasis'] ?? '',
+          record['Razon Social'] ?? '',
+        ]
       );
       const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
       worksheet['!cols'] = headers.map((header) => ({ wch: Math.max(12, header.length + 4) }));
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock Historico');
-      XLSX.writeFile(workbook, `Stock-Historico-Corregido-${ahora()}.xlsx`);
-      showToast(`Excel descargado · ${exportables.length} Entrada(s)${registros.length > exportables.length ? ` · ${registros.length - exportables.length} duplicado(s) omitido(s)` : ''}`);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'CARGA');
+      XLSX.writeFile(workbook, `Remitos-Entradas-Importar-${ahora()}.xlsx`);
+      showToast(`Excel listo para Importar Excel · ${exportables.length} Entrada(s)${registros.length > exportables.length ? ` · ${registros.length - exportables.length} duplicado(s) omitido(s)` : ''}`);
     } catch (err) {
       showToast(err.message || 'No se pudo generar el Excel corregido.', 'error');
     } finally {
       setExportandoExcel(false);
-    }
-  }
-
-  async function guardarEnHistorico() {
-    if (!carpeta?.handle) {
-      showToast('Elegí primero la carpeta STOCK para escribir en el Excel compartido.', 'error');
-      return;
-    }
-    if (!confirmacionVisual || guardandoAprendizaje) {
-      showToast('Confirmá primero que revisaste los registros contra sus PDF.', 'error');
-      return;
-    }
-    if (erroresLectura.length > 0 || registrosConObservaciones.length > 0) {
-      showToast('Corregí los campos pendientes antes de actualizar el histórico.', 'error');
-      return;
-    }
-    if (!centro || carga !== 'Entrada') {
-      showToast('Seleccioná el centro y confirmá Carga = Entrada antes de guardar.', 'error');
-      return;
-    }
-
-    setGuardandoHistorico(true);
-    try {
-      const {
-        prepararIncorporacionHistorico,
-        guardarIncorporacionHistorico,
-      } = await import('@/lib/tickets/archivo.mjs');
-      const exportables = registros
-        .filter((record) => record.Estado !== 'DUPLICADO')
-        .map((record) => ({
-          ...Object.fromEntries(CAMPOS.map((field) => [field, record[field] ?? ''])),
-          Centro: centro,
-          Carga: carga,
-        }));
-      if (exportables.length === 0) {
-        throw new Error('No hay Entradas nuevas para agregar al Excel.');
-      }
-
-      const preparacion = await prepararIncorporacionHistorico(carpeta.handle, exportables);
-      if (preparacion.appendRows.length === 0) {
-        const onlyDuplicates = await guardarIncorporacionHistorico(preparacion);
-        setHistoricoGuardado(onlyDuplicates);
-        showToast(`Los ${onlyDuplicates.duplicados} remitos ya estaban en ${onlyDuplicates.nombre}.`);
-        return;
-      }
-
-      const accepted = window.confirm(
-        `Se agregarán ${preparacion.appendRows.length} Entrada(s) nuevas a ${preparacion.nombre} en la carpeta compartida. ` +
-        `${preparacion.duplicados} duplicada(s) se omitirán. No se modificarán la base de stock ni los PDF. ¿Continuar?`
-      );
-      if (!accepted) return;
-
-      const resultadoExcel = await guardarIncorporacionHistorico(preparacion);
-      setHistoricoGuardado(resultadoExcel);
-      setClavesPlanilla(new Set(preparacion.claves));
-      showToast(
-        `Excel actualizado: ${resultadoExcel.agregados} Entrada(s) agregada(s) · ${resultadoExcel.duplicados} duplicada(s) omitida(s).`
-      );
-    } catch (err) {
-      showToast(err.message || 'No se pudo actualizar Stock-Historico.xlsx.', 'error');
-    } finally {
-      setGuardandoHistorico(false);
     }
   }
 
@@ -1224,7 +1183,7 @@ export default function TicketsPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={descargarExcelCorregido}
+                    onClick={descargarExcelParaImportar}
                     disabled={
                       exportandoExcel ||
                       procesando ||
@@ -1234,10 +1193,10 @@ export default function TicketsPage() {
                       carga !== 'Entrada'
                     }
                     className="btn-ghost !px-2.5 !py-1.5 text-[10px] disabled:cursor-not-allowed disabled:opacity-40"
-                    title="Descarga las Entradas corregidas sin escribir en la base ni mover archivos"
+                    title="Descarga un Excel compatible con Importar Excel; no guarda movimientos"
                   >
                     <IconDownload className="h-3.5 w-3.5" />
-                    {exportandoExcel ? 'Generando…' : 'Descargar Excel corregido'}
+                    {exportandoExcel ? 'Generando…' : 'Descargar para Importar Excel'}
                   </button>
                 </div>
               </div>
@@ -1465,8 +1424,10 @@ export default function TicketsPage() {
       {/* Paso 3 — Guardar en el servidor */}
       <Paso
         n="3"
-        titulo="Guardar las Entradas revisadas"
-        ayuda="En producción, agregá las Entradas corregidas al Excel compartido. En desarrollo, podés guardarlas en la base dev."
+        titulo={isProductionVercel ? 'Importar las Entradas a producción' : 'Guardar las Entradas revisadas'}
+        ayuda={isProductionVercel
+          ? 'Descargá el Excel compatible y cargalo desde la sección Importar Excel para incorporarlo a producción.'
+          : 'En desarrollo, podés guardar las Entradas revisadas en la base dev.'}
       >
         <label className="flex items-start gap-2 text-xs text-slate-300">
           <input
@@ -1486,7 +1447,7 @@ export default function TicketsPage() {
             {guardandoAprendizaje
               ? 'Guardando lo aprendido…'
               : isProductionVercel
-                ? 'Confirmo que revisé cada registro contra su PDF original. En producción, esta confirmación solo habilita la escritura al Excel histórico; no guarda movimientos en la base.'
+                ? 'Confirmo que revisé cada registro contra su PDF original. Esta confirmación no guarda movimientos; después debo descargar el Excel e importarlo desde Importar Excel.'
                 : 'Confirmo que revisé cada registro contra su PDF original. En desarrollo, al tildar también guardo las correcciones en la base de lectura para las próximas tandas.'}
           </span>
         </label>
@@ -1494,16 +1455,12 @@ export default function TicketsPage() {
         {isProductionVercel ? (
           <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
             <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Excel histórico de producción
+              Importación a producción
             </p>
             <p className="mb-2 rounded border border-sky-400/20 bg-sky-400/[0.05] p-2 text-[10px] text-sky-100">
-              Se escribe desde este navegador en el Stock-Historico.xlsx de la carpeta compartida seleccionada.
-              No se modifica la base de stock ni se mueven los PDF.
+              Este paso no escribe en el Excel de la carpeta compartida ni en la base. Primero descargá el archivo
+              desde el paso 2; después subilo en Importar Excel y confirmá allí la importación a producción.
             </p>
-            <Requisito
-              ok={!!carpeta?.handle}
-              texto={carpeta?.handle ? `Carpeta compartida seleccionada · ${carpeta.nombre}` : 'Elegí la carpeta STOCK compartida'}
-            />
             <Requisito
               ok={erroresLectura.length === 0 && registrosConObservaciones.length === 0}
               texto={erroresLectura.length
@@ -1512,36 +1469,10 @@ export default function TicketsPage() {
                   ? `${registrosConObservaciones.length} registro(s) con campos pendientes`
                   : 'Todos los campos completos'}
             />
-            {historicoGuardado && (
-              <p className="mt-2 text-[11px] font-semibold text-emerald-300">
-                Excel actualizado: {historicoGuardado.agregados} Entrada(s) agregada(s), {historicoGuardado.duplicados} duplicada(s) omitida(s) · {historicoGuardado.nombre} · {historicoGuardado.total} filas de datos.
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={guardarEnHistorico}
-              disabled={
-                !carpeta?.handle ||
-                !confirmacionVisual ||
-                guardandoAprendizaje ||
-                guardandoHistorico ||
-                procesando ||
-                registros.length === 0 ||
-                erroresLectura.length > 0 ||
-                registrosConObservaciones.length > 0 ||
-                !centro ||
-                carga !== 'Entrada' ||
-                !!historicoGuardado
-              }
-              className="btn-primary mt-3 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <IconCheck className="h-4 w-4" />
-              {guardandoHistorico
-                ? 'Actualizando Excel…'
-                : historicoGuardado
-                  ? 'Excel histórico actualizado'
-                  : 'Agregar Entradas al Excel histórico'}
-            </button>
+            <a href="/incorporar" className="btn-primary mt-3 inline-flex">
+              <IconUpload className="h-4 w-4" />
+              Ir a Importar Excel
+            </a>
           </div>
         ) : (
         <>
