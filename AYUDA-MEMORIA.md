@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-11-01. Estado de publicación y prueba integral para retomar desde la oficina._
+_Última actualización: 2026-11-02. Restauración del guardado de remitos en el histórico compartido._
 
 ---
 
@@ -69,10 +69,10 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
   - `app/incorporar/page.js` + `lib/importar.js` → **Incorporar**: carga masiva desde las
     plantillas Excel (Entradas/Salidas) con validación fila por fila, preview y confirmación.
   - `app/tickets/page.js` + `lib/tickets/ocr.mjs` + `lib/tickets/extract.mjs` → lectura
-    OCR de remitos PDF en el navegador; distingue nuevas Entradas, coincidencias existentes
-    y campos vacíos que podrían completarse. El botón de descarga genera un Excel
-    compatible con `/incorporar`; las Entradas llegan a producción solo después de
-    subirlo y confirmar allí. No modifica directamente el histórico compartido.
+    OCR de remitos PDF en el navegador; contrasta duplicados contra el histórico elegido.
+    Al confirmar, `lib/tickets/archivo.mjs` agrega las Entradas a
+    `STOCK\Salida\Stock-Historico.xlsx` y mueve los PDF a `STOCK\procesados` mediante el
+    permiso de carpeta del navegador. No modifica `data/db.json`.
   - `app/api/db/import-tickets-dev/route.js` + `app/api/db/import-remitos-dev/route.js` →
     importaciones de prueba limitadas a ejecución local y `GITHUB_BRANCH=dev`; bloqueadas
     en Vercel. La guía funcional completa está en `docs/flujo-remitos-pdf.md`.
@@ -836,8 +836,10 @@ conocimiento con tablas canónicas de Razón Social y Material.
   `app/tickets/page.js`.
 - Falta la prueba integral funcional desde la oficina, exclusivamente en desarrollo y con
   `GITHUB_BRANCH=dev`. Seguir [docs/prueba-integral-oficina.md](./docs/prueba-integral-oficina.md).
-- Los endpoints de importación PDF/Excel de prueba siguen bloqueados en Vercel por diseño;
-  publicar el código no habilita escrituras operativas en producción.
+- Los endpoints experimentales de importación PDF a `data/db.json` siguen bloqueados en
+  Vercel por diseño. Esto es independiente de `/tickets`: el histórico compartido se
+  actualiza desde el navegador del operador, que debe tener acceso y conceder permiso a
+  la carpeta STOCK.
 
 ### Preparación
 
@@ -860,7 +862,8 @@ conocimiento con tablas canónicas de Razón Social y Material.
 - `main` es la rama que Vercel despliega a producción. Probar primero en `dev` y obtener
   aprobación expresa antes de publicar cambios a `main`.
 - `GITHUB_BRANCH` determina dónde las APIs leen/escriben: usar `dev` para pruebas. `data/db.json`
-  es el histórico operativo; `data/base.json` en `dev` guarda aprendizaje OCR. No borrar ni
+  es la base de movimientos de la aplicación; `Stock-Historico.xlsx` en la carpeta compartida es
+  el histórico de remitos PDF. `data/base.json` guarda aprendizaje OCR. No borrar ni
   reemplazar esos archivos al cambiar de PC. `lib/tickets/base.mjs` contiene la base curada
   versionada con el código.
 - `.env.local`, PDFs temporales y archivos de trabajo local no se versionan. Los originales de
@@ -868,6 +871,15 @@ conocimiento con tablas canónicas de Razón Social y Material.
   el movimiento al histórico ni autoriza a mover el PDF.
 
 ### Estado del flujo de remitos PDF (2026-11-01)
+
+**Actualización 2026-11-02:** `/tickets` incorpora al histórico compartido desde el navegador.
+Después de elegir la carpeta STOCK y revisar los registros, el botón de confirmación llama a
+`incorporarEnCarpeta`: agrega solo remitos nuevos a `Salida\Stock-Historico.xlsx` y mueve los PDF
+de `Entrada` a `procesados`. Se validó el flujo con carpetas simuladas: agrega una fila no
+duplicada, conserva las existentes, archiva los PDF y rechaza una carpeta sin `Salida`. No se
+escribió en el histórico real ni se movió ningún PDF durante esta validación. El cambio está en
+el árbol local; falta publicarlo para que aparezca en Vercel. El estado OCR abierto en el navegador
+no se debe refrescar hasta decidir cómo continuar con esa tanda.
 
 - La conciliación por PDF busca Entradas por proveedor y número de remito normalizados.
 - Un registro existente con origen manual o histórico no identificado puede completarse

@@ -3,16 +3,17 @@
 **Objetivo:** validar los formularios y el flujo de remitos con los datos de
 desarrollo antes de considerar cerrada la tanda.
 
-**Estado al 2026-11-01:** código y documentación publicados en `main`; deployment
-de producción Ready. La verificación productiva de Chofer/Patente fue solo
-visual e interactiva: se abrieron sugerencias y se eligió un chofer para
-comprobar la patente asociada, pero se cerró el formulario sin guardar. No hubo
-escrituras en producción. La prueba integral con datos de `dev` sigue pendiente.
+**Estado al 2026-11-02:** el flujo operativo de `/tickets` vuelve a escribir
+desde el navegador en `STOCK\Salida\Stock-Historico.xlsx` y archiva los PDF en
+`STOCK\procesados`, mediante el permiso de carpeta que concede el operador.
+Esto no modifica `data/db.json`. La prueba integral de las APIs experimentales
+de importación directa a la base `dev` sigue pendiente y es un circuito
+separado; no usarla para cargar el histórico.
 
-En producción, `/tickets` genera un Excel de Entradas compatible con
-`/incorporar`. Para guardar los movimientos, hay que subir ese archivo en
-**Importar Excel**, revisar la vista previa y confirmar. Este flujo no modifica
-directamente `Stock-Historico.xlsx` en la carpeta compartida.
+Para operar el histórico desde la PC de la oficina, usar Chrome o Edge, elegir
+la carpeta compartida `STOCK`, revisar los PDF de `Entrada` y confirmar solo
+cuando todos los datos estén verificados. Cerrar `Stock-Historico.xlsx` antes
+de confirmar. No hace falta usar **Importar Excel** para actualizar ese archivo.
 
 ## Preparación segura
 

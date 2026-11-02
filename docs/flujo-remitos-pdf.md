@@ -3,6 +3,12 @@
 **Estado:** implementación de prueba, solo para Entradas.
 **Última revisión:** 2026-11-01.
 
+Esta guía describe el flujo experimental que concilia remitos con
+`data/db.json` en desarrollo. **No describe el guardado operativo en el Excel
+histórico.** Para el circuito habitual de la oficina, `/tickets` escribe
+`Stock-Historico.xlsx` y archiva los PDF con permiso de carpeta del navegador;
+no usa estas APIs ni requiere `GITHUB_BRANCH=dev`.
+
 La prueba integral pendiente se ejecuta en desarrollo desde la oficina. Consulta
 [`prueba-integral-oficina.md`](./prueba-integral-oficina.md) para el checklist,
 los límites de escritura y el orden recomendado.

@@ -2,16 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { revisarRegistro, parseNum, normalizeRemito } from '@/lib/tickets/extract.mjs';
+import { revisarRegistro, parseNum } from '@/lib/tickets/extract.mjs';
 import { MATERIALES, RAZONES_SOCIALES } from '@/lib/tickets/base.mjs';
-import { CATALOGO_PRODUCTOS, normalizar } from '@/lib/productos';
-import { evaluarCompletarManual } from '@/lib/importar-remitos-dev';
 import EditorTicket from '@/components/EditorTicket';
 import SectionHero from '@/components/SectionHero';
 import {
   IconUpload,
   IconFileText,
-  IconDownload,
   IconCheck,
   IconAlert,
   IconX,
@@ -38,7 +35,7 @@ const CENTROS = ['Lujan', 'Campana'];
 const CARGAS = ['Entrada', 'Salida'];
 const EDICIONES_KEY = 'falpat:tickets:ediciones';
 
-const COLUMNAS_TABLA = [...CAMPOS, 'Archivo', 'Estado', 'Base de datos'];
+const COLUMNAS_TABLA = [...CAMPOS, 'Archivo', 'Estado'];
 
 function claveFechaOrden(valor) {
   const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(valor || ''));
@@ -54,7 +51,7 @@ function claveNumeroOrden(valor) {
 }
 
 function compararRegistros(a, b, campo) {
-  if (campo === 'Centro' || campo === 'Carga' || campo === 'Base de datos') return 0;
+  if (campo === 'Centro' || campo === 'Carga') return 0;
   if (campo === 'Fecha') return claveFechaOrden(a.Fecha) - claveFechaOrden(b.Fecha);
   if (campo === 'Neto' || campo === 'Peso Neto') {
     return claveNumeroOrden(a[campo]) - claveNumeroOrden(b[campo]);
@@ -70,81 +67,10 @@ function sinDato(valor) {
   return v === '' || v.toUpperCase() === 'N/D';
 }
 
-function claveRemitoEntrada(proveedor, remito) {
-  const supplier = normalizar(proveedor);
-  const number = normalizeRemito(remito)?.toUpperCase();
-  return supplier && number ? `${supplier}|${number}` : '';
-}
-
-function camposVaciosParaCompletar(existing, incoming) {
-  const labels = {
-    fechaRemito: 'Fecha',
-    producto: 'Material',
-    codigoProducto: 'Código',
-    patente: 'Patente',
-    chofer: 'Chofer',
-    nroRemitoProveedor: 'Remito proveedor',
-    pesoProveedor: 'Neto proveedor',
-    pesoBalanza: 'Peso neto',
-    planta: 'Centro',
-    proveedor: 'Proveedor',
-    razonSocial: 'Razón social',
-  };
-  return Object.keys(labels).filter(
-    (field) => sinDato(existing[field]) && !sinDato(incoming[field])
-  ).map((field) => labels[field]);
-}
-
 function toneladasDesdeKg(value) {
   const kilograms = parseNum(value);
   if (kilograms === null) return '';
   return `${(kilograms / 1000).toFixed(3).replace(/\.?0+$/, '')} tn`;
-}
-
-function valorImportableDesdeKg(value) {
-  const kilograms = parseNum(value);
-  return kilograms === null ? '' : Number((kilograms / 1000).toFixed(3));
-}
-
-function fechaIsoDesdeTicket(value) {
-  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(value || '').trim());
-  if (!match) return '';
-  const [, day, month, year] = match;
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
-  if (
-    date.getUTCFullYear() !== Number(year) ||
-    date.getUTCMonth() !== Number(month) - 1 ||
-    date.getUTCDate() !== Number(day)
-  ) return '';
-  return date.toISOString().replace(/\.\d{3}Z$/, '.000Z');
-}
-
-function entradaDesdeTicket(record, centro) {
-  const product = String(record.Material || '').trim();
-  const exactCode =
-    CATALOGO_PRODUCTOS.find((item) => item.codigo && normalizar(item.nombre) === normalizar(product))
-      ?.codigo || '';
-  return {
-    carga: 'Entrada',
-    producto: product,
-    codigoProducto: exactCode,
-    fechaRemito: fechaIsoDesdeTicket(record.Fecha),
-    patente: String(record['Pat. Chasis'] || '').trim().toUpperCase(),
-    chofer: String(record.Chofer || '').trim(),
-    nroRemitoProveedor: String(record['N Remito'] || '').trim(),
-    nroRemitoFalpat: '',
-    pesoProveedor: toneladasDesdeKg(record.Neto),
-    pesoBalanza: toneladasDesdeKg(record['Peso Neto']),
-    planta: centro,
-    proveedor: String(record.Proveedor || '').trim(),
-    cliente: '',
-    razonSocial: String(record['Razon Social'] || '').trim(),
-    archivoOrigen: String(record.Archivo || '').trim(),
-  };
-}
-
-function keyConciliacion(record, existing) {
-  return `${record.Archivo || record['N Remito'] || ''}|${existing.id}`;
 }
 
 function tieneFaltantes(registro) {
@@ -158,12 +84,6 @@ function fmtBytes(n) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function ahora() {
-  const d = new Date();
-  const p = (x) => String(x).padStart(2, '0');
-  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
-}
-
 function ordenarPorFecha(registros) {
   return [...registros].sort((a, b) => {
     const fa = String(a.Fecha || a.fecha || '');
@@ -175,7 +95,6 @@ function ordenarPorFecha(registros) {
 export default function TicketsPage() {
   const {
     showToast,
-    records: movimientosDb,
     tickets,
     procesarTickets,
     limpiarTickets,
@@ -185,14 +104,12 @@ export default function TicketsPage() {
     agregarChoferes,
     agregarPatentes,
     baseConocimiento,
-    reload,
   } = useApp();
   const inputRef = useRef(null);
   const [files, setFiles] = useState([]);
   const [arrastrando, setArrastrando] = useState(false);
   const [registrosEditados, setRegistrosEditados] = useState([]);
   const [huboEdiciones, setHuboEdiciones] = useState(false);
-  const [exportandoExcel, setExportandoExcel] = useState(false);
   const [editandoIdx, setEditandoIdx] = useState(null);
   const [soloPendientes, setSoloPendientes] = useState(false);
   const [incorporando, setIncorporando] = useState(false);
@@ -207,10 +124,7 @@ export default function TicketsPage() {
   const [guardandoAprendizaje, setGuardandoAprendizaje] = useState(false);
   const [progreso, setProgreso] = useState(null);
   const [orden, setOrden] = useState({ campo: '', dir: 'asc' });
-  const [selectedDbMatches, setSelectedDbMatches] = useState([]);
   const [devEnvironment, setDevEnvironment] = useState(null);
-  const isProductionVercel =
-    devEnvironment?.environment === 'vercel' && devEnvironment?.branch === 'main';
   const opcionesMaterial = useMemo(
     () => [...new Set([...MATERIALES, ...(baseConocimiento?.materiales || [])])],
     [baseConocimiento]
@@ -334,41 +248,19 @@ export default function TicketsPage() {
   const registros = useMemo(() => {
     const lista = huboEdiciones ? registrosEditados : resultado?.registros || [];
     const claves = clavesPlanilla;
-    const registrosBase = lista.map((r) => {
-      const key = claveRemitoEntrada(r.Proveedor, r['N Remito']);
-      const entradaDb = centro ? entradaDesdeTicket(r, centro) : null;
-      const matches = key
-        ? movimientosDb.filter(
-            (record) =>
-              record.carga === 'Entrada' &&
-              claveRemitoEntrada(record.proveedor, record.nroRemitoProveedor) === key
-          )
-        : [];
-      const datosEnriquecimiento =
-        matches.length === 1 && entradaDb
-          ? evaluarCompletarManual(matches[0], entradaDb)
-          : { completar: {}, conflictos: [] };
-      return {
-        ...r,
-        Estado: claves
-          ? claves.has(`${r.Proveedor || ''}|${r['N Remito'] || ''}`)
-            ? 'DUPLICADO'
-            : 'NUEVO'
-          : r.Estado,
-        EntradaDb: entradaDb,
-        CoincidenciasBase: matches,
-        CamposACompletar: matches.length === 1 && entradaDb
-          ? camposVaciosParaCompletar(matches[0], entradaDb)
-          : [],
-        ConflictosBase: datosEnriquecimiento.conflictos,
-      };
-    });
-    const conEstado = registrosBase;
+    const conEstado = lista.map((r) => ({
+      ...r,
+      Estado: claves
+        ? claves.has(`${r.Proveedor || ''}|${r['N Remito'] || ''}`)
+          ? 'DUPLICADO'
+          : 'NUEVO'
+        : r.Estado,
+    }));
     const ordenados = ordenarPorFecha(conEstado);
     if (!orden.campo) return ordenados;
     const factor = orden.dir === 'asc' ? 1 : -1;
     return [...ordenados].sort((a, b) => factor * compararRegistros(a, b, orden.campo));
-  }, [resultado, registrosEditados, huboEdiciones, clavesPlanilla, movimientosDb, centro, orden]);
+  }, [resultado, registrosEditados, huboEdiciones, clavesPlanilla, orden]);
 
   const registrosVisibles = useMemo(
     () => (soloPendientes ? registros.filter((r) => tieneFaltantes(r)) : registros),
@@ -397,34 +289,6 @@ export default function TicketsPage() {
     if (!resultado) return [];
     return registros.filter((r) => r.Estado === 'DUPLICADO');
   }, [resultado, registros]);
-  const coincidenciasBase = useMemo(
-    () => registros.filter((registro) => registro.CoincidenciasBase?.length > 0),
-    [registros]
-  );
-  const registrosPdfYaCargados = useMemo(
-    () => registros.filter((registro) => registro.CoincidenciasBase?.some(
-      (match) => match.origenCarga === 'pdf' || match.enriquecidoPorPdf
-    )),
-    [registros]
-  );
-  const coincidenciasSinResolver = useMemo(
-    () => registros.filter((registro) => {
-      if (registro.CoincidenciasBase?.length > 1) return true;
-      if (registro.CoincidenciasBase?.length !== 1) return false;
-      const match = registro.CoincidenciasBase[0];
-      if (match.origenCarga === 'pdf' || match.enriquecidoPorPdf) return false;
-      if (!registro.CamposACompletar.length) return false;
-      const key = keyConciliacion(registro, match);
-      return !selectedDbMatches.includes(key);
-    }),
-    [registros, selectedDbMatches]
-  );
-  const registrosNuevosDb = useMemo(
-    () => registros.filter((registro) =>
-      registro.CoincidenciasBase?.length === 0 && registro.Estado !== 'DUPLICADO'
-    ),
-    [registros]
-  );
 
   function addFiles(lista) {
     const nuevos = Array.from(lista).filter((f) => /\.pdf$/i.test(f.name));
@@ -497,74 +361,12 @@ export default function TicketsPage() {
     setCentro('');
     setCarga('');
     setConfirmacionVisual(false);
-    setSelectedDbMatches([]);
     try {
       sessionStorage.removeItem(EDICIONES_KEY);
     } catch {
       // storage no disponible
     }
     if (inputRef.current) inputRef.current.value = '';
-  }
-
-  async function descargarExcelParaImportar() {
-    if (erroresLectura.length > 0 || registrosConObservaciones.length > 0) {
-      showToast('Corregí los campos pendientes antes de descargar el Excel.', 'error');
-      return;
-    }
-    if (!centro || carga !== 'Entrada') {
-      showToast('Seleccioná el Centro y confirmá Carga = Entrada antes de descargar.', 'error');
-      return;
-    }
-
-    setExportandoExcel(true);
-    try {
-      const XLSX = await import('xlsx');
-      const headers = [
-        'REMITOS',
-        'OBSERVACION',
-        'FECHA',
-        'CODIGO DEL PRODUCTO',
-        'DESCRIPCION',
-        'CANTIDAD KG',
-        'CENTRO DE DISTRIBUCION',
-        'NETO',
-        'CHOFER',
-        'PAT. CHASIS',
-        'RAZON SOCIAL',
-      ];
-      const exportables = registros.filter((record) => record.Estado !== 'DUPLICADO');
-      if (exportables.length === 0) {
-        throw new Error('No hay Entradas nuevas para descargar.');
-      }
-
-      const rows = exportables.map((record) =>
-        [
-          record['N Remito'] ?? '',
-          record.Proveedor ?? '',
-          record.Fecha ?? '',
-          CATALOGO_PRODUCTOS.find(
-            (item) => item.codigo && normalizar(item.nombre) === normalizar(record.Material)
-          )?.codigo || '',
-          record.Material ?? '',
-          valorImportableDesdeKg(record['Peso Neto']),
-          centro,
-          valorImportableDesdeKg(record.Neto),
-          record.Chofer ?? '',
-          record['Pat. Chasis'] ?? '',
-          record['Razon Social'] ?? '',
-        ]
-      );
-      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-      worksheet['!cols'] = headers.map((header) => ({ wch: Math.max(12, header.length + 4) }));
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'CARGA');
-      XLSX.writeFile(workbook, `Remitos-Entradas-Importar-${ahora()}.xlsx`);
-      showToast(`Excel listo para Importar Excel · ${exportables.length} Entrada(s)${registros.length > exportables.length ? ` · ${registros.length - exportables.length} duplicado(s) omitido(s)` : ''}`);
-    } catch (err) {
-      showToast(err.message || 'No se pudo generar el Excel corregido.', 'error');
-    } finally {
-      setExportandoExcel(false);
-    }
   }
 
   async function elegirCarpeta() {
@@ -610,7 +412,7 @@ export default function TicketsPage() {
       setCarpeta({ handle, nombre: handle.name });
       const { rows } = await leerPlanillaDeCarpeta(handle);
       setClavesPlanilla(clavesDeFilas(rows && rows.length ? rows : [CAMPOS]));
-      showToast(`Carpeta STOCK lista: ${handle.name}${nota} · el Excel se actualiza solo al confirmarlo`);
+      showToast(`Carpeta STOCK lista: ${handle.name}${nota} · el histórico se actualiza al confirmar`);
     } catch (err) {
       if (err?.name !== 'AbortError') showToast(err.message || 'No se pudo abrir la carpeta', 'error');
     } finally {
@@ -650,7 +452,6 @@ export default function TicketsPage() {
       // storage no disponible
     }
     setEditandoIdx(null);
-    setSelectedDbMatches([]);
     progresoRef.current = {
       total: files.length,
       archivos: files.map((f) => f.name),
@@ -714,7 +515,6 @@ export default function TicketsPage() {
       return lista;
     });
     setConfirmacionVisual(false);
-    setSelectedDbMatches([]);
     setHuboEdiciones(true);
     if (irSiguiente && editandoIdx < registrosVisibles.length - 1) {
       setEditandoIdx(editandoIdx + 1);
@@ -884,54 +684,41 @@ export default function TicketsPage() {
       showToast('La incorporación de remitos de Salida todavía no está habilitada.', 'error');
       return;
     }
-    if (!devEnvironment?.enabled) {
-      showToast('La escritura está bloqueada: esta función solo opera localmente en la rama dev.', 'error');
-      return;
-    }
-    if (coincidenciasSinResolver.length > 0) {
-      showToast('Resolvé las coincidencias con la base o quitá esos registros antes de incorporar.', 'error');
-      return;
-    }
-    const reconciliations = registros
-      .filter((record) => record.CoincidenciasBase?.length === 1)
-      .filter((record) => {
-        const existing = record.CoincidenciasBase[0];
-        return selectedDbMatches.includes(keyConciliacion(record, existing));
-      })
-      .map((record) => ({
-        id: record.CoincidenciasBase[0].id,
-        record: record.EntradaDb,
-      }));
-    const recordsToSave = registrosNuevosDb.map((record) => record.EntradaDb);
-    if (recordsToSave.length === 0 && reconciliations.length === 0) {
-      showToast('No hay Entradas nuevas ni coincidencias seleccionadas para completar.', 'error');
+    if (!carpeta?.handle) {
+      showToast('Elegí primero la carpeta STOCK para guardar en el histórico compartido.', 'error');
       return;
     }
     const accepted = window.confirm(
-      `¿Confirmás guardar ${recordsToSave.length} Entrada(s) nueva(s) y completar ${reconciliations.length} registro(s) existentes en la base de desarrollo? No se modificará el Excel ni se moverá ningún PDF.`
+      `¿Confirmás incorporar ${nNuevos} remito(s) nuevo(s) y archivar ${registros.length} PDF(s)? Se actualizará Stock-Historico.xlsx en la carpeta STOCK y se moverán los PDF a procesados.`
     );
     if (!accepted) return;
 
     setIncorporando(true);
     try {
-      const response = await fetch('/api/db/import-tickets-dev', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          confirmar: true,
-          records: recordsToSave,
-          reconciliations,
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || `Error HTTP ${response.status}`);
-      await reload();
-      showToast(
-        `${data.insertados} Entrada(s) nueva(s) agregada(s) · ${data.actualizados} movimiento(s) completado(s) en dev · total ${data.total}`
-      );
-      limpiar();
+      const { incorporarEnCarpeta } = await import('@/lib/tickets/archivo.mjs');
+      const registrosConMeta = registros.map((record) => ({
+        ...record,
+        Centro: centro,
+        Carga: carga,
+        _file: files.find((file) => file.name === record.Archivo),
+      }));
+      const data = await incorporarEnCarpeta(carpeta.handle, registrosConMeta);
+      if (data.claves) setClavesPlanilla(new Set(data.claves));
+      const erroresMovimiento = data.errores
+        .slice(0, 3)
+        .map(({ archivo, error }) => `${archivo || 'PDF'}: ${error}`)
+        .join(' · ');
+      const mensaje =
+        `${data.agregados} fila(s) agregada(s) al histórico · ` +
+        `${data.movidos.length} PDF(s) archivado(s)` +
+        (data.duplicados ? ` · ${data.duplicados} repetida(s)` : '') +
+        (data.errores.length
+          ? ` · ${data.errores.length} PDF(s) no pudieron moverse: ${erroresMovimiento}`
+          : '');
+      showToast(mensaje, data.errores.length ? 'error' : undefined);
+      if (data.errores.length === 0) limpiar();
     } catch (err) {
-      showToast(err.message || 'Error al incorporar en desarrollo', 'error');
+      showToast(err.message || 'Error al guardar en el histórico compartido', 'error');
     } finally {
       setIncorporando(false);
     }
@@ -945,7 +732,7 @@ export default function TicketsPage() {
         icon={IconFileText}
         title="Cargar Entrada desde PDF"
         tag="Lectura de remitos"
-        subtitle="Leé y corregí los remitos; después descargá el Excel para importarlos a producción"
+        subtitle="Leé y corregí los remitos; al confirmar se actualiza Stock-Historico.xlsx y se archivan los PDF"
       >
         {(files.length > 0 || hayResultado) && (
           <button type="button" onClick={limpiar} className="btn-ghost !px-3 !py-1.5 !text-xs" disabled={procesando}>
@@ -1052,7 +839,7 @@ export default function TicketsPage() {
               {carpeta ? (
                 <>
                   STOCK: <span className="font-mono text-slate-200">{carpeta.nombre}</span> ·
-                  {clavesPlanilla ? `${clavesPlanilla.size} registro(s) de referencia en el histórico (solo lectura)` : ''}
+                  {clavesPlanilla ? `${clavesPlanilla.size} registro(s) existentes en el histórico` : ''}
                 </>
               ) : (
                 <>
@@ -1101,7 +888,7 @@ export default function TicketsPage() {
           <p className="mb-2 text-[11px] text-slate-500">
             {centro && carga
               ? carga === 'Entrada'
-                ? <span className="text-emerald-400">Entrada lista para revisar e incorporar solo en desarrollo</span>
+                ?                 <span className="text-emerald-400">Entrada lista para revisar e incorporar al histórico</span>
                 : <span className="text-amber-300">La incorporación de remitos de Salida todavía no está habilitada</span>
               : <span className="text-amber-400">Obligatorio para incorporar</span>}
           </p>
@@ -1123,17 +910,6 @@ export default function TicketsPage() {
             <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 p-2 text-xs text-amber-100">
               <IconAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>{alertas.length} remito(s) ya existían en el historial.</span>
-            </div>
-          )}
-
-          {coincidenciasBase.length > 0 && (
-            <div className="flex items-start gap-2 rounded-lg border border-sky-400/30 bg-sky-400/[0.08] p-2 text-xs text-sky-100">
-              <IconAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>
-                Se encontraron {coincidenciasBase.length} posible(s) coincidencia(s) con la base de movimientos.
-                Revisá la columna «Base de datos»: diferencia cargas manuales identificadas, registros antiguos
-                sin origen y remitos ya incorporados desde PDF. El escaneo no modifica esos registros.
-              </span>
             </div>
           )}
 
@@ -1181,23 +957,6 @@ export default function TicketsPage() {
                     />
                     Solo pendientes ({registrosConObservaciones.length})
                   </label>
-                  <button
-                    type="button"
-                    onClick={descargarExcelParaImportar}
-                    disabled={
-                      exportandoExcel ||
-                      procesando ||
-                      erroresLectura.length > 0 ||
-                      registrosConObservaciones.length > 0 ||
-                      !centro ||
-                      carga !== 'Entrada'
-                    }
-                    className="btn-ghost !px-2.5 !py-1.5 text-[10px] disabled:cursor-not-allowed disabled:opacity-40"
-                    title="Descarga un Excel compatible con Importar Excel; no guarda movimientos"
-                  >
-                    <IconDownload className="h-3.5 w-3.5" />
-                    {exportandoExcel ? 'Generando…' : 'Descargar para Importar Excel'}
-                  </button>
                 </div>
               </div>
               <div className="table-scroll rounded-lg border border-white/10">
@@ -1297,80 +1056,6 @@ export default function TicketsPage() {
                           )}
                         </td>
                         <td className="px-2 py-1">
-                          {r.CoincidenciasBase?.length > 1 ? (
-                            <span
-                              className="inline-flex whitespace-nowrap rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-200"
-                              title="Hay más de un registro con este proveedor y número de remito."
-                            >
-                              Varias coincidencias
-                            </span>
-                          ) : r.CoincidenciasBase?.length === 1 ? (
-                            (() => {
-                              const existing = r.CoincidenciasBase[0];
-                              const manual = existing.origenCarga === 'manual';
-                              const desdePdf = existing.origenCarga === 'pdf' || existing.enriquecidoPorPdf;
-                              const label = desdePdf
-                                ? 'Ya incorporado desde PDF'
-                                : manual
-                                  ? 'Carga manual'
-                                  : 'Origen no identificado';
-                              const selectionKey = keyConciliacion(r, existing);
-                              const selected = selectedDbMatches.includes(selectionKey);
-                              const canComplete = r.CamposACompletar.length > 0 && !desdePdf;
-                              return (
-                                <div className="min-w-[180px] space-y-1">
-                                  <span
-                                    className={`inline-flex whitespace-nowrap rounded border px-1.5 py-0.5 text-[9px] font-semibold ${
-                                      manual
-                                        ? 'border-sky-400/30 bg-sky-400/10 text-sky-200'
-                                        : desdePdf
-                                          ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
-                                          : 'border-slate-400/20 bg-white/[0.04] text-slate-300'
-                                    }`}
-                                  >
-                                    {label}
-                                  </span>
-                                  {r.CamposACompletar.length > 0 ? (
-                                    <p className="max-w-[260px] whitespace-normal text-[9px] leading-snug text-emerald-300">
-                                      Se pueden completar: {r.CamposACompletar.join(', ')}
-                                    </p>
-                                  ) : (
-                                    <p className="text-[9px] text-slate-500">
-                                      Sin campos vacíos compatibles; se omitirá sin modificarlo.
-                                    </p>
-                                  )}
-                                  {r.ConflictosBase.length > 0 && (
-                                    <p className="max-w-[260px] whitespace-normal text-[9px] leading-snug text-amber-300">
-                                      Datos distintos: {r.ConflictosBase.map((item) => item.campo).join(', ')}. No se sobrescriben.
-                                    </p>
-                                  )}
-                                  {canComplete && (
-                                    <label className="flex items-start gap-1 text-[9px] leading-snug text-slate-300">
-                                      <input
-                                        type="checkbox"
-                                        className="mt-0.5 accent-sky-400"
-                                        checked={selected}
-                                        disabled={incorporando}
-                                        onChange={(event) => {
-                                          setSelectedDbMatches((current) =>
-                                            event.target.checked
-                                              ? [...current, selectionKey]
-                                              : current.filter((key) => key !== selectionKey)
-                                          );
-                                        }}
-                                      />
-                                      Confirmo completar solo campos vacíos
-                                      {!manual && ' · origen no identificado'}
-                                    </label>
-                                  )}
-                                </div>
-                              );
-                            })()
-                          ) : (
-                            <span className="text-[10px] text-slate-600">Sin coincidencia</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-1">
                           <div className="flex items-center gap-0.5">
                             {r.Archivo && tieneFaltantes(r) && (
                               <a
@@ -1421,13 +1106,11 @@ export default function TicketsPage() {
         )}
       </Paso>
 
-      {/* Paso 3 — Guardar en el servidor */}
+      {/* Paso 3 — Guardar en el histórico compartido */}
       <Paso
         n="3"
-        titulo={isProductionVercel ? 'Importar las Entradas a producción' : 'Guardar las Entradas revisadas'}
-        ayuda={isProductionVercel
-          ? 'Descargá el Excel compatible y cargalo desde la sección Importar Excel para incorporarlo a producción.'
-          : 'En desarrollo, podés guardar las Entradas revisadas en la base dev.'}
+        titulo="Incorporar al histórico"
+        ayuda="Al confirmar, se agregan los remitos al Excel histórico de la carpeta STOCK y se archivan los PDF."
       >
         <label className="flex items-start gap-2 text-xs text-slate-300">
           <input
@@ -1446,49 +1129,18 @@ export default function TicketsPage() {
           <span>
             {guardandoAprendizaje
               ? 'Guardando lo aprendido…'
-              : isProductionVercel
-                ? 'Confirmo que revisé cada registro contra su PDF original. Esta confirmación no guarda movimientos; después debo descargar el Excel e importarlo desde Importar Excel.'
-                : 'Confirmo que revisé cada registro contra su PDF original. En desarrollo, al tildar también guardo las correcciones en la base de lectura para las próximas tandas.'}
+              : 'Confirmo que revisé cada registro contra su PDF original.'}
           </span>
         </label>
 
-        {isProductionVercel ? (
-          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
-            <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Importación a producción
-            </p>
-            <p className="mb-2 rounded border border-sky-400/20 bg-sky-400/[0.05] p-2 text-[10px] text-sky-100">
-              Este paso no escribe en el Excel de la carpeta compartida ni en la base. Primero descargá el archivo
-              desde el paso 2; después subilo en Importar Excel y confirmá allí la importación a producción.
-            </p>
-            <Requisito
-              ok={erroresLectura.length === 0 && registrosConObservaciones.length === 0}
-              texto={erroresLectura.length
-                ? `${erroresLectura.length} PDF(s) con error`
-                : registrosConObservaciones.length
-                  ? `${registrosConObservaciones.length} registro(s) con campos pendientes`
-                  : 'Todos los campos completos'}
-            />
-            <a href="/incorporar" className="btn-primary mt-3 inline-flex">
-              <IconUpload className="h-4 w-4" />
-              Ir a Importar Excel
-            </a>
-          </div>
-        ) : (
-        <>
         <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Entorno de prueba protegido
-          </p>
-          <p className={`mb-2 text-[10px] font-semibold ${devEnvironment?.enabled ? 'text-emerald-300' : 'text-amber-300'}`}>
-            {devEnvironment
-              ? devEnvironment.enabled
-                ? `Escritura habilitada · local · rama ${devEnvironment.branch}`
-                : `Escritura bloqueada · ${devEnvironment.error || `rama ${devEnvironment.branch}`}`
-              : 'Verificando entorno de desarrollo…'}
+            Histórico de la carpeta compartida
           </p>
           <p className="mb-2 rounded border border-sky-400/20 bg-sky-400/[0.05] p-2 text-[10px] text-sky-100">
-            Al confirmar, solo se modifica la base de desarrollo. No se escribe en Stock-Historico.xlsx ni se mueve ningún PDF.
+            La escritura se realiza desde el navegador en la carpeta STOCK que elegiste: agrega filas a
+            <span className="font-semibold"> Salida\Stock-Historico.xlsx</span> y mueve los PDF de Entrada a procesados.
+            No modifica la base de movimientos de la aplicación.
           </p>
           <ul className="grid gap-1 sm:grid-cols-2">
             <Requisito
@@ -1508,8 +1160,8 @@ export default function TicketsPage() {
               }
             />
             <Requisito
-              ok={!!devEnvironment?.enabled}
-              texto={devEnvironment?.enabled ? `Base protegida · rama ${devEnvironment.branch}` : 'La base dev todavía no está habilitada'}
+              ok={!!carpeta?.handle}
+              texto={carpeta ? `Carpeta STOCK autorizada · ${carpeta.nombre}` : 'Falta elegir la carpeta STOCK'}
             />
             <Requisito
               ok={!!centro && carga === 'Entrada'}
@@ -1520,20 +1172,10 @@ export default function TicketsPage() {
               texto={confirmacionVisual ? 'Revisión visual confirmada' : 'Falta confirmar la revisión visual'}
             />
             <Requisito
-              ok={registrosNuevosDb.length + selectedDbMatches.length > 0}
-              texto={`${registrosNuevosDb.length} Entrada(s) nueva(s) · ${selectedDbMatches.length} coincidencia(s) seleccionada(s) para completar`}
+              ok={registros.length > 0}
+              texto={`${nNuevos} remito(s) nuevo(s) · ${nDuplicados} repetido(s)`}
             />
           </ul>
-          {coincidenciasSinResolver.length > 0 && (
-            <p className="mt-1 text-[10px] text-amber-200">
-              Hay {coincidenciasSinResolver.length} coincidencia(s) sin resolver. Seleccioná completar campos vacíos o quitá las filas ambiguas.
-            </p>
-          )}
-          {registrosPdfYaCargados.length > 0 && (
-            <p className="mt-1 text-[10px] text-amber-200">
-              Se omitirán {registrosPdfYaCargados.length} remito(s) que ya fueron incorporados desde PDF.
-            </p>
-          )}
           {nDuplicados > 0 && (
             <p className="mt-1 text-[10px] text-amber-200">
               Se omitirán {nDuplicados} remito(s) ya presentes en el Excel histórico de referencia.
@@ -1576,26 +1218,22 @@ export default function TicketsPage() {
             type="button"
             onClick={incorporar}
             disabled={
-              !devEnvironment?.enabled ||
+              !carpeta?.handle ||
               carga !== 'Entrada' ||
               registros.length === 0 ||
               incorporando ||
               registrosConObservaciones.length > 0 ||
               erroresLectura.length > 0 ||
-              !confirmacionVisual ||
-              coincidenciasSinResolver.length > 0 ||
-              registrosNuevosDb.length + selectedDbMatches.length === 0
+              !confirmacionVisual
             }
             className="btn-primary"
           >
             <IconCheck className="h-4 w-4" />
             {incorporando
-              ? 'Incorporando…'
-              : `Guardar en dev (${registrosNuevosDb.length} nueva(s) · ${selectedDbMatches.length} completar)`}
+              ? 'Guardando histórico…'
+              : `Guardar en histórico (${nNuevos} nuevo(s) · ${nDuplicados} repetido(s))`}
           </button>
         </div>
-        </>
-        )}
       </Paso>
 
       {procesando && <ProcessingOverlay progreso={progreso} archivos={files.length} />}

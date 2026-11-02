@@ -47,28 +47,32 @@ tildes y espacios en la patente. Si hay más de una asociación, no se elige
 ninguna automáticamente para evitar asignaciones ambiguas. El autocompletado
 solo prepara el formulario; los datos se guardan al confirmar el registro.
 
-## Importar remitos PDF a producción
+## Cargar remitos PDF al histórico compartido
 
-En `/tickets`, revisá los remitos y descargá **Descargar para Importar Excel**.
-El archivo resultante usa la hoja `CARGA` y el formato que acepta `/incorporar`.
-Después, elegí **Entradas** en **Importar Excel**, subí el archivo, revisá la
-vista previa y confirmá la importación. En Vercel, esa confirmación guarda los
-movimientos en la base de producción mediante el flujo existente.
+En `/tickets`, elegí la carpeta `STOCK` compartida, leé los PDF de `Entrada`,
+revisá cada registro y confirmá la incorporación. La sección actualiza
+`Salida\Stock-Historico.xlsx` y archiva los PDF en `procesados`. La escritura
+se realiza desde el navegador, usando el permiso explícito para la carpeta que
+seleccionó el operador; no depende de que Vercel tenga acceso a la red.
 
-El Excel generado conserva remito, proveedor, fecha, producto, centro y peso de
-balanza, además de Neto, chofer, patente y razón social. No modifica
-`Stock-Historico.xlsx` en la carpeta compartida; ese archivo es distinto del
-Excel de importación.
+Usá Chrome o Edge en una PC con acceso a la carpeta compartida. Cerrá el Excel
+histórico antes de confirmar la carga. Los remitos repetidos no se agregan de
+nuevo, aunque sus PDF también se archivan. Este circuito no escribe en
+`data/db.json`.
+
+**Importar Excel** (`/incorporar`) es un flujo separado para cargar planillas a
+la base de movimientos de la aplicación; no reemplaza ni actualiza
+`Stock-Historico.xlsx`.
 
 ## Datos y publicación
 
 - `GITHUB_BRANCH` selecciona la rama de datos que usan las APIs. En desarrollo,
   usa `dev`; no uses `main` para pruebas de escritura.
 - La rama de código `main` está conectada al despliegue de producción en Vercel.
-- Los endpoints de incorporación directa de PDF y del importador de remitos de
-  prueba están limitados a ejecución local con `GITHUB_BRANCH=dev`; rechazan
-  peticiones en Vercel. Publicar el código no habilita esas escrituras en
-  producción.
+- Los endpoints experimentales que incorporan remitos PDF directamente a
+  `data/db.json` están limitados a ejecución local con `GITHUB_BRANCH=dev`;
+  rechazan peticiones en Vercel. No son el flujo de `/tickets` hacia el Excel
+  histórico compartido, que escribe desde el navegador con permiso de carpeta.
 - Antes de publicar, revisa `git status`, la rama actual y la diferencia con el
   remoto. No reemplaces una rama de datos divergente.
 - Nunca versionar `.env.local`, credenciales, PDFs de proveedores ni planillas
