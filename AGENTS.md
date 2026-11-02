@@ -1,5 +1,26 @@
 # AGENTS.md — Notas de trabajo (FALPAT Stock)
 
+## Prioridad al retomar la prueba desde la oficina
+
+La próxima prueba integral se hará desde **otra PC**, no desde este entorno.
+Al iniciar:
+
+1. Actualizar/clonar la rama de código `main` y leer
+   [docs/prueba-integral-oficina.md](./docs/prueba-integral-oficina.md).
+2. Crear `.env.local` en esa PC con las credenciales privadas locales; no
+   copiar el archivo de esta PC ni compartir o imprimir sus secretos.
+3. Confirmar que `GITHUB_BRANCH=dev` antes de iniciar la app. La prueba y las
+   escrituras previstas en su checklist son exclusivamente para desarrollo;
+   nunca cambiar a `main` ni modificar datos de producción.
+4. Completar el checklist de punta a punta. El usuario ya pidió realizar la
+   prueba completa en dev: no volver a pedir autorización para cada paso normal
+   previsto allí. Detenerse y consultar si hay una coincidencia ambigua, datos
+   inesperados, riesgo de afectar otro movimiento o cualquier intento de tocar
+   producción.
+5. Antes de guardar una Entrada desde PDF, comprobar el documento, la identidad
+   del movimiento, proveedor y número de remito. Completar solo campos vacíos;
+   no reemplazar valores existentes ni mover/modificar los PDFs originales.
+
 ## Levantar el entorno de desarrollo (Windows / PowerShell)
 
 **Problema:** ejecutar `npm run dev` o `next dev` en primer plano dentro del tool de shell hace que el
