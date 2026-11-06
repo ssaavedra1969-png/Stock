@@ -2305,24 +2305,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "4f62d816-d614-4617-aaef-50d96feb8f59",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "PIEDRA PARTIDA 6/20",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-14T12:00:00.000Z",
-      "patente": "AH702YZ",
-      "chofer": "AGUERD TOMAS AGUSTIN",
-      "nroRemitoProveedor": "112333",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.46 tn",
-      "pesoBalanza": "35.28 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "4c65193e-a995-4df4-b769-472a5485eec8",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
