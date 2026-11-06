@@ -2071,24 +2071,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "b0ccae1d-0cb5-4810-b626-847c957d0629",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "ARENA GRANITICA 0/6",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-15T12:00:00.000Z",
-      "patente": "AH702XY",
-      "chofer": "PRIMITERRA TONINO",
-      "nroRemitoProveedor": "112363",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.76 tn",
-      "pesoBalanza": "36.78 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "6431ac47-7d35-42fd-b282-17885117068d",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
