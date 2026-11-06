@@ -1711,24 +1711,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "bc8ffb15-7d2b-4159-95bb-03f0f01e5069",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "ARENA MODULO 1.8-1.9",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-09T12:00:00.000Z",
-      "patente": "AG894ER",
-      "chofer": "OCHOA ANIBAL",
-      "nroRemitoProveedor": "65971",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "36.2 tn",
-      "pesoBalanza": "36.88 tn",
-      "planta": "Lujan",
-      "proveedor": "SPOSITO",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "af61a217-da28-4d58-9c56-d3f14bed9e63",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
