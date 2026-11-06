@@ -2071,24 +2071,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "255d3ffd-c1ca-4c1f-9c7e-504354d7d4ad",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "ARENA GRANITICA 0/6",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-14T12:00:00.000Z",
-      "patente": "AH919IQ",
-      "chofer": "PIACENTINI ALEJANDRO MIGUEL",
-      "nroRemitoProveedor": "112353",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.82 tn",
-      "pesoBalanza": "33.96 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "2bc500e1-c05f-4a42-b202-c711c15a0511",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
