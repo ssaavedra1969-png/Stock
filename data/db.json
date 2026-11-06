@@ -2323,24 +2323,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "468c7d0a-5523-435d-88ae-2d78456e9e46",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "CEMENTO",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-14T12:00:00.000Z",
-      "patente": "AH784OY",
-      "chofer": "TOLOSA CESAR",
-      "nroRemitoProveedor": "2740550",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.25 tn",
-      "pesoBalanza": "35.36 tn",
-      "planta": "Lujan",
-      "proveedor": "CEMENTO AVELLANEDA",
-      "cliente": "",
-      "razonSocial": "GRUPO FALPAT SRL"
-    },
-    {
       "id": "255d3ffd-c1ca-4c1f-9c7e-504354d7d4ad",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
