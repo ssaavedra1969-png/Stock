@@ -75,6 +75,25 @@ PDF corresponde a ese movimiento antes de completar datos.
   material o datos del transportista. Los pesos ya reconocidos como plausibles
   se conservan; una lectura dudosa no debe reemplazarse silenciosamente por un
   valor inventado.
+- La página del proveedor se procesa con perfiles separados para SPOSITO, LCE
+  y Cemento Avellaneda. Cada perfil apunta al encabezado del remito y a la fila
+  o celda de material/neto correspondiente; el número también se coteja con la
+  zona de remito de la balanza. Los recortes mejorados aplican escala de grises
+  y contraste incluso cuando no necesitan ampliación. Si las lecturas difieren,
+  el registro queda marcado para revisión en lugar de tratar la lectura como
+  confirmada. Los formatos pueden variar entre escaneos, por lo que siempre hay
+  que cotejar los campos marcados con el PDF original.
+- Los perfiles y sus regiones están centralizados en
+  `lib/tickets/extract.mjs` (`DOCUMENT_PROFILES`). Para ajustar un formato,
+  primero comparar un PDF autorizado con sus zonas de proveedor y balanza y
+  agregar una prueba focalizada en `lib/tickets/extract.test.mjs`; no incorporar
+  correcciones específicas de remitos sin validarlas contra el documento.
+- La razón social se prioriza desde el campo de la primera página. El campo
+  `PROVEEDOR` del ticket de balanza identifica al proveedor del ticket y no se
+  usa como sustituto automático de la razón social. Si el campo no se puede
+  confirmar, se conserva la revisión pendiente en vez de aceptar una semejanza
+  débil. Arena granítica y piedra partida se canonizan por separado aunque
+  compartan granulometría.
 - El Centro debe seleccionarse en la pantalla; no se deduce exclusivamente de
   un nombre de empresa que aparezca en el documento.
 - Los pesos se normalizan a toneladas para la base, manteniendo separados el
