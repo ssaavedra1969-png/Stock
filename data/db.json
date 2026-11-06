@@ -1693,24 +1693,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "7f7d489b-05ee-429f-81d1-e23e6915a607",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "PIEDRA PARTIDA 6/20",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-08T12:00:00.000Z",
-      "patente": "AH604EL",
-      "chofer": "DIERICKX CARLOS",
-      "nroRemitoProveedor": "168348",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.4 tn",
-      "pesoBalanza": "35.48 tn",
-      "planta": "Lujan",
-      "proveedor": "CEMENTO AVELLANEDA",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "ca0f304d-f520-4735-b36b-2113c1104144",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
