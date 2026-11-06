@@ -2305,24 +2305,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "be37ec69-d6eb-460b-b8ce-05d4d9f59912",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "PIEDRA PARTIDA 6/12",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-14T12:00:00.000Z",
-      "patente": "AH702XY",
-      "chofer": "PRIMITERRA TONING",
-      "nroRemitoProveedor": "112316",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "36.22 tn",
-      "pesoBalanza": "35.02 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "4f62d816-d614-4617-aaef-50d96feb8f59",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
