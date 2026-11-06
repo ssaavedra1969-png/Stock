@@ -1909,24 +1909,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "41fabf7e-3f29-4455-a5bd-6e2705e799cb",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "ARENA FINA",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-13T12:00:00.000Z",
-      "patente": "AG266CJ",
-      "chofer": "GARCIA CRISTIAN",
-      "nroRemitoProveedor": "65982",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "36.18 tn",
-      "pesoBalanza": "36.48 tn",
-      "planta": "Lujan",
-      "proveedor": "SPOSITO",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "56f9d0e4-73ec-48e6-9c34-8b1a8083c4a4",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
