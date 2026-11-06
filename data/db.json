@@ -1891,24 +1891,6 @@
       "razonSocial": "ARENERA CANELONES"
     },
     {
-      "id": "9906b47b-b3d7-4c2a-90fe-8596279709db",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "PIEDRA PARTIDA 6/20",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-09T12:00:00.000Z",
-      "patente": "AI417ZZ",
-      "chofer": "VIVAS LEONEL",
-      "nroRemitoProveedor": "112222",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "41.14 tn",
-      "pesoBalanza": "40.82 tn",
-      "planta": "Lujan",
-      "proveedor": "LCE",
-      "cliente": "",
-      "razonSocial": "ALMAJO NORTE"
-    },
-    {
       "id": "08b75a2b-db0b-4749-8f9c-159976ba8c6f",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
