@@ -2287,24 +2287,6 @@
       "razonSocial": "ALMAJO NORTE"
     },
     {
-      "id": "705a115d-3e39-4656-ba42-2855d35771c7",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "ARENA MODULO 1.8-1.9",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-14T12:00:00.000Z",
-      "patente": "AG894ER",
-      "chofer": "OCHOA ANIBAL",
-      "nroRemitoProveedor": "65995",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "35.3 tn",
-      "pesoBalanza": "36.12 tn",
-      "planta": "Lujan",
-      "proveedor": "SPOSITO",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "806dffef-3b1b-4d13-8ed1-56ff6f132673",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
