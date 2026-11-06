@@ -1873,24 +1873,6 @@
       "razonSocial": "GRUPO FALPAT SRL"
     },
     {
-      "id": "09e8db0c-7a21-47c4-ad1f-a6e421681c9b",
-      "createdAt": "2026-11-02T14:04:02.916Z",
-      "carga": "Entrada",
-      "producto": "PIEDRA PARTIDA 6/20",
-      "codigoProducto": "",
-      "fechaRemito": "2026-10-09T12:00:00.000Z",
-      "patente": "AH919KE",
-      "chofer": "LEDESMA CAMILO",
-      "nroRemitoProveedor": "168323",
-      "nroRemitoFalpat": "",
-      "pesoProveedor": "36.14 tn",
-      "pesoBalanza": "36.36 tn",
-      "planta": "Lujan",
-      "proveedor": "CEMENTO AVELLANEDA",
-      "cliente": "",
-      "razonSocial": "ARENERA CANELONES"
-    },
-    {
       "id": "08b75a2b-db0b-4749-8f9c-159976ba8c6f",
       "createdAt": "2026-11-02T14:04:02.916Z",
       "carga": "Entrada",
