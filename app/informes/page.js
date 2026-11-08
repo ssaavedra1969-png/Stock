@@ -17,7 +17,7 @@ import { useMemo, useState, useId } from 'react';
 import Image from 'next/image';
 import { useApp } from '@/context/AppContext';
 import { COMPANY, LOGO_PATH } from '@/lib/company';
-import { formatDate, formatDateTime, todayISO, toMillis, anioMes, descripcionPeriodo } from '@/lib/utils';
+import { formatDate, formatDateTime, todayISO, toMillis, anioMes, descripcionPeriodo, normalizeText } from '@/lib/utils';
 import FiltroPeriodo from '@/components/FiltroPeriodo';
 import FiltrosAplicados from '@/components/FiltrosAplicados';
 import MultiSelect from '@/components/MultiSelect';
@@ -56,6 +56,10 @@ const PIE_COLORS = [
 
 const TIPOS = [
   { value: 'general', label: 'Informe General' },
+  { value: 'por-producto', label: 'Entradas y salidas por producto' },
+  { value: 'por-cliente', label: 'Salidas por cliente' },
+  { value: 'por-proveedor', label: 'Entradas por proveedor' },
+  { value: 'por-chofer', label: 'Viajes por chofer' },
   { value: 'entradas', label: 'Entradas' },
   { value: 'salidas', label: 'Salidas' },
   { value: 'movimientos', label: 'Movimientos' },
@@ -76,6 +80,8 @@ const SECCION_COLORS = {
 
 // Tipos que se leen como listado de movimientos (no agregan por producto).
 const MOVIMIENTO_TIPOS = new Set(['entradas', 'salidas', 'movimientos']);
+const CONTRAPARTE_TIPOS = new Set(['por-cliente', 'por-proveedor']);
+const SIN_CHOFER = '__sin_chofer__';
 
 // ------------------------------------------------------------
 // Helpers
@@ -323,6 +329,7 @@ export default function Informes() {
   const [productosSel, setProductosSel] = useState([]);
   const [planta, setPlanta] = useState('');
   const [contraparte, setContraparte] = useState('');
+  const [chofer, setChofer] = useState('');
 
   // Filtros de período propios de cada sección del Informe General
   // (01 Ventas / 02 Entradas), independientes del filtro global.
@@ -346,12 +353,26 @@ export default function Informes() {
   );
   const contraparteOptions = useMemo(() => {
     const set = new Set();
+    const soloProveedores = ['entradas', 'por-proveedor'].includes(tipo);
+    const soloClientes = ['salidas', 'por-cliente'].includes(tipo);
     for (const r of records) {
-      if (r.proveedor) set.add(r.proveedor);
-      if (r.cliente) set.add(r.cliente);
+      if (!soloClientes && r.proveedor) set.add(r.proveedor);
+      if (!soloProveedores && r.cliente) set.add(r.cliente);
     }
     return [...set].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
-  }, [records]);
+  }, [records, tipo]);
+  const choferOptions = useMemo(
+    () => {
+      const options = [...new Set(records.map((r) => String(r.chofer ?? '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+        .map((nombre) => ({ value: nombre, label: nombre }));
+      if (records.some((r) => !String(r.chofer ?? '').trim())) {
+        options.push({ value: SIN_CHOFER, label: 'Sin chofer' });
+      }
+      return options;
+    },
+    [records]
+  );
 
   const anios = useMemo(
     () =>
@@ -372,15 +393,119 @@ export default function Informes() {
       );
     }
     if (planta) arr = arr.filter((r) => r.planta === planta);
-    if (contraparte) arr = arr.filter((r) => r.proveedor === contraparte || r.cliente === contraparte);
+    if (contraparte) {
+      if (['salidas', 'por-cliente'].includes(tipo)) arr = arr.filter((r) => r.cliente === contraparte);
+      else if (['entradas', 'por-proveedor'].includes(tipo)) arr = arr.filter((r) => r.proveedor === contraparte);
+      else arr = arr.filter((r) => r.proveedor === contraparte || r.cliente === contraparte);
+    }
+    if (tipo === 'por-chofer' && chofer) {
+      arr = arr.filter((r) => {
+        const nombre = String(r.chofer ?? '').trim();
+        return chofer === SIN_CHOFER ? !nombre : nombre === chofer;
+      });
+    }
     return arr;
-  }, [records, productosSel, planta, contraparte]);
+  }, [records, productosSel, planta, contraparte, tipo, chofer]);
 
   // Base completa con el período global (mes/año + desde/hasta), para los informes
   // de Entradas / Salidas / Movimientos / Stock por planta.
   const baseRecords = useMemo(
     () => filtrarPeriodo(baseSinPeriodo, { mes, anio, desde, hasta }),
     [baseSinPeriodo, mes, anio, desde, hasta]
+  );
+
+  const analysisRows = useMemo(() => {
+    if (!['por-cliente', 'por-proveedor', 'por-chofer', 'por-producto'].includes(tipo)) return [];
+    const map = new Map();
+    for (const record of baseRecords) {
+      if (tipo === 'por-cliente' && record.carga !== 'Salida') continue;
+      if (tipo === 'por-proveedor' && record.carga !== 'Entrada') continue;
+      const { num, unit } = pesoDetalle(record.pesoBalanza);
+      const tn = pesoTn(record.pesoBalanza);
+
+      if (['por-cliente', 'por-proveedor', 'por-chofer'].includes(tipo)) {
+        const nombreChofer = String(record.chofer ?? '').trim();
+        const sinChofer = tipo === 'por-chofer' && !nombreChofer;
+        const label = tipo === 'por-cliente'
+          ? (record.cliente || 'Sin cliente')
+          : tipo === 'por-proveedor'
+            ? (record.proveedor || 'Sin proveedor')
+            : (nombreChofer || 'Sin chofer');
+        const key = sinChofer ? SIN_CHOFER : normalizeText(label);
+        if (!map.has(key)) {
+          map.set(key, {
+            nombre: label,
+            sinChofer,
+            movimientos: 0,
+            entradas: 0,
+            entradasTn: 0,
+            salidas: 0,
+            salidasTn: 0,
+            tn: 0,
+            productos: new Set(),
+          });
+        }
+        const item = map.get(key);
+        item.movimientos += 1;
+        item.productos.add(record.codigoProducto || record.producto || '—');
+        if (tipo === 'por-chofer') {
+          if (record.carga === 'Entrada') {
+            item.entradas += 1;
+            item.entradasTn += tn;
+          } else {
+            item.salidas += 1;
+            item.salidasTn += tn;
+          }
+          item.tn += tn;
+        } else {
+          item.tn += tn;
+        }
+      } else {
+        const key = `${record.codigoProducto || record.producto || 'SIN CÓDIGO'}§${unit}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            codigo: record.codigoProducto || '—',
+            producto: record.producto || 'Sin producto',
+            unidad: unit || '—',
+            entradas: 0,
+            entradasTn: 0,
+            salidas: 0,
+            salidasTn: 0,
+          });
+        }
+        const item = map.get(key);
+        if (record.carga === 'Entrada') {
+          item.entradas += 1;
+          item.entradasTn += tn;
+        } else {
+          item.salidas += 1;
+          item.salidasTn += tn;
+        }
+      }
+    }
+
+    const rows = [...map.values()].map((item) => ({
+      ...item,
+      productos: item.productos ? item.productos.size : undefined,
+      volumenTn: item.tn ?? item.entradasTn + item.salidasTn,
+      balanceTn: item.entradasTn - item.salidasTn,
+    }));
+    return rows.sort((a, b) => {
+      if (tipo === 'por-chofer' && a.sinChofer !== b.sinChofer) return a.sinChofer ? 1 : -1;
+      return b.volumenTn - a.volumenTn;
+    });
+  }, [baseRecords, tipo]);
+
+  const analysisSummary = useMemo(
+    () => analysisRows.reduce((summary, row) => ({
+      movimientos: summary.movimientos + (row.movimientos ?? row.entradas + row.salidas),
+      entradas: summary.entradas + (row.entradas || 0),
+      entradasTn: summary.entradasTn + (row.entradasTn || 0),
+      salidas: summary.salidas + (row.salidas || 0),
+      salidasTn: summary.salidasTn + (row.salidasTn || 0),
+      tn: summary.tn + (row.tn || row.volumenTn || 0),
+    }), { movimientos: 0, entradas: 0, entradasTn: 0, salidas: 0, salidasTn: 0, tn: 0 }),
+    [analysisRows]
   );
 
 // Saldo histórico por producto (usado como columna "Saldo").
@@ -443,6 +568,13 @@ export default function Informes() {
   // ----- Totales -----
   const totals = useMemo(() => {
     if (tipo === 'general') return {};
+    if (['por-cliente', 'por-proveedor', 'por-chofer', 'por-producto'].includes(tipo)) {
+      return {
+        count: analysisRows.length,
+        tn: analysisSummary.tn,
+        ...analysisSummary,
+      };
+    }
     if (tipo === 'por-planta') {
       return {
         count: plantaRows.length,
@@ -454,11 +586,35 @@ export default function Informes() {
     }
     const tn = movRows.reduce((s, r) => s + pesoTn(r.pesoBalanza), 0);
     return { count: movRows.length, tn };
-  }, [tipo, plantaRows, movRows]);
+  }, [tipo, plantaRows, movRows, analysisRows, analysisSummary]);
 
   // ----- Datos del gráfico de torta -----
   const pieData = useMemo(() => {
     if (tipo === 'general') return [];
+    if (tipo === 'por-cliente' || tipo === 'por-proveedor') {
+      return buildPie(
+        analysisRows,
+        (row) => row.tn,
+        (row) => row.nombre,
+        () => 'tn'
+      );
+    }
+    if (tipo === 'por-chofer') {
+      return buildPie(
+        analysisRows.filter((row) => !row.sinChofer),
+        (row) => row.tn,
+        (row) => row.nombre,
+        () => 'tn'
+      );
+    }
+    if (tipo === 'por-producto') {
+      return buildPie(
+        analysisRows,
+        (row) => row.volumenTn,
+        (row) => `${row.codigo} · ${row.producto}`,
+        () => 'tn'
+      );
+    }
     if (tipo === 'por-planta') {
       return buildPie(
         plantaRows.filter((r) => r.stockHist > 0.0001),
@@ -473,7 +629,7 @@ export default function Informes() {
       (r) => `${r.codigoProducto || '—'} · ${r.producto || '—'}`,
       () => 'tn'
     );
-  }, [tipo, plantaRows, movRows]);
+  }, [tipo, plantaRows, movRows, analysisRows]);
 
 // ==========================================================
   // Datos del INFORME GENERAL (gerencial, 5 secciones)
@@ -523,7 +679,7 @@ export default function Informes() {
       })
       .sort((a, b) => a.producto.localeCompare(b.producto, 'es', { sensitivity: 'base' }));
     const stockPie = buildPie(
-      stockFechaRows.filter((r) => r.stock > 0.0001),
+      stockFechaRows.filter((r) => r.unit === 'tn' && r.stock > 0.0001),
       (r) => r.stock,
       (r) => `${r.codigo} · ${r.producto}`,
       () => 'tn'
@@ -571,7 +727,7 @@ export default function Informes() {
 return {
       ventas: {
         rows: ventasRows,
-        pie: buildPie(ventasRows, (r) => r.cant, (r) => `${r.codigo} · ${r.producto}`, (r) => r.unit),
+        pie: buildPie(ventasRows.filter((r) => r.unit === 'tn'), (r) => r.cant, (r) => `${r.codigo} · ${r.producto}`, (r) => r.unit),
         totalTn: tnSal,
         movs: movsSal,
         contrapartes: clientes,
@@ -580,7 +736,7 @@ return {
       },
       entradas: {
         rows: entradasRows,
-        pie: buildPie(entradasRows, (r) => r.cant, (r) => `${r.codigo} · ${r.producto}`, (r) => r.unit),
+        pie: buildPie(entradasRows.filter((r) => r.unit === 'tn'), (r) => r.cant, (r) => `${r.codigo} · ${r.producto}`, (r) => r.unit),
         totalTn: tnEnt,
         movs: movsEnt,
         contrapartes: proveedores,
@@ -595,10 +751,24 @@ return {
 
   // ----- Etiquetas del informe -----
   const reportTitle = TIPOS.find((t) => t.value === tipo)?.label || 'Informe';
+  const reportDisplayTitle = tipo === 'general' ? 'Informe General' : `Informe de ${reportTitle}`;
   const esMovimiento = MOVIMIENTO_TIPOS.has(tipo);
+  const contraparteLabel = ['salidas', 'por-cliente'].includes(tipo)
+    ? 'Cliente'
+    : ['entradas', 'por-proveedor'].includes(tipo)
+      ? 'Proveedor'
+      : 'Cliente / proveedor';
 
-  const donutCenterTop = tipo === 'por-planta' ? 'Stock (tn)' : 'Total (tn)';
-  const donutCenterBottom = tipo === 'por-planta' ? fmtNum(totals.stock) : fmtNum(totals.tn);
+  const donutCenterTop = tipo === 'por-planta'
+    ? 'Stock (tn)'
+    : tipo === 'por-chofer'
+      ? 'Volumen movido (tn)'
+      : 'Total (tn)';
+  const donutCenterBottom = tipo === 'por-planta'
+    ? fmtNum(totals.stock)
+    : tipo === 'por-chofer'
+      ? fmtNum(pieData.reduce((sum, item) => sum + item.value, 0))
+      : fmtNum(totals.tn);
 const periodoLabel = useMemo(() => {
     if (tipo === 'general') {
       return 'Período: por sección (01 Ventas · 02 Entradas)';
@@ -612,9 +782,12 @@ const periodoLabel = useMemo(() => {
     const parts = [periodoLabel];
     if (productosSel.length > 0) parts.push(`Producto: ${productosSel.join(', ')}`);
     if (planta) parts.push(`Planta: ${planta}`);
-    if (contraparte) parts.push(`Origen/Destino: ${contraparte}`);
+    if (contraparte) parts.push(`${contraparteLabel}: ${contraparte}`);
+    if (tipo === 'por-chofer' && chofer) {
+      parts.push(`Chofer: ${chofer === SIN_CHOFER ? 'Sin chofer' : chofer}`);
+    }
     return parts.join('  ·  ');
-  }, [periodoLabel, productosSel, planta, contraparte]);
+  }, [periodoLabel, productosSel, planta, contraparte, contraparteLabel, tipo, chofer]);
 
   const filtrosAplicados = useMemo(() => {
     const items = [];
@@ -628,14 +801,18 @@ const periodoLabel = useMemo(() => {
     }
     if (productosSel.length > 0) items.push(`Producto: ${productosSel.join(', ')}`);
     if (planta) items.push(`Planta: ${planta}`);
-    if (contraparte) items.push(`Origen/Destino: ${contraparte}`);
+    if (contraparte) items.push(`${contraparteLabel}: ${contraparte}`);
+    if (tipo === 'por-chofer' && chofer) {
+      items.push(`Chofer: ${chofer === SIN_CHOFER ? 'Sin chofer' : chofer}`);
+    }
     return items;
-  }, [tipo, mes, anio, desde, hasta, ventasF, entradasF, productosSel, planta, contraparte]);
+  }, [tipo, mes, anio, desde, hasta, ventasF, entradasF, productosSel, planta, contraparte, contraparteLabel, chofer]);
 
   function clearFilters() {
     setProductosSel([]);
     setPlanta('');
     setContraparte('');
+    setChofer('');
     setDesde('');
     setHasta('');
     setMes('');
@@ -649,6 +826,57 @@ const periodoLabel = useMemo(() => {
   // ==========================================================
   const tableData = useMemo(() => {
     if (tipo === 'general') return { head: [], rows: [], foot: [] };
+    if (tipo === 'por-cliente' || tipo === 'por-proveedor') {
+      const label = tipo === 'por-cliente' ? 'Cliente' : 'Proveedor';
+      const totalTn = analysisRows.reduce((sum, row) => sum + row.tn, 0);
+      return {
+        head: [label, 'Movimientos', 'Productos', 'Volumen (tn)', '% del total'],
+        rows: analysisRows.map((row) => [
+          row.nombre,
+          row.movimientos,
+          row.productos,
+          fmtNum(row.tn),
+          totalTn ? `${((row.tn / totalTn) * 100).toFixed(1)}%` : '0.0%',
+        ]),
+        foot: [{ text: `Total: ${analysisSummary.movimientos} movimientos · ${fmtNum(totalTn)} tn`, colSpan: 5 }],
+      };
+    }
+    if (tipo === 'por-chofer') {
+      return {
+        head: ['Chofer', 'Viajes', 'Entradas (tn)', 'Salidas (tn)', 'Total movido (tn)', 'Productos'],
+        rows: analysisRows.map((row) => [
+          row.nombre,
+          row.movimientos,
+          fmtNum(row.entradasTn),
+          fmtNum(row.salidasTn),
+          fmtNum(row.tn),
+          row.productos,
+        ]),
+        foot: [{
+          text: `Total: ${analysisSummary.movimientos} viajes · ${fmtNum(analysisSummary.entradasTn)} tn entradas · ${fmtNum(analysisSummary.salidasTn)} tn salidas · ${fmtNum(analysisSummary.tn)} tn movidas`,
+          colSpan: 6,
+        }],
+      };
+    }
+    if (tipo === 'por-producto') {
+      return {
+        head: ['Producto', 'Código', 'Unidad', 'Entradas', 'Entradas (tn)', 'Salidas', 'Salidas (tn)', 'Balance (tn)'],
+        rows: analysisRows.map((row) => [
+          row.producto,
+          row.codigo,
+          row.unidad,
+          row.entradas,
+          fmtNum(row.entradasTn),
+          row.salidas,
+          fmtNum(row.salidasTn),
+          fmtNum(row.balanceTn),
+        ]),
+        foot: [{
+          text: `Total: ${analysisSummary.entradas} entradas · ${fmtNum(analysisSummary.entradasTn)} tn · ${analysisSummary.salidas} salidas · ${fmtNum(analysisSummary.salidasTn)} tn`,
+          colSpan: 8,
+        }],
+      };
+    }
     if (tipo === 'por-planta') {
       return {
         head: ['Planta', 'Productos', 'Entradas (tn)', 'Salidas (tn)', 'Stock (tn)', 'Movimientos'],
@@ -693,113 +921,342 @@ const periodoLabel = useMemo(() => {
       { text: `Total: ${totals.count} movimientos · ${fmtNum(totals.tn)} tn`, colSpan: head.length },
     ];
     return { head, rows, foot };
-  }, [tipo, plantaRows, movRows, totals, esMovimiento]);
+  }, [tipo, analysisRows, analysisSummary, plantaRows, movRows, totals, esMovimiento]);
 
   // ==========================================================
   // Exportación a Excel (.xlsx)
   // ==========================================================
   async function handleExportExcel() {
     try {
-      const XLSX = await import('xlsx');
+      const { default: ExcelJS } = await import('exceljs');
       const hoy = formatDateTime(new Date());
+      const nombreArchivo = tipo === 'general'
+        ? 'Informe_General'
+        : `Informe_${reportTitle.replace(/\s+/g, '_')}`;
+      const wb = new ExcelJS.Workbook();
+      wb.creator = COMPANY.name;
+      wb.company = COMPANY.name;
+      wb.subject = reportTitle;
+      wb.title = reportDisplayTitle;
+      wb.created = new Date();
+      wb.modified = new Date();
 
-      // --- Informe General: un libro con 5 hojas ---
-      if (tipo === 'general' && generalData) {
-        const wb = XLSX.utils.book_new();
-const cab = (arr, titulo, labelPeriodo) => {
-          arr.push([COMPANY.name]);
-          arr.push([`INFORME GENERAL — ${titulo.toUpperCase()}`]);
-          arr.push([labelPeriodo || periodoLabel]);
-          arr.push([`Generado: ${hoy}`]);
-          arr.push([]);
+      const logo = await getLogoDataUrl();
+      const imageId = wb.addImage({
+        base64: logo.slice(logo.indexOf(',') + 1),
+        extension: 'png',
+      });
+      const companyDetails = [
+        COMPANY.address,
+        [COMPANY.phone, COMPANY.email, COMPANY.cuit && `CUIT ${COMPANY.cuit}`].filter(Boolean).join(' · '),
+        COMPANY.web,
+      ].filter(Boolean);
+
+      const excelNumber = (value, header) => {
+        if (typeof value === 'number') return value;
+        if (typeof value !== 'string') return value ?? '';
+        const text = value.trim();
+        if (/%$/.test(text) && /%/.test(header)) {
+          const percentage = Number(text.slice(0, -1).replace(',', '.'));
+          return Number.isFinite(percentage) ? percentage / 100 : value;
+        }
+        const isNumericColumn =
+          /movimientos|viajes|productos|entradas hist\.|salidas hist\.|stock actual|vendido|recibido|entradas \(tn\)|salidas \(tn\)|balance \(tn\)|total movido \(tn\)|volumen \(tn\)|stock \(tn\)|diferencia \(tn\)/i.test(header);
+        if (!isNumericColumn || !/^-?(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d+)?$/.test(text)) return value;
+        const number = Number(text.replace(/\./g, '').replace(',', '.'));
+        return Number.isFinite(number) ? number : value;
+      };
+
+      const buildSheet = ({
+        name,
+        title,
+        headers,
+        rows,
+        footTexts = [],
+        period = periodoLabel,
+        filters = filterLabel,
+        summary = [],
+      }) => {
+        const ws = wb.addWorksheet(name);
+        ws.properties.defaultRowHeight = 19;
+        ws.views = [{ state: 'frozen', ySplit: 13, showGridLines: false }];
+        ws.pageSetup = {
+          paperSize: ws.PAPER_SIZE_A4,
+          orientation: headers.length >= 8 ? 'landscape' : 'portrait',
+          fitToPage: true,
+          fitToWidth: 1,
+          fitToHeight: 0,
+          margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.25 },
         };
-        function hoja(nombre, tituloHoja, head, rows, footTexts, labelPeriodo) {
-          const aoa2 = [];
-          cab(aoa2, tituloHoja, labelPeriodo);
-          aoa2.push(head);
-          for (const r of rows) aoa2.push(r.map((c) => pdfSafe(c)));
-          if (footTexts?.length) {
-            aoa2.push([]);
-            aoa2.push(footTexts.map((c) => pdfSafe(c)));
+        ws.headerFooter.oddFooter = `&L${COMPANY.name}&CInforme de ${title}&RPágina &P de &N`;
+        ws.columns = headers.map((header, index) => {
+          const longestValue = rows.reduce(
+            (longest, row) => Math.max(longest, String(row[index] ?? '').length),
+            String(header).length
+          );
+          return { width: Math.min(42, Math.max(index === 0 ? 24 : 14, longestValue + 2)) };
+        });
+
+        const lastColumn = headers.length;
+        const lastLetter = ws.getColumn(lastColumn).letter;
+        const headerRows = [
+          [1, COMPANY.name, 18, '172554', 'FFFFFF'],
+          [2, COMPANY.tagline, 22, '334155', 'FFFFFF'],
+          [3, companyDetails[0] || '', 18, '475569', 'FFFFFF'],
+          [4, companyDetails.slice(1).join(' · '), 18, '475569', 'FFFFFF'],
+        ];
+        headerRows.forEach(([rowNumber, value, height, color, fontColor]) => {
+          ws.mergeCells(`C${rowNumber}:${lastLetter}${rowNumber}`);
+          const cell = ws.getCell(`C${rowNumber}`);
+          cell.value = pdfSafe(value);
+          cell.font = {
+            name: 'Aptos',
+            size: rowNumber === 1 ? 17 : rowNumber === 2 ? 11 : 9,
+            bold: rowNumber <= 2,
+            color: { argb: `FF${fontColor}` },
+          };
+          cell.alignment = { vertical: 'middle', wrapText: true };
+          ws.getRow(rowNumber).height = height;
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${color}` } };
+        });
+        ws.addImage(imageId, {
+          tl: { col: 0.12, row: 0.15 },
+          ext: { width: 68, height: 68 },
+        });
+        ws.getRow(5).height = 8;
+
+        const titleCell = ws.getCell('A6');
+        ws.mergeCells(`A6:${lastLetter}6`);
+        titleCell.value = pdfSafe(title.toUpperCase());
+        titleCell.font = { name: 'Aptos Display', size: 15, bold: true, color: { argb: 'FF0F172A' } };
+        titleCell.alignment = { vertical: 'middle' };
+        ws.getRow(6).height = 28;
+
+        const metadata = [
+          ['Período', period],
+          ['Generado', hoy],
+          ['Filtros aplicados', filters || 'Sin filtros'],
+        ];
+        metadata.forEach(([label, value], index) => {
+          const row = 7 + index;
+          ws.getCell(`A${row}`).value = label;
+          ws.getCell(`A${row}`).font = { name: 'Aptos', size: 9, bold: true, color: { argb: 'FF475569' } };
+          ws.mergeCells(`B${row}:${lastLetter}${row}`);
+          const valueCell = ws.getCell(`B${row}`);
+          valueCell.value = pdfSafe(value || '—');
+          valueCell.font = { name: 'Aptos', size: 9, color: { argb: 'FF334155' } };
+          valueCell.alignment = { vertical: 'middle', wrapText: true };
+          ws.getRow(row).height = index === 2 && String(value || '').length > 100 ? 30 : 19;
+        });
+
+        let rowCursor = 11;
+        if (summary.length) {
+          ws.mergeCells(`A${rowCursor}:${lastLetter}${rowCursor}`);
+          const summaryTitle = ws.getCell(`A${rowCursor}`);
+          summaryTitle.value = 'RESUMEN EJECUTIVO';
+          summaryTitle.font = { name: 'Aptos', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+          summaryTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+          summaryTitle.alignment = { vertical: 'middle' };
+          ws.getRow(rowCursor).height = 19;
+          rowCursor += 1;
+          summary.forEach(([label, value]) => {
+            ws.mergeCells(`A${rowCursor}:B${rowCursor}`);
+            ws.mergeCells(`C${rowCursor}:${lastLetter}${rowCursor}`);
+            const labelCell = ws.getCell(`A${rowCursor}`);
+            const valueCell = ws.getCell(`C${rowCursor}`);
+            labelCell.value = label;
+            labelCell.font = { name: 'Aptos', size: 9, bold: true, color: { argb: 'FF475569' } };
+            labelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+            valueCell.value = value;
+            valueCell.font = { name: 'Aptos', size: 10, bold: true, color: { argb: 'FF0F172A' } };
+            valueCell.alignment = { horizontal: 'right', vertical: 'middle' };
+            if (typeof value === 'number') valueCell.numFmt = Number.isInteger(value) ? '#,##0' : '#,##0.00;[Red]-#,##0.00';
+            ws.getRow(rowCursor).height = 20;
+            rowCursor += 1;
+          });
+        }
+        rowCursor += 1;
+        const tableHeaderRow = rowCursor;
+        const tableRows = rows.map((row) =>
+          row.map((value, index) => excelNumber(value, headers[index] || ''))
+        );
+        ws.addTable({
+          name: `Report${wb.worksheets.length}`,
+          ref: `A${tableHeaderRow}`,
+          headerRow: true,
+          style: { theme: 'TableStyleMedium2', showRowStripes: true },
+          columns: headers.map((name) => ({ name, filterButton: true })),
+          rows: tableRows,
+        });
+        const tableHeader = ws.getRow(tableHeaderRow);
+        tableHeader.height = 28;
+        tableHeader.eachCell((cell) => {
+          cell.font = { name: 'Aptos', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          cell.border = { bottom: { style: 'medium', color: { argb: 'FF0F766E' } } };
+        });
+        for (let index = 0; index < headers.length; index += 1) {
+          const header = headers[index];
+          const isPercent = /%/.test(header);
+          const isAmount =
+            /\(tn\)|vendido|recibido|stock actual|entradas hist\.|salidas hist\.|diferencia/i.test(header);
+          if (isPercent || isAmount) {
+            for (let row = tableHeaderRow + 1; row <= tableHeaderRow + rows.length; row += 1) {
+              const cell = ws.getCell(row, index + 1);
+              cell.numFmt = isPercent ? '0.0%' : '#,##0.00;[Red]-#,##0.00;–';
+              cell.alignment = { horizontal: 'right', vertical: 'middle' };
+            }
           }
-          const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
-          ws2['!cols'] = Array.from({ length: head.length }, () => ({ wch: 18 }));
-          XLSX.utils.book_append_sheet(wb, ws2, nombre);
         }
 
-        hoja(
-          'Ventas',
-          'Ventas (salidas)',
-          ['Producto', 'Código', 'Unidad', 'Vendido', 'Movimientos', '% del total'],
-          generalData.ventas.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.cant), r.movs, `${r.pct.toFixed(1)}%`]),
-          [`Total: ${fmtNum(generalData.ventas.totalTn)} tn · ${generalData.ventas.movs} remitos · ${generalData.ventas.contrapartes} clientes`],
-          `Período sección 01 · ${generalData.ventas.periodo}`
-        );
-        hoja(
-          'Entradas',
-          'Entradas de materiales',
-          ['Producto', 'Código', 'Unidad', 'Recibido', 'Movimientos', '% del total'],
-          generalData.entradas.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.cant), r.movs, `${r.pct.toFixed(1)}%`]),
-          [`Total: ${fmtNum(generalData.entradas.totalTn)} tn · ${generalData.entradas.movs} remitos · ${generalData.entradas.contrapartes} proveedores`],
-          `Período sección 02 · ${generalData.entradas.periodo}`
-        );
-        hoja(
-          'Stock',
-          'Stock a la fecha',
-          ['Producto', 'Código', 'Unidad', 'Entradas hist.', 'Salidas hist.', 'Stock actual', 'Último mov.'],
-          generalData.stock.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.e), fmtNum(r.s), fmtNum(r.stock), r.ultimo]),
-          [`Total: ${fmtNum(generalData.stock.totalTn)} tn en ${generalData.stock.n} materiales`]
-        );
-        hoja(
-          'Evolucion',
-          'Evolución mensual',
-          ['Mes', 'Entradas (tn)', 'Salidas (tn)', 'Diferencia (tn)'],
-          generalData.evo.meses.map((m) => [m.label, fmtNum(m.e), fmtNum(m.s), fmtNum(m.e - m.s)]),
-          [`Pico de ventas: ${generalData.evo.pico?.label || '—'} (${fmtNum(generalData.evo.pico?.s || 0)} tn)`]
-        );
-        hoja(
-          'Alertas',
-          'Alertas de stock',
-          ['Producto', 'Código', 'Unidad', 'Stock actual', 'Estado'],
-          generalData.alertas.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.stock), r.estado]),
-          generalData.alertas.rows.length ? [] : ['Sin alertas: ningún material con stock negativo o cero']
-        );
+        if (footTexts.length) {
+          const footerRow = tableHeaderRow + rows.length + 2;
+          ws.mergeCells(`A${footerRow}:${lastLetter}${footerRow}`);
+          const footer = ws.getCell(`A${footerRow}`);
+          footer.value = footTexts.map(pdfSafe).join(' · ');
+          footer.font = { name: 'Aptos', size: 9, bold: true, color: { argb: 'FF0F172A' } };
+          footer.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+          footer.alignment = { vertical: 'middle', wrapText: true };
+          ws.getRow(footerRow).height = 26;
+        }
+        ws.views = [{ state: 'frozen', ySplit: tableHeaderRow, showGridLines: false }];
+        ws.pageSetup.printArea = `A1:${lastLetter}${tableHeaderRow + rows.length + (footTexts.length ? 2 : 0)}`;
+        ws.pageSetup.printTitlesRow = `${tableHeaderRow}:${tableHeaderRow}`;
+        return ws;
+      };
 
-        XLSX.writeFile(wb, `Informe_General_${todayISO()}.xlsx`);
-        showToast('Informe General exportado a Excel (5 hojas)');
-        return;
+      if (tipo === 'general' && generalData) {
+        buildSheet({
+          name: 'Ventas',
+          title: 'Informe General · Ventas (salidas)',
+          headers: ['Producto', 'Código', 'Unidad', 'Vendido', 'Movimientos', '% del total'],
+          rows: generalData.ventas.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.cant), r.movs, `${r.pct.toFixed(1)}%`]),
+          footTexts: [`Total: ${fmtNum(generalData.ventas.totalTn)} tn`, `${generalData.ventas.movs} remitos`, `${generalData.ventas.contrapartes} clientes`],
+          period: `Sección 01 · ${generalData.ventas.periodo}`,
+          summary: [
+            ['Ventas (tn)', generalData.ventas.totalTn],
+            ['Remitos', generalData.ventas.movs],
+            ['Clientes', generalData.ventas.contrapartes],
+            ['Promedio por venta (tn)', generalData.ventas.promedio],
+          ],
+        });
+        buildSheet({
+          name: 'Entradas',
+          title: 'Informe General · Entradas',
+          headers: ['Producto', 'Código', 'Unidad', 'Recibido', 'Movimientos', '% del total'],
+          rows: generalData.entradas.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.cant), r.movs, `${r.pct.toFixed(1)}%`]),
+          footTexts: [`Total: ${fmtNum(generalData.entradas.totalTn)} tn`, `${generalData.entradas.movs} remitos`, `${generalData.entradas.contrapartes} proveedores`],
+          period: `Sección 02 · ${generalData.entradas.periodo}`,
+          summary: [
+            ['Entradas (tn)', generalData.entradas.totalTn],
+            ['Remitos', generalData.entradas.movs],
+            ['Proveedores', generalData.entradas.contrapartes],
+            ['Promedio por ingreso (tn)', generalData.entradas.promedio],
+          ],
+        });
+        buildSheet({
+          name: 'Stock',
+          title: 'Informe General · Stock a la fecha',
+          headers: ['Producto', 'Código', 'Unidad', 'Entradas hist.', 'Salidas hist.', 'Stock actual', 'Último mov.'],
+          rows: generalData.stock.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.e), fmtNum(r.s), fmtNum(r.stock), r.ultimo]),
+          footTexts: [`Stock total: ${fmtNum(generalData.stock.totalTn)} tn`, `${generalData.stock.n} materiales`],
+          period: 'Acumulado histórico · sin filtros de período',
+          summary: [
+            ['Stock total (tn)', generalData.stock.totalTn],
+            ['Materiales', generalData.stock.n],
+            ['Stock negativo', generalData.stock.negativos],
+            ['Sin existencias', generalData.stock.ceros],
+          ],
+        });
+        buildSheet({
+          name: 'Evolucion',
+          title: 'Informe General · Evolución mensual',
+          headers: ['Mes', 'Entradas (tn)', 'Salidas (tn)', 'Diferencia (tn)'],
+          rows: generalData.evo.meses.map((m) => [m.label, fmtNum(m.e), fmtNum(m.s), fmtNum(m.e - m.s)]),
+          footTexts: [`Pico de ventas: ${generalData.evo.pico?.label || '—'}`, `${fmtNum(generalData.evo.pico?.s || 0)} tn`],
+          period: 'Últimos 12 meses con movimientos · historial completo',
+          summary: [
+            ['Promedio mensual de entradas (tn)', generalData.evo.promE],
+            ['Promedio mensual de salidas (tn)', generalData.evo.promS],
+            ['Mes pico de ventas', generalData.evo.pico?.label || '—'],
+            ['Salidas del mes pico (tn)', generalData.evo.pico?.s || 0],
+          ],
+        });
+        buildSheet({
+          name: 'Alertas',
+          title: 'Informe General · Alertas de stock',
+          headers: ['Producto', 'Código', 'Unidad', 'Stock actual', 'Estado'],
+          rows: generalData.alertas.rows.map((r) => [r.producto, r.codigo, r.unit, fmtNum(r.stock), r.estado]),
+          footTexts: generalData.alertas.rows.length
+            ? [`Materiales a revisar: ${generalData.alertas.rows.length}`]
+            : ['Sin alertas: ningún material con stock negativo o cero'],
+          period: 'Estado actual calculado sobre el historial completo',
+          summary: [
+            ['Materiales a revisar', generalData.alertas.rows.length],
+            ['Stock negativo', generalData.stock.negativos],
+            ['Sin existencias', generalData.stock.ceros],
+          ],
+        });
+      } else {
+        const summary = tipo === 'por-chofer'
+          ? [
+              ['Choferes identificados', analysisRows.filter((row) => !row.sinChofer).length],
+              ['Viajes', totals.movimientos],
+              ['Entradas (tn)', totals.entradasTn],
+              ['Salidas (tn)', totals.salidasTn],
+              ['Total movido (tn)', totals.tn],
+            ]
+          : tipo === 'por-cliente' || tipo === 'por-proveedor'
+            ? [
+                [tipo === 'por-cliente' ? 'Clientes' : 'Proveedores', totals.count],
+                ['Movimientos', totals.movimientos],
+                ['Volumen (tn)', totals.tn],
+              ]
+            : tipo === 'por-producto'
+              ? [
+                  ['Productos', totals.count],
+                  ['Entradas (tn)', totals.entradasTn],
+                  ['Salidas (tn)', totals.salidasTn],
+                  ['Balance (tn)', totals.entradasTn - totals.salidasTn],
+                ]
+              : tipo === 'por-planta'
+                ? [
+                    ['Plantas', totals.count],
+                    ['Entradas (tn)', totals.entradas],
+                    ['Salidas (tn)', totals.salidas],
+                    ['Stock (tn)', totals.stock],
+                  ]
+                : [
+                    ['Movimientos', totals.count],
+                    ['Volumen (tn)', totals.tn],
+                  ];
+        buildSheet({
+          name: reportTitle.slice(0, 31),
+          title: reportDisplayTitle,
+          headers: tableData.head,
+          rows: tableData.rows,
+          footTexts: tableData.foot.map((item) => item.text),
+          summary,
+        });
       }
 
-      const nCols = tableData.head.length;
-      const aoa = [];
-      aoa.push([COMPANY.name]);
-      aoa.push([COMPANY.tagline]);
-      aoa.push([]);
-      aoa.push([`INFORME DE ${reportTitle.toUpperCase()}`]);
-      aoa.push([periodoLabel]);
-      aoa.push([`Generado: ${hoy}`]);
-      aoa.push([`Filtros: ${filterLabel}`]);
-      aoa.push([]);
-      aoa.push(tableData.head);
-      for (const row of tableData.rows) aoa.push(row.map((c) => pdfSafe(c)));
-      aoa.push([]);
-      aoa.push(tableData.foot.map((f) => pdfSafe(f.text)));
-
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      ws['!cols'] = Array.from({ length: nCols }, () => ({ wch: 18 }));
-      ws['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: nCols - 1 } },
-        { s: { r: 1, c: 0 }, e: { r: 1, c: nCols - 1 } },
-        { s: { r: 3, c: 0 }, e: { r: 3, c: nCols - 1 } },
-        { s: { r: 4, c: 0 }, e: { r: 4, c: nCols - 1 } },
-        { s: { r: 5, c: 0 }, e: { r: 5, c: nCols - 1 } },
-        { s: { r: 6, c: 0 }, e: { r: 6, c: nCols - 1 } },
-      ];
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, reportTitle.slice(0, 31));
-      XLSX.writeFile(wb, `Informe_${reportTitle.replace(/\s+/g, '')}_${todayISO()}.xlsx`);
-      showToast('Informe exportado a Excel');
+      wb.views = [{ activeTab: 0, firstSheet: 0, visibility: 'visible' }];
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${nombreArchivo}_${todayISO()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast(tipo === 'general'
+        ? 'Informe General exportado a Excel (5 hojas profesionales)'
+        : 'Informe exportado a Excel');
     } catch (e) {
       showToast(`Error al exportar Excel: ${e.message}`, 'error');
     }
@@ -811,17 +1268,21 @@ const cab = (arr, titulo, labelPeriodo) => {
   let logoCache = null;
   async function getLogoDataUrl() {
     if (logoCache !== null) return logoCache;
-    try {
-      const res = await fetch(LOGO_PATH);
-      const blob = await res.blob();
-      logoCache = await new Promise((resolve) => {
-        const fr = new FileReader();
-        fr.onloadend = () => resolve(fr.result);
-        fr.readAsDataURL(blob);
-      });
-    } catch {
-      logoCache = null;
-    }
+    const res = await fetch(LOGO_PATH);
+    if (!res.ok) throw new Error(`No se pudo cargar el logo de la empresa (HTTP ${res.status})`);
+    const blob = await res.blob();
+    logoCache = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => {
+        if (typeof fr.result !== 'string') {
+          reject(new Error('No se pudo preparar el logo de la empresa'));
+          return;
+        }
+        resolve(fr.result);
+      };
+      fr.onerror = () => reject(new Error('No se pudo leer el logo de la empresa'));
+      fr.readAsDataURL(blob);
+    });
     return logoCache;
   }
 
@@ -829,6 +1290,7 @@ const cab = (arr, titulo, labelPeriodo) => {
   // La suma de cada fila queda SIEMPRE dentro del área imprimible:
   //   portrait A4 = 210mm -> usable 190 · landscape = 297mm -> usable 277.
   const ANCHOS_PDF = {
+    'por-chofer': [{ w: 50 }, { w: 16, a: 'right' }, { w: 28, a: 'right' }, { w: 28, a: 'right' }, { w: 32, a: 'right' }, { w: 20, a: 'right' }],
     'por-planta': [{ w: 40 }, { w: 20, a: 'center' }, { w: 26, a: 'right' }, { w: 26, a: 'right' }, { w: 26, a: 'right' }, { w: 22, a: 'right' }],
     entradas: [{ w: 17 }, { w: 42 }, { w: 11, a: 'center' }, { w: 15, a: 'center' }, { w: 32 }, { w: 14, a: 'center' }, { w: 26 }, { w: 19, a: 'right' }, { w: 21, a: 'right' }, { w: 13, a: 'center' }],
     salidas: null, // igual que entradas
@@ -877,7 +1339,7 @@ const cab = (arr, titulo, labelPeriodo) => {
       }
 
       // --- Encabezado: banda con logo + empresa + título ---
-      const headH = 24;
+      const headH = 30;
       conOpacidad(0.07, () => {
         doc.setFillColor(15, 23, 42);
         doc.roundedRect(margin + 0.5, margin + 0.9, usable, headH, 3, 3, 'F');
@@ -896,9 +1358,18 @@ const cab = (arr, titulo, labelPeriodo) => {
       doc.setFontSize(8.5);
       doc.setTextColor(71, 85, 105);
       doc.text(pdfSafe(COMPANY.tagline), margin + 27, margin + 15.5);
+      doc.setFontSize(6.2);
+      doc.text(pdfSafe(COMPANY.address), margin + 27, margin + 20);
+      const datosContacto = [
+        COMPANY.phone,
+        COMPANY.email,
+        COMPANY.cuit && `CUIT ${COMPANY.cuit}`,
+        COMPANY.web,
+      ].filter(Boolean).join(' · ');
+      if (datosContacto) doc.text(pdfSafe(datosContacto), margin + 27, margin + 24);
 
       // Título a la derecha: se achica si no entra en su mitad.
-      const titulo = pdfSafe(`INFORME DE ${reportTitle.toUpperCase()}`);
+      const titulo = pdfSafe(reportDisplayTitle.toUpperCase());
       let fsTitulo = 13;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(fsTitulo);
@@ -914,18 +1385,32 @@ const cab = (arr, titulo, labelPeriodo) => {
       doc.text(pdfSafe(periodoLabel), pageW - margin - 5, margin + 14, { align: 'right' });
       doc.text(pdfSafe(`Generado: ${formatDateTime(new Date())}`), pageW - margin - 5, margin + 18, { align: 'right' });
 
-      // Filtros debajo de la banda: envuelto al ancho útil, máx 2 líneas.
+      // Filtros completos del corte, envueltos sin omitir criterios seleccionados.
       let cursorY = margin + headH + 5.5;
+      const filtrosGenerales = tipo === 'general'
+        ? [
+            `Ventas (01): ${descripcionPeriodo(ventasF.mes, ventasF.anio, ventasF.desde, ventasF.hasta)}`,
+            `Entradas (02): ${descripcionPeriodo(entradasF.mes, entradasF.anio, entradasF.desde, entradasF.hasta)}`,
+            ...productosSel.map((producto) => `Producto: ${producto}`),
+            ...(planta ? [`Planta: ${planta}`] : []),
+            ...(contraparte ? [`${contraparteLabel}: ${contraparte}`] : []),
+          ].join('  ·  ')
+        : filterLabel;
+      const filtrosTxt = pdfSafe(filtrosGenerales || 'Sin filtros aplicados');
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(100, 116, 139);
-      const filtrosTxt = pdfSafe(filterLabel ? `Filtros: ${filterLabel}` : 'Sin filtros aplicados');
-      let flLines = doc.splitTextToSize(filtrosTxt, usable);
-      if (flLines.length > 2) {
-        flLines = [flLines[0], `${flLines[1].replace(/\s+\S*$/, '')} …`];
-      }
-      doc.text(flLines, margin, cursorY);
-      cursorY += flLines.length * 3.8 + 2;
+      doc.setFontSize(7);
+      const flLines = doc.splitTextToSize(filtrosTxt, usable - 10);
+      const filterBoxHeight = 10 + flLines.length * 3.2;
+      panel(margin, cursorY, usable, filterBoxHeight);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.2);
+      doc.setTextColor(8, 145, 178);
+      doc.text('PERÍODO Y FILTROS APLICADOS', margin + 5, cursorY + 4.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(51, 65, 85);
+      doc.text(flLines, margin + 5, cursorY + 8.5);
+      cursorY += filterBoxHeight + 4;
 
       // --- Informe General: carátula + una página por sección ---
       if (tipo === 'general' && generalData) {
@@ -941,10 +1426,10 @@ const cab = (arr, titulo, labelPeriodo) => {
           const col = SEC[colKey] || SEC.ventas;
           doc.setFillColor(255, 255, 255);
           doc.setDrawColor(226, 232, 240);
-          doc.roundedRect(margin, margin, usable, 13, 2.5, 2.5, 'FD');
+          doc.roundedRect(margin, margin, usable, 18, 2.5, 2.5, 'FD');
           doc.setFillColor(...col.rgb);
-          doc.roundedRect(margin + 1.5, margin + 2, 1.6, 9, 0.8, 0.8, 'F');
-          if (logo) doc.addImage(logo, 'PNG', margin + 5, margin + 2.5, 8, 8);
+          doc.roundedRect(margin + 1.5, margin + 2, 1.6, 14, 0.8, 0.8, 'F');
+          if (logo) doc.addImage(logo, 'PNG', margin + 5, margin + 4, 10, 10);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(9);
           doc.setTextColor(15, 23, 42);
@@ -953,6 +1438,9 @@ const cab = (arr, titulo, labelPeriodo) => {
           doc.setFontSize(6.5);
           doc.setTextColor(100, 116, 139);
           doc.text(pdfSafe('Sistema de Control de Stock'), margin + 15.5, margin + 10.2);
+          doc.setFontSize(5.5);
+          doc.text(pdfSafe(COMPANY.address), margin + 15.5, margin + 13.4);
+          doc.text(pdfSafe(COMPANY.web), margin + 15.5, margin + 16.2);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(8.5);
           doc.setTextColor(...col.rgb);
@@ -967,7 +1455,7 @@ const cab = (arr, titulo, labelPeriodo) => {
         function nuevaPaginaSeccion(num, titulo, sub, colKey) {
           doc.addPage();
           cabeceraPagina(colKey, `SECCIÓN ${num} · ${titulo}`);
-          const y = margin + 13 + 6;
+          const y = margin + 18 + 6;
           const col = SEC[colKey];
           doc.setFillColor(...col.rgb);
           doc.roundedRect(margin, y, 9, 9, 1.8, 1.8, 'F');
@@ -1058,18 +1546,45 @@ const cab = (arr, titulo, labelPeriodo) => {
         function tabla(head, rows, widths, colKey, tituloSeccion, extraStyles = {}) {
           const totalW = widths.reduce((s, x) => s + (x?.w ?? x), 0);
           const side = Math.max((pageW - totalW) / 2, margin);
-          const col = SEC[colKey] || SEC.ventas;
           autoTable(doc, {
             startY: cursorY,
             head: [head.map(pdfSafe)],
             body: rows.map((r) => r.map((c) => pdfSafe(c))),
-            theme: 'grid',
-            styles: { fontSize: 7.2, cellPadding: 1.5, textColor: [30, 41, 59], lineColor: [203, 213, 225], lineWidth: 0.15 },
-            headStyles: { fillColor: col.rgb, textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0 },
-            alternateRowStyles: { fillColor: [248, 250, 252] },
+            theme: 'plain',
+            styles: {
+              fontSize: 7.5,
+              cellPadding: { top: 2.4, right: 2.5, bottom: 2.4, left: 2.5 },
+              textColor: [35, 35, 35],
+              lineColor: [145, 145, 145],
+              lineWidth: 0,
+            },
+            headStyles: { fillColor: [220, 220, 220], textColor: [20, 20, 20], fontStyle: 'bold', lineWidth: 0, minCellHeight: 8 },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            didParseCell: (data) => {
+              if (data.section === 'body') {
+                if (data.row.index % 2 === 1) data.cell.styles.fillColor = [245, 245, 245];
+                if (data.column.index === 0) {
+                  data.cell.styles.fontStyle = 'bold';
+                  data.cell.styles.textColor = [20, 20, 20];
+                }
+              }
+              if (data.section === 'foot') {
+                data.cell.styles.fillColor = [220, 220, 220];
+                data.cell.styles.textColor = [20, 20, 20];
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.cellPadding = { top: 3, right: 3, bottom: 3, left: 3 };
+              }
+            },
+            didDrawCell: (data) => {
+              if (data.section === 'body') {
+                doc.setDrawColor(135, 135, 135);
+                doc.setLineWidth(0.3);
+                doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+              }
+            },
             columnStyles: Object.fromEntries(widths.map((spec, i) => [i, { cellWidth: spec?.w ?? spec, halign: spec?.a || 'left' }])),
             didDrawPage: () => cabeceraPagina(colKey, tituloSeccion),
-            margin: { left: side, right: side, top: 28, bottom: 16 },
+            margin: { left: side, right: side, top: 34, bottom: 16 },
             ...extraStyles,
           });
           cursorY = doc.lastAutoTable.finalY + 6;
@@ -1262,7 +1777,7 @@ const cab = (arr, titulo, labelPeriodo) => {
               didParseCell: (d) => {
                 if (d.section === 'body' && d.column.index === 4) {
                   d.cell.styles.fontStyle = 'bold';
-                  d.cell.styles.textColor = String(d.cell.raw) === 'NEGATIVO' ? [190, 18, 60] : [180, 83, 9];
+                  d.cell.styles.textColor = [20, 20, 20];
                 }
               },
             }
@@ -1274,7 +1789,86 @@ const cab = (arr, titulo, labelPeriodo) => {
             doc.text(pdfSafe(`+ ${g.alertas.rows.length - 15} materiales adicionales a revisar.`), margin, cursorY - 1);
           }
         }
-      } else if (pieData.length > 0) {
+      } else {
+        const resumenPDF = tipo === 'por-chofer'
+          ? [
+              ['VIAJES', String(totals.movimientos)],
+              ['CHOFERES IDENTIFICADOS', String(analysisRows.filter((row) => !row.sinChofer).length)],
+              ['ENTRADAS (TN)', fmtNum(totals.entradasTn)],
+              ['SALIDAS (TN)', fmtNum(totals.salidasTn)],
+              ['TOTAL MOVIDO (TN)', fmtNum(totals.tn)],
+            ]
+          : tipo === 'por-cliente' || tipo === 'por-proveedor'
+            ? [
+                [tipo === 'por-cliente' ? 'CLIENTES' : 'PROVEEDORES', String(totals.count)],
+                ['MOVIMIENTOS', String(totals.movimientos)],
+                ['VOLUMEN (TN)', fmtNum(totals.tn)],
+              ]
+            : tipo === 'por-producto'
+              ? [
+                  ['PRODUCTOS', String(totals.count)],
+                  ['ENTRADAS (TN)', fmtNum(totals.entradasTn)],
+                  ['SALIDAS (TN)', fmtNum(totals.salidasTn)],
+                  ['BALANCE (TN)', fmtNum(totals.entradasTn - totals.salidasTn)],
+                ]
+              : tipo === 'por-planta'
+                ? [
+                    ['PLANTAS', String(totals.count)],
+                    ['ENTRADAS (TN)', fmtNum(totals.entradas)],
+                    ['SALIDAS (TN)', fmtNum(totals.salidas)],
+                    ['STOCK TOTAL (TN)', fmtNum(totals.stock)],
+                  ]
+                : [
+                    ['MOVIMIENTOS', String(totals.count)],
+                    ['VOLUMEN (TN)', fmtNum(totals.tn)],
+                  ];
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(71, 85, 105);
+        doc.text('RESUMEN EJECUTIVO', margin, cursorY + 3.5);
+        cursorY += 6;
+        const cardGap = 3;
+        const cardsPerRow = Math.min(4, resumenPDF.length);
+        const cardWidth = (usable - cardGap * (cardsPerRow - 1)) / cardsPerRow;
+        const cardHeight = 17;
+        resumenPDF.forEach(([label, value], index) => {
+          const row = Math.floor(index / cardsPerRow);
+          const column = index % cardsPerRow;
+          const x = margin + column * (cardWidth + cardGap);
+          const y = cursorY + row * (cardHeight + cardGap);
+          panel(x, y, cardWidth, cardHeight);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(5.8);
+          doc.setTextColor(100, 116, 139);
+          doc.text(pdfSafe(label), x + 3, y + 5.3);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(15, 23, 42);
+          doc.text(pdfSafe(value), x + 3, y + 12.5);
+        });
+        cursorY += Math.ceil(resumenPDF.length / cardsPerRow) * (cardHeight + cardGap) + 2;
+
+        if (tipo === 'por-chofer' && analysisRows.some((row) => row.sinChofer)) {
+          const aviso = 'Los movimientos sin chofer informado permanecen en la tabla como “Sin chofer”; no se atribuyen a una persona ni se incluyen en el gráfico por chofer.';
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          const avisoLines = doc.splitTextToSize(pdfSafe(aviso), usable - 12);
+          const avisoH = 7 + avisoLines.length * 3.3;
+          doc.setFillColor(255, 251, 235);
+          doc.setDrawColor(253, 230, 138);
+          doc.roundedRect(margin, cursorY, usable, avisoH, 2.5, 2.5, 'FD');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6.2);
+          doc.setTextColor(180, 83, 9);
+          doc.text('ACLARACIÓN', margin + 4, cursorY + 4.4);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(120, 53, 15);
+          doc.text(avisoLines, margin + 4, cursorY + 8);
+          cursorY += avisoH + 3;
+        }
+
+        if (pieData.length > 0) {
         // Un solo donut con leyenda a la derecha, dentro de un panel.
         const chartSize = landscape ? 44 : 40;
         const padPanel = 6;
@@ -1309,24 +1903,41 @@ const cab = (arr, titulo, labelPeriodo) => {
         }
         cursorY += innerH + 7;
       }
+      }
 
       if (!esGeneral) autoTable(doc, {
         startY: cursorY,
         head: [tableData.head.map(pdfSafe)],
         body: tableData.rows.map((row) => row.map((c) => pdfSafe(c))),
         foot: [tableData.foot.map((f) => ({ content: pdfSafe(f.text), colSpan: f.colSpan || 1 }))],
-        theme: 'grid',
+        theme: 'plain',
         styles: {
           fontSize: landscape ? 7.5 : 8.2,
-          cellPadding: 2,
-          textColor: [30, 41, 59],
-          lineColor: [203, 213, 225],
-          lineWidth: 0.15,
+          cellPadding: { top: 2.8, right: 2.8, bottom: 2.8, left: 2.8 },
+          textColor: [35, 35, 35],
+          lineColor: [145, 145, 145],
+          lineWidth: 0,
           overflow: 'linebreak',
         },
-        headStyles: { fillColor: [8, 145, 178], textColor: [255, 255, 255], fontStyle: 'bold', lineWidth: 0 },
-        footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
+        headStyles: { fillColor: [220, 220, 220], textColor: [20, 20, 20], fontStyle: 'bold', lineWidth: 0, minCellHeight: 9 },
+        footStyles: { fillColor: [220, 220, 220], textColor: [20, 20, 20], fontStyle: 'bold', minCellHeight: 10 },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        didParseCell: (data) => {
+          if (data.section === 'body') {
+            if (data.row.index % 2 === 1) data.cell.styles.fillColor = [245, 245, 245];
+            if (data.column.index === 0) {
+              data.cell.styles.fontStyle = 'bold';
+              data.cell.styles.textColor = [20, 20, 20];
+            }
+          }
+        },
+        didDrawCell: (data) => {
+          if (data.section === 'body') {
+            doc.setDrawColor(135, 135, 135);
+            doc.setLineWidth(0.3);
+            doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+          }
+        },
         columnStyles: Object.fromEntries(
           (ANCHOS_PDF[tipo] || ANCHOS_PDF.entradas).map((spec, i) => [
             i,
@@ -1334,7 +1945,23 @@ const cab = (arr, titulo, labelPeriodo) => {
           ])
         ),
         horizontalPageBreak: true,
-        margin: { top: 14, right: margin, bottom: 16, left: margin },
+        didDrawPage: (data) => {
+          if (data.pageNumber === 1) return;
+          doc.setFillColor(248, 250, 252);
+          doc.setDrawColor(226, 232, 240);
+          doc.roundedRect(margin, margin, usable, 20, 2.5, 2.5, 'FD');
+          if (logo) doc.addImage(logo, 'PNG', margin + 3, margin + 3, 14, 14);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(15, 23, 42);
+          doc.text(pdfSafe(COMPANY.name), margin + 20, margin + 8);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(6.5);
+          doc.setTextColor(100, 116, 139);
+          doc.text(pdfSafe(COMPANY.address), margin + 20, margin + 13);
+          doc.text(pdfSafe(`${reportDisplayTitle} · ${periodoLabel}`), margin + 20, margin + 17);
+        },
+        margin: { top: 24, right: margin, bottom: 16, left: margin },
       });
 
       // --- Pie de página con numeración ---
@@ -1344,11 +1971,14 @@ const cab = (arr, titulo, labelPeriodo) => {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7);
         doc.setTextColor(148, 163, 184);
-        doc.text(pdfSafe(`${COMPANY.name} · ${reportTitle}`), margin, pageH - 7);
+        doc.text(pdfSafe(`${COMPANY.name} · ${reportDisplayTitle}`), margin, pageH - 7);
         doc.text(`Página ${i} de ${pages}`, pageW - margin, pageH - 7, { align: 'right' });
       }
 
-      doc.save(`Informe_${reportTitle.replace(/\s+/g, '')}_${todayISO()}.pdf`);
+      const nombreArchivo = tipo === 'general'
+        ? 'Informe_General'
+        : `Informe_${reportTitle.replace(/\s+/g, '')}`;
+      doc.save(`${nombreArchivo}_${todayISO()}.pdf`);
       showToast('Informe exportado a PDF');
     } catch (e) {
       showToast(`Error al exportar PDF: ${e.message}`, 'error');
@@ -1409,7 +2039,15 @@ const cab = (arr, titulo, labelPeriodo) => {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Tipo de informe</span>
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="field">
+            <select
+              value={tipo}
+              onChange={(e) => {
+                setTipo(e.target.value);
+                setContraparte('');
+                setChofer('');
+              }}
+              className="field"
+            >
               {TIPOS.map((t) => (
                 <option key={t.value} value={t.value} className="bg-night-900">
                   {t.label}
@@ -1440,7 +2078,7 @@ const cab = (arr, titulo, labelPeriodo) => {
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Proveedor / Cliente</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{contraparteLabel}</span>
             <select value={contraparte} onChange={(e) => setContraparte(e.target.value)} className="field">
               <option value="" className="bg-night-900">Todos</option>
               {contraparteOptions.map((c) => (
@@ -1450,6 +2088,19 @@ const cab = (arr, titulo, labelPeriodo) => {
               ))}
             </select>
           </label>
+          {tipo === 'por-chofer' && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Chofer</span>
+              <select value={chofer} onChange={(e) => setChofer(e.target.value)} className="field">
+                <option value="" className="bg-night-900">Todos los choferes</option>
+                {choferOptions.map((option) => (
+                  <option key={option.value} value={option.value} className="bg-night-900">
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
 {/* Período: en Informe General se filtra por sección (01/02); en el resto,
@@ -1512,7 +2163,7 @@ const cab = (arr, titulo, labelPeriodo) => {
           </div>
           <div className="text-right">
             <h1 className="omx-brand-gradient text-base font-extrabold uppercase tracking-wide">
-              Informe de {reportTitle}
+              {reportDisplayTitle}
             </h1>
             <p className="mt-0.5 font-mono text-xs font-semibold tabular-nums text-slate-300">{periodoLabel}</p>
             <p className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Generado: {formatDateTime(new Date())}</p>
@@ -1544,6 +2195,27 @@ const cab = (arr, titulo, labelPeriodo) => {
                   <ResumenChip label="Salidas (tn)" value={fmtNum(totals.salidas)} tone="volt" />
                   <ResumenChip label="Stock Total (tn)" value={fmtNum(totals.stock)} accent />
                 </>
+              ) : tipo === 'por-chofer' ? (
+                <>
+                  <ResumenChip label="Choferes identificados" value={String(analysisRows.filter((row) => !row.sinChofer).length)} />
+                  <ResumenChip label="Viajes" value={String(totals.movimientos)} />
+                  <ResumenChip label="Entradas (tn)" value={fmtNum(totals.entradasTn)} tone="emerald" />
+                  <ResumenChip label="Salidas (tn)" value={fmtNum(totals.salidasTn)} tone="volt" />
+                </>
+              ) : tipo === 'por-cliente' || tipo === 'por-proveedor' ? (
+                <>
+                  <ResumenChip label={tipo === 'por-cliente' ? 'Clientes' : 'Proveedores'} value={String(totals.count)} />
+                  <ResumenChip label="Movimientos" value={String(totals.movimientos)} />
+                  <ResumenChip label="Volumen (tn)" value={fmtNum(totals.tn)} accent />
+                  <ResumenChip label="Período" value={descripcionPeriodo(mes, anio, desde, hasta)} />
+                </>
+              ) : tipo === 'por-producto' ? (
+                <>
+                  <ResumenChip label="Productos" value={String(totals.count)} />
+                  <ResumenChip label="Entradas (tn)" value={fmtNum(totals.entradasTn)} tone="emerald" />
+                  <ResumenChip label="Salidas (tn)" value={fmtNum(totals.salidasTn)} tone="volt" />
+                  <ResumenChip label="Balance período (tn)" value={fmtNum(totals.entradasTn - totals.salidasTn)} accent />
+                </>
               ) : (
                 <>
                   <ResumenChip label={tipo === 'movimientos' ? 'Movimientos' : reportTitle} value={String(totals.count)} />
@@ -1556,7 +2228,17 @@ const cab = (arr, titulo, labelPeriodo) => {
 
             {/* Gráfico de distribución */}
             <div className="grid gap-4 px-6 py-6 lg:grid-cols-[1.5fr_1fr] lg:items-stretch">
-              <ChartCard title={tipo === 'por-planta' ? 'Distribución por planta' : 'Distribución por producto'} icon={IconPieChart}>
+              <ChartCard
+                title={
+                  tipo === 'por-planta' ? 'Distribución por planta'
+                    : tipo === 'por-cliente' ? 'Salidas por cliente (tn)'
+                      : tipo === 'por-proveedor' ? 'Entradas por proveedor (tn)'
+                        : tipo === 'por-chofer' ? 'Toneladas por chofer identificado'
+                        : tipo === 'por-producto' ? 'Volumen por producto (tn)'
+                          : 'Distribución por producto'
+                }
+                icon={IconPieChart}
+              >
                 <GlamDoughnut
                   labels={pieData.map((d) => d.label)}
                   data={pieData.map((d) => d.value)}
@@ -1588,6 +2270,16 @@ const cab = (arr, titulo, labelPeriodo) => {
                   )}
                 </div>
               </div>
+              {tipo === 'por-chofer' && analysisRows.some((row) => row.sinChofer) && (
+                <p className="-mt-4 px-6 pb-2 text-[11px] leading-5 text-amber-300">
+                  Hay movimientos sin chofer informado; se muestran como “Sin chofer” en la tabla y no se incluyen en el gráfico por chofer.
+                </p>
+              )}
+              {['por-cliente', 'por-proveedor', 'por-chofer', 'por-producto'].includes(tipo) && (
+                <p className="-mt-4 px-6 pb-5 text-[11px] leading-5 text-slate-500">
+                  Los gráficos y volúmenes se expresan en toneladas; movimientos guardados en kg, unidades, bolsas u otras medidas no se convierten ni se suman a tn.
+                </p>
+              )}
             </div>
 
             {/* Tabla del detalle */}

@@ -28,6 +28,23 @@ terminal.
 La portada (`/`) contiene la información institucional de Grupo FALPAT. La
 gestión operativa de entradas y salidas está en `/movimientos`.
 
+## Reportes e informes
+
+- `/reportes` permite analizar movimientos del período y stock calculado por
+  producto o planta, con fecha de corte y una unidad de medida a la vez.
+- `/informes` genera informes gerenciales por producto, cliente, proveedor y
+  chofer, además de los informes generales y operativos. El informe por chofer
+  muestra viajes, entradas, salidas, toneladas y productos, con filtros por
+  chofer, período, producto, planta y contraparte; los movimientos sin chofer
+  informado se identifican como **Sin chofer**.
+- Las exportaciones PDF y Excel incluyen el logo, datos verificados de Grupo
+  FALPAT, período, filtros aplicados y resúmenes ejecutivos. El Informe General
+  se entrega en un libro Excel de cinco hojas; los PDF usan encabezados de
+  empresa, paginación y tablas en escala de grises, con separadores visibles
+  entre registros para facilitar la lectura e impresión en blanco y negro.
+- Los totales en toneladas no convierten ni mezclan movimientos registrados en
+  kg, unidades, bolsas u otras medidas.
+
 ## Validación
 
 ```powershell
@@ -130,6 +147,9 @@ guardar. El Excel compartido no se modifica.
 
 - [AYUDA-MEMORIA.md](./AYUDA-MEMORIA.md): arquitectura, desarrollo y notas de
   continuidad.
+- [docs/continuidad-inicio-movimientos-2026-11-07.md](./docs/continuidad-inicio-movimientos-2026-11-07.md):
+  estado, publicación, validación y pasos para retomar la separación de Inicio
+  y Movimientos.
 - [docs/flujo-remitos-pdf.md](./docs/flujo-remitos-pdf.md): detección de
   coincidencias, conciliación de campos vacíos y límites de seguridad del flujo
   PDF.
