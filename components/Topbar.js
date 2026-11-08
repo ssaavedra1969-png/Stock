@@ -6,6 +6,7 @@ import { useApp } from '@/context/AppContext';
 
 const SECTION_TITLES = {
   '/': 'Inicio',
+  '/movimientos': 'Movimientos',
   '/reportes': 'Reportes',
   '/informes': 'Informes',
   '/incorporar': 'Importar Excel',

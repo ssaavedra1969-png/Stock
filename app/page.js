@@ -486,7 +486,7 @@ function TableSkeleton() {
   );
 }
 
-export default function Home() {
+export default function Home({ vista = 'inicio' }) {
   const { records, loading, error, reload, deleteRecord, openEdit, openModal, showToast } = useApp();
   const tableRef = useRef(null);
   const tableDragRef = useRef(null);
@@ -747,33 +747,31 @@ export default function Home() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <SectionHero
-        icon={IconLayout}
-        title="Inicio"
-        tag="Stock"
-        subtitle={`Resumen de movimientos · ${new Date().toLocaleDateString('es-AR', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })}`}
-      >
-        <ModeBadge online={!error} />
-        <button
-          type="button"
-          onClick={reload}
-          className="btn-ghost"
-          disabled={loading}
-          title="Recargar datos"
-        >
-          <IconRefresh className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-          <span className="hidden sm:inline">Actualizar</span>
-        </button>
-      </SectionHero>
+      {vista === 'movimientos' && (
+        <>
+          <SectionHero
+            icon={IconLayout}
+            title="Movimientos"
+            tag="Operación"
+            subtitle="Consultá, filtrá y administrá las entradas y salidas de materiales."
+          >
+            <ModeBadge online={!error} />
+            <button
+              type="button"
+              onClick={reload}
+              className="btn-ghost"
+              disabled={loading}
+              title="Recargar datos"
+            >
+              <IconRefresh className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+              <span className="hidden sm:inline">Actualizar</span>
+            </button>
+          </SectionHero>
+          {error && <ErrorPanel message={error} onRetry={reload} />}
+        </>
+      )}
 
-      {error && <ErrorPanel message={error} onRetry={reload} />}
-
-      <section
+      {vista === 'inicio' && <section
         aria-labelledby="home-hero-title"
         className="relative isolate overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07101b] shadow-[0_30px_90px_-55px_rgba(0,0,0,0.95)]"
       >
@@ -812,53 +810,35 @@ export default function Home() {
 
             <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-falpat/25 bg-falpat/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-falpat-soft">
               <span className="h-1.5 w-1.5 rounded-full bg-falpat shadow-glow" />
-              Control operativo de stock
+              Calidad · servicio · trayectoria
             </p>
             <h2
               id="home-hero-title"
               className="max-w-2xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl xl:text-[3.25rem]"
             >
-              Cada material y cada movimiento,{' '}
+              Soluciones confiables{' '}
               <span className="bg-gradient-to-r from-falpat-soft via-white to-volt bg-clip-text text-transparent">
-                bajo control.
+                para cada obra.
               </span>
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-              Un socio confiable en tu obra. Registrá entradas y salidas, consultá
-              remitos y seguí los movimientos de materiales en un solo lugar.
+              Un socio confiable en tu obra. Grupo FALPAT acompaña cada proyecto
+              con soluciones de hormigón y materiales para la industria de la construcción.
             </p>
             <p className="mt-2 max-w-2xl text-xs leading-6 text-slate-500 sm:text-sm">
-              En línea con el compromiso de FALPAT con la calidad, el soporte técnico
-              y el acompañamiento logístico para cada proyecto.
+              Calidad en cada proceso, asesoramiento técnico y apoyo logístico
+              para acompañar el éxito de cada obra.
             </p>
 
             <div className="mt-7 flex w-full flex-wrap gap-2.5">
               <Link
-                href="/tickets"
+                href="/movimientos"
                 className="btn-primary whitespace-nowrap !px-4 !py-2.5 !text-[12px]"
-                title="Leer remitos PDF para registrar una entrada"
+                title="Ir a la gestión de movimientos"
               >
-                <IconFileText className="h-3.5 w-3.5" />
-                Cargar Entrada PDF
+                <IconLayout className="h-3.5 w-3.5" />
+                Ir a Movimientos
               </Link>
-              <button
-                type="button"
-                onClick={() => openModal('Entrada')}
-                className="btn-ghost whitespace-nowrap !px-4 !py-2.5 !text-[12px]"
-                title="Registrar manualmente una entrada"
-              >
-                <IconArrowUpRight className="h-3.5 w-3.5" />
-                Entrada manual
-              </button>
-              <button
-                type="button"
-                onClick={() => openModal('Salida')}
-                className="btn-volt whitespace-nowrap !px-4 !py-2.5 !text-[12px]"
-                title="Registrar una salida de material"
-              >
-                <IconArrowDownLeft className="h-3.5 w-3.5" />
-                Registrar salida
-              </button>
             </div>
 
             <a
@@ -879,39 +859,33 @@ export default function Home() {
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
                     Vista general
                   </p>
-                  <h3 className="mt-1 text-lg font-bold text-white">Operación diaria</h3>
+                  <h3 className="mt-1 text-lg font-bold text-white">Soluciones para la construcción</h3>
                 </div>
                 <span className="rounded-lg border border-white/10 bg-white/[0.035] p-2 text-falpat-soft">
                   <IconBox className="h-5 w-5" />
                 </span>
               </div>
 
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                <MiniStat label="Entradas" value={stats.entradas} accent="text-falpat-soft" />
-                <MiniStat label="Salidas" value={stats.salidas} accent="text-volt" />
-                <MiniStat label="Movimientos" value={stats.total} />
-              </div>
-
               <div className="mt-6 space-y-3">
                 <div className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
                   <span className="mt-0.5 text-falpat-soft"><IconFileText className="h-4 w-4" /></span>
                   <div>
-                    <p className="text-xs font-semibold text-slate-200">Entradas con respaldo</p>
-                    <p className="mt-1 text-[10px] leading-5 text-slate-500">Carga manual o lectura de remitos PDF.</p>
+                    <p className="text-xs font-semibold text-slate-200">Hormigón proyectado y Mortero RDC</p>
+                    <p className="mt-1 text-[10px] leading-5 text-slate-500">Soluciones para aplicación, relleno y soporte estructural.</p>
                   </div>
                 </div>
                 <div className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
-                  <span className="mt-0.5 text-volt"><IconArrowDownLeft className="h-4 w-4" /></span>
+                  <span className="mt-0.5 text-volt"><IconBox className="h-4 w-4" /></span>
                   <div>
-                    <p className="text-xs font-semibold text-slate-200">Salidas registradas</p>
-                    <p className="mt-1 text-[10px] leading-5 text-slate-500">Seguimiento de despachos y destinos.</p>
+                    <p className="text-xs font-semibold text-slate-200">Fast Track y pavimentos</p>
+                    <p className="mt-1 text-[10px] leading-5 text-slate-500">Alternativas de rápida habilitación y alta durabilidad.</p>
                   </div>
                 </div>
                 <div className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
-                  <span className="mt-0.5 text-sky-300"><IconScale className="h-4 w-4" /></span>
+                  <span className="mt-0.5 text-sky-300"><IconTruck className="h-4 w-4" /></span>
                   <div>
-                    <p className="text-xs font-semibold text-slate-200">Consulta y trazabilidad</p>
-                    <p className="mt-1 text-[10px] leading-5 text-slate-500">Buscá, filtrá y revisá el historial de movimientos.</p>
+                    <p className="text-xs font-semibold text-slate-200">Soporte y logística</p>
+                    <p className="mt-1 text-[10px] leading-5 text-slate-500">Laboratorio, servicio posventa y equipos para cada obra.</p>
                   </div>
                 </div>
               </div>
@@ -923,35 +897,157 @@ export default function Home() {
             </div>
           </aside>
         </div>
-      </section>
+      </section>}
 
-      {/* Visor del registro actual */}
-      {loading ? (
-        <div className="card mx-auto w-full space-y-3 lg:max-w-4xl">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : (
-        <div className="mx-auto w-full lg:max-w-4xl">
-          <RecordNavigator
-            record={navRecord}
-            index={navIndex}
-            total={records.length}
-            onPrev={() => setNavIndex((i) => Math.max(0, i - 1))}
-            onNext={() => setNavIndex((i) => Math.min(records.length - 1, i + 1))}
-            onEdit={openEdit}
-          />
-        </div>
+      {vista === 'inicio' && (
+        <section className="card">
+          <div className="mb-4">
+            <h2 className="section-title">Accesos rápidos</h2>
+            <p className="section-sub mt-0.5">
+              Cargá una entrada o registrá un movimiento sin salir de Inicio.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            <Link
+              href="/tickets"
+              className="btn-primary whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+              title="Leer remitos PDF para registrar una entrada"
+            >
+              <IconFileText className="h-3.5 w-3.5" />
+              Cargar Entrada PDF
+            </Link>
+            <button
+              type="button"
+              onClick={() => openModal('Entrada')}
+              className="btn-ghost whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+              title="Registrar manualmente una entrada"
+            >
+              <IconArrowUpRight className="h-3.5 w-3.5" />
+              Registrar Entrada manual
+            </button>
+            <button
+              type="button"
+              onClick={() => openModal('Salida')}
+              className="btn-volt whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+              title="Registrar una salida de material"
+            >
+              <IconArrowDownLeft className="h-3.5 w-3.5" />
+              Registrar Salida manual
+            </button>
+          </div>
+        </section>
       )}
 
-      {/* Tabla de últimos registros */}
-      <div id="movimientos" className="card scroll-mt-36 overflow-hidden !p-0">
+      {vista === 'movimientos' && (
+        <section className="card">
+          <div className="mb-4">
+            <h2 className="section-title">Registrar un movimiento</h2>
+            <p className="section-sub mt-0.5">
+              Elegí cómo querés cargar la entrada o registrar una salida.
+            </p>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="rounded-xl border border-falpat/15 bg-falpat/[0.035] p-4">
+              <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-falpat-soft">
+                Entrada desde PDF
+              </h3>
+              <p className="mt-1 mb-3 text-[11px] leading-5 text-slate-500">
+                Cargá uno o varios remitos PDF para leer los datos y revisar la entrada.
+              </p>
+              <Link
+                href="/tickets"
+                className="btn-primary whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+                title="Cargar uno o varios remitos PDF para registrar entradas"
+              >
+                <IconFileText className="h-3.5 w-3.5" />
+                Cargar Entrada PDF
+              </Link>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+              <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-slate-200">
+                Entrada manual
+              </h3>
+              <p className="mt-1 mb-3 text-[11px] leading-5 text-slate-500">
+                Completá el formulario para registrar el ingreso de material.
+              </p>
+              <button
+                type="button"
+                onClick={() => openModal('Entrada')}
+                className="btn-ghost whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+                title="Registrar manualmente una entrada"
+              >
+                <IconArrowUpRight className="h-3.5 w-3.5" />
+                Registrar entrada manual
+              </button>
+            </div>
+            <div className="rounded-xl border border-volt/15 bg-volt/[0.035] p-4">
+              <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-volt">
+                Salida manual
+              </h3>
+              <p className="mt-1 mb-3 text-[11px] leading-5 text-slate-500">
+                Registrá el despacho o egreso de material.
+              </p>
+              <button
+                type="button"
+                onClick={() => openModal('Salida')}
+                className="btn-volt whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
+                title="Registrar una salida de material"
+              >
+                <IconArrowDownLeft className="h-3.5 w-3.5" />
+                Registrar salida manual
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {vista === 'movimientos' && (
+        <section className="card">
+          <div className="mb-3">
+            <h2 className="section-title">Resumen general</h2>
+            <p className="section-sub mt-0.5">Totales de todo el historial, sin aplicar los filtros del listado.</p>
+          </div>
+          <div className="grid max-w-xl grid-cols-3 gap-2">
+            <MiniStat label="Entradas" value={stats.entradas} accent="text-falpat-soft" />
+            <MiniStat label="Salidas" value={stats.salidas} accent="text-volt" />
+            <MiniStat label="Total histórico" value={stats.total} />
+          </div>
+        </section>
+      )}
+
+      {vista === 'movimientos' && (
+        <section aria-labelledby="latest-movement-heading" className="space-y-3">
+          <div>
+            <h2 id="latest-movement-heading" className="section-title">Último movimiento</h2>
+            <p className="section-sub mt-0.5">Usá las flechas para recorrer los registros y Editar para modificar el seleccionado.</p>
+          </div>
+          {loading ? (
+            <div className="card mx-auto w-full space-y-3 lg:max-w-4xl">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : (
+            <div className="mx-auto w-full lg:max-w-4xl">
+              <RecordNavigator
+                record={navRecord}
+                index={navIndex}
+                total={records.length}
+                onPrev={() => setNavIndex((i) => Math.max(0, i - 1))}
+                onNext={() => setNavIndex((i) => Math.min(records.length - 1, i + 1))}
+                onEdit={openEdit}
+              />
+            </div>
+          )}
+        </section>
+      )}
+
+      {vista === 'movimientos' && <div className="card overflow-hidden !p-0">
         <div className="flex flex-col gap-4 border-b border-white/10 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="section-title">Movimientos de stock</h2>
+              <h2 className="section-title">Historial de movimientos</h2>
               <p className="section-sub mt-0.5">
-                {rangeLabel} registros · arrastrá con el botón izquierdo o deslizá horizontalmente con el touchpad
+                Consultá, buscá y filtrá los registros guardados. {rangeLabel} en la vista actual.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1121,7 +1217,7 @@ export default function Home() {
             </div>
           </>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

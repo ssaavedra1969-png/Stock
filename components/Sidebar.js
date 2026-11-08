@@ -8,14 +8,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import {
-  IconArrowDownLeft,
-  IconArrowUpRight,
   IconChevronLeft,
   IconChevronRight,
-  IconFileText,
   IconLayers,
   IconLayout,
   IconPieChart,
@@ -72,19 +69,7 @@ function Brand({ onClick, collapsed, stacked = false }) {
 
 function NavItem({ icon, label, href, collapsed, onNavigate }) {
   const pathname = usePathname();
-  const [hash, setHash] = useState('');
-  const isAnchor = href.includes('#');
-  const basePath = isAnchor ? href.slice(0, href.indexOf('#')) || '/' : href;
-  const anchor = isAnchor ? href.slice(href.indexOf('#')) : '';
-
-  useEffect(() => {
-    const updateHash = () => setHash(window.location.hash);
-    updateHash();
-    window.addEventListener('hashchange', updateHash);
-    return () => window.removeEventListener('hashchange', updateHash);
-  }, []);
-
-  const active = pathname === basePath && (isAnchor ? hash === anchor : hash !== '#movimientos');
+  const active = pathname === href;
   return (
     <Link
       href={href}
@@ -121,26 +106,6 @@ function NavItem({ icon, label, href, collapsed, onNavigate }) {
   );
 }
 
-function NavAction({ icon, label, onClick, collapsed }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={collapsed ? label : undefined}
-      aria-label={label}
-      className={
-        'group flex w-full items-center overflow-hidden rounded-xl border border-white/[0.06] bg-gradient-to-b from-white/[0.045] to-white/[0.015] px-3 py-2 text-left text-xs font-bold text-slate-400 shadow-[0_4px_10px_-5px_rgba(0,0,0,0.85),inset_0_1px_rgba(255,255,255,0.045)] transition duration-200 ease-out hover:-translate-y-0.5 hover:border-falpat/25 hover:from-white/[0.07] hover:to-white/[0.025] hover:text-slate-100 hover:shadow-[0_9px_18px_-9px_rgba(0,0,0,0.95),inset_0_1px_rgba(255,255,255,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-falpat/60 ' +
-        (collapsed ? 'justify-center px-2.5' : 'gap-3')
-      }
-    >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-black/20 text-slate-400 shadow-[inset_0_1px_rgba(255,255,255,0.06)] transition duration-200 group-hover:scale-105 group-hover:border-falpat/20 group-hover:bg-falpat/10 group-hover:text-falpat-soft">
-        {icon}
-      </span>
-      {!collapsed && <span className="leading-snug uppercase tracking-[0.08em]">{label}</span>}
-    </button>
-  );
-}
-
 function NavGroup({ title, children, collapsed }) {
   return (
     <div className="space-y-1.5">
@@ -154,31 +119,12 @@ function NavGroup({ title, children, collapsed }) {
   );
 }
 
-function NavigationLinks({ collapsed, openModal, onNavigate }) {
+function NavigationLinks({ collapsed, onNavigate }) {
   return (
     <div className="space-y-3">
-      <NavGroup title="Operación" collapsed={collapsed}>
+      <NavGroup title="Navegación" collapsed={collapsed}>
         <NavItem icon={<IconLayout className="h-[18px] w-[18px]" />} label="Inicio" href="/" collapsed={collapsed} onNavigate={onNavigate} />
-        <NavItem icon={<IconFileText className="h-[18px] w-[18px]" />} label="Cargar Entrada · PDF" href="/tickets" collapsed={collapsed} onNavigate={onNavigate} />
-        <NavAction
-          icon={<IconArrowUpRight className="h-[18px] w-[18px]" />}
-          label="Registrar Entrada manual"
-          onClick={() => {
-            openModal('Entrada');
-            onNavigate?.();
-          }}
-          collapsed={collapsed}
-        />
-        <NavAction
-          icon={<IconArrowDownLeft className="h-[18px] w-[18px]" />}
-          label="Registrar Salida manual"
-          onClick={() => {
-            openModal('Salida');
-            onNavigate?.();
-          }}
-          collapsed={collapsed}
-        />
-        <NavItem icon={<IconLayers className="h-[18px] w-[18px]" />} label="Movimientos" href="/#movimientos" collapsed={collapsed} onNavigate={onNavigate} />
+        <NavItem icon={<IconLayers className="h-[18px] w-[18px]" />} label="Movimientos" href="/movimientos" collapsed={collapsed} onNavigate={onNavigate} />
       </NavGroup>
       <NavGroup title="Importación" collapsed={collapsed}>
         <NavItem icon={<IconUpload className="h-[18px] w-[18px]" />} label="Importar Excel" href="/incorporar" collapsed={collapsed} onNavigate={onNavigate} />
@@ -213,7 +159,7 @@ function QuickStats() {
 }
 
 export default function Sidebar({ collapsed = false, onToggle }) {
-  const { openModal } = useApp();
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const closeMobileMenu = () => setMobileOpen(false);
 
@@ -252,10 +198,10 @@ export default function Sidebar({ collapsed = false, onToggle }) {
           </div>
 
           <nav className="mt-5">
-            <NavigationLinks collapsed={collapsed} openModal={openModal} />
+            <NavigationLinks collapsed={collapsed} />
           </nav>
 
-          {!collapsed && (
+          {!collapsed && pathname === '/movimientos' && (
             <div className="mt-5">
               <p className="mb-2 px-2 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500">
                 Resumen
@@ -295,7 +241,6 @@ export default function Sidebar({ collapsed = false, onToggle }) {
           <nav>
             <NavigationLinks
               collapsed={false}
-              openModal={openModal}
               onNavigate={closeMobileMenu}
             />
           </nav>
