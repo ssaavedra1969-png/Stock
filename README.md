@@ -25,8 +25,8 @@ npm run dev
 Abre `http://localhost:3000`. Para detener el servidor, usa `Ctrl+C` en su
 terminal.
 
-La portada (`/`) contiene la información institucional de Grupo FALPAT. La
-gestión operativa de entradas y salidas está en `/movimientos`.
+La portada (`/`) presenta el stock general de la empresa y accesos rápidos.
+La gestión operativa de entradas y salidas está en `/movimientos`.
 
 ## Validación
 

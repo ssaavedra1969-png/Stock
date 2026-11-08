@@ -810,24 +810,16 @@ export default function Home({ vista = 'inicio' }) {
 
             <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-falpat/25 bg-falpat/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-falpat-soft">
               <span className="h-1.5 w-1.5 rounded-full bg-falpat shadow-glow" />
-              Calidad · servicio · trayectoria
+              Control de stock
             </p>
             <h2
               id="home-hero-title"
               className="max-w-2xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl xl:text-[3.25rem]"
             >
-              Soluciones confiables{' '}
-              <span className="bg-gradient-to-r from-falpat-soft via-white to-volt bg-clip-text text-transparent">
-                para cada obra.
-              </span>
+              Stock general de la empresa
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-              Un socio confiable en tu obra. Grupo FALPAT acompaña cada proyecto
-              con soluciones de hormigón y materiales para la industria de la construcción.
-            </p>
-            <p className="mt-2 max-w-2xl text-xs leading-6 text-slate-500 sm:text-sm">
-              Calidad en cada proceso, asesoramiento técnico y apoyo logístico
-              para acompañar el éxito de cada obra.
+              Resumen de materiales y movimientos de Grupo FALPAT.
             </p>
 
             <div className="mt-7 flex w-full flex-wrap gap-2.5">
