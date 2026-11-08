@@ -20,16 +20,31 @@ import {
 const PROVEEDORES = ['SPOSITO', 'LCE', 'CEMENTO AVELLANEDA'];
 const RAZONES = ['ARENERA CANELONES', 'ALMAJO NORTE'];
 
-const CAMPOS_FORM = [
-  { key: 'Fecha', label: 'Fecha', placeholder: 'dd/mm/aaaa' },
-  { key: 'N Remito', label: 'N° Remito', mono: true },
-  { key: 'Proveedor', label: 'Proveedor', list: PROVEEDORES },
-  { key: 'Razon Social', label: 'Razón Social', list: RAZONES },
-  { key: 'Material', label: 'Material', list: [...MATERIALES_OK], ancho: 2 },
-  { key: 'Neto', label: 'Neto (kg)', mono: true },
-  { key: 'Peso Neto', label: 'Peso Neto (kg)', mono: true },
-  { key: 'Chofer', label: 'Chofer', ancho: 2, opciones: 'choferes' },
-  { key: 'Pat. Chasis', label: 'Patente chasis', mono: true, opciones: 'patentes' },
+const SECCIONES_FORM = [
+  {
+    titulo: 'Remito y procedencia',
+    campos: [
+      { key: 'Fecha', label: 'Fecha', placeholder: 'dd/mm/aaaa' },
+      { key: 'N Remito', label: 'N° Remito', mono: true },
+      { key: 'Proveedor', label: 'Proveedor', list: PROVEEDORES },
+      { key: 'Razon Social', label: 'Razón Social', list: RAZONES },
+    ],
+  },
+  {
+    titulo: 'Material y pesaje',
+    campos: [
+      { key: 'Material', label: 'Material', list: [...MATERIALES_OK], ancho: 2 },
+      { key: 'Neto', label: 'Neto (kg)', mono: true },
+      { key: 'Peso Neto', label: 'Peso Neto (kg)', mono: true },
+    ],
+  },
+  {
+    titulo: 'Transporte',
+    campos: [
+      { key: 'Chofer', label: 'Chofer', opciones: 'choferes' },
+      { key: 'Pat. Chasis', label: 'Patente chasis', mono: true, opciones: 'patentes' },
+    ],
+  },
 ];
 
 function listaId(campo) {
@@ -107,16 +122,27 @@ function InputConLista({ value, onChange, lista, placeholder, mono, error }) {
         className={`field !py-2 text-xs w-full ${mono ? 'font-mono' : ''} ${error ? 'field-error' : ''}`}
       />
       {abierto && opciones.length > 0 && (
-        <ul className="omx-dropdown absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-white/10 bg-night-900 shadow-xl">
+        <ul
+          role="listbox"
+          className="omx-dropdown mt-2 max-h-36 w-full overflow-y-auto rounded-lg border border-white/10 bg-night-900 shadow-xl"
+        >
           {opciones.map((opcion) => (
             <li
               key={opcion}
-              onMouseDown={(e) => { e.preventDefault(); seleccionar(opcion); }}
-              className={`cursor-pointer px-3 py-2 text-xs hover:bg-falpat/20 hover:text-white ${
-                opcion === value ? 'bg-falpat/10 text-falpat-soft font-semibold' : 'text-slate-300'
-              }`}
+              className="min-w-0"
             >
-              {opcion}
+              <button
+                type="button"
+                role="option"
+                aria-selected={opcion === value}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => seleccionar(opcion)}
+                className={`w-full break-words px-3 py-2 text-left text-xs hover:bg-falpat/20 hover:text-white ${
+                  opcion === value ? 'bg-falpat/10 font-semibold text-falpat-soft' : 'text-slate-300'
+                }`}
+              >
+                {opcion}
+              </button>
             </li>
           ))}
         </ul>
@@ -319,63 +345,79 @@ export default function EditorTicket({
           </section>
 
           <section className="min-h-0 overflow-y-auto p-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {CAMPOS_FORM.map((campo) => {
-                const error = errores[campo.key];
-                const lista =
-                  campo.key === 'Material'
-                    ? materiales || campo.list
-                    : campo.key === 'Razon Social'
-                      ? razones || campo.list
-                      : campo.opciones === 'choferes'
-                        ? choferes || []
-                        : campo.opciones === 'patentes'
-                          ? patentes || []
-                          : campo.list;
-                return (
-                  <label key={campo.key} className={campo.ancho === 2 ? 'sm:col-span-2' : ''}>
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      {campo.label}
-                    </span>
-                    {lista ? (
-                      <InputConLista
-                        value={form[campo.key] ?? ''}
-                        onChange={(v) => setCampo(campo.key, v)}
-                        lista={lista}
-                        placeholder={campo.placeholder}
-                        mono={campo.mono}
-                        error={!!error}
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={form[campo.key] ?? ''}
-                        onChange={(event) => setCampo(campo.key, event.target.value)}
-                        placeholder={campo.placeholder}
-                        autoComplete="off"
-                        className={`field !py-2 text-xs ${campo.mono ? 'font-mono' : ''} ${
-                          error ? 'field-error' : ''
-                        }`}
-                      />
-                    )}
-                    {error && (
-                      <span className="mt-1 block text-[10px] leading-snug text-red-300">
-                        {error}
-                      </span>
-                    )}
-                    {campo.key === 'Material' && materialNuevo && !error && (
-                      <span className="mt-1 block text-[10px] leading-snug text-emerald-300">
-                        Material nuevo: se agregará a la lista al guardar.
-                      </span>
-                    )}
-                    {campo.key === 'Razon Social' && razonNueva && !error && (
-                      <span className="mt-1 block text-[10px] leading-snug text-emerald-300">
-                        Razón social nueva: se agregará a la lista al guardar.
-                      </span>
-                    )}
-                  </label>
-                );
-              })}
+            <div className="space-y-4">
+              {SECCIONES_FORM.map((seccion) => (
+                <fieldset
+                  key={seccion.titulo}
+                  className="min-w-0 rounded-xl border border-white/10 bg-white/[0.025] p-3"
+                >
+                  <legend className="sr-only">{seccion.titulo}</legend>
+                  <h3 className="border-b border-white/10 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-falpat-soft">
+                    {seccion.titulo}
+                  </h3>
+                  <div className="mt-3 grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
+                    {seccion.campos.map((campo) => {
+                      const error = errores[campo.key];
+                      const lista =
+                        campo.key === 'Material'
+                          ? materiales || campo.list
+                          : campo.key === 'Razon Social'
+                            ? razones || campo.list
+                            : campo.opciones === 'choferes'
+                              ? choferes || []
+                              : campo.opciones === 'patentes'
+                                ? patentes || []
+                                : campo.list;
+                      return (
+                        <label
+                          key={campo.key}
+                          className={`min-w-0 ${campo.ancho === 2 ? 'sm:col-span-2' : ''}`}
+                        >
+                          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            {campo.label}
+                          </span>
+                          {lista ? (
+                            <InputConLista
+                              value={form[campo.key] ?? ''}
+                              onChange={(v) => setCampo(campo.key, v)}
+                              lista={lista}
+                              placeholder={campo.placeholder}
+                              mono={campo.mono}
+                              error={!!error}
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={form[campo.key] ?? ''}
+                              onChange={(event) => setCampo(campo.key, event.target.value)}
+                              placeholder={campo.placeholder}
+                              autoComplete="off"
+                              className={`field !py-2 text-xs ${campo.mono ? 'font-mono' : ''} ${
+                                error ? 'field-error' : ''
+                              }`}
+                            />
+                          )}
+                          {error && (
+                            <span className="mt-1 block text-[10px] leading-snug text-red-300">
+                              {error}
+                            </span>
+                          )}
+                          {campo.key === 'Material' && materialNuevo && !error && (
+                            <span className="mt-1 block text-[10px] leading-snug text-emerald-300">
+                              Material nuevo: se agregará a la lista al guardar.
+                            </span>
+                          )}
+                          {campo.key === 'Razon Social' && razonNueva && !error && (
+                            <span className="mt-1 block text-[10px] leading-snug text-emerald-300">
+                              Razón social nueva: se agregará a la lista al guardar.
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
+              ))}
             </div>
 
             {pdfUrl && (
