@@ -130,6 +130,7 @@ export default function TicketsPage() {
   const [files, setFiles] = useState([]);
   const [arrastrando, setArrastrando] = useState(false);
   const [registrosEditados, setRegistrosEditados] = useState([]);
+  const [erroresExcluidos, setErroresExcluidos] = useState(() => new Set());
   const [huboEdiciones, setHuboEdiciones] = useState(false);
   const [editandoIdx, setEditandoIdx] = useState(null);
   const [idsEdicion, setIdsEdicion] = useState([]);
@@ -328,7 +329,12 @@ export default function TicketsPage() {
         .filter((p) => p.campos.length > 0),
     [registros]
   );
-  const erroresLectura = resultado?.errores || [];
+  const erroresLectura = (resultado?.errores || []).filter(
+    (_, index) => !erroresExcluidos.has(index)
+  );
+  const erroresLecturaExcluidos = (resultado?.errores || [])
+    .map((error, index) => ({ ...error, index }))
+    .filter((_, index) => erroresExcluidos.has(index));
 
   const alertas = useMemo(() => {
     if (!resultado) return [];
@@ -339,6 +345,13 @@ export default function TicketsPage() {
     const nuevos = Array.from(lista).filter((f) => /\.pdf$/i.test(f.name));
     if (nuevos.length === 0) {
       showToast('Solo se aceptan archivos PDF', 'error');
+      return;
+    }
+    if (procesando || resultado) {
+      showToast(
+        'Terminá o limpiá la tanda actual antes de cargar más PDF; así no se vuelven a procesar los archivos ya leídos.',
+        'error'
+      );
       return;
     }
     setFiles((prev) => {
@@ -397,6 +410,7 @@ export default function TicketsPage() {
   function limpiar() {
     setFiles([]);
     limpiarTickets();
+    setErroresExcluidos(new Set());
     progresoRef.current = null;
     setProgreso(null);
     setRegistrosEditados([]);
@@ -490,6 +504,7 @@ export default function TicketsPage() {
   async function procesar() {
     if (files.length === 0) return;
     setUltimaIncorporacion(null);
+    setErroresExcluidos(new Set());
     setRegistrosEditados([]);
     setHuboEdiciones(false);
     try {
@@ -666,7 +681,32 @@ export default function TicketsPage() {
     });
     setConfirmacionVisual(false);
     setHuboEdiciones(true);
-    showToast('Registro eliminado');
+    showToast('Registro quitado de esta tanda; el PDF original queda intacto en Entrada');
+  }
+
+  function excluirErrorLectura(index) {
+    const error = resultado?.errores?.[index];
+    if (!error?.archivo) {
+      showToast('No se puede excluir esta falla porque no identifica el PDF afectado.', 'error');
+      return;
+    }
+    const accepted = window.confirm(
+      `¿Quitar "${error.archivo}" solo de esta tanda? No se incorporará ni se moverá; el PDF original quedará intacto en Entrada para revisarlo después.`
+    );
+    if (!accepted) return;
+    setErroresExcluidos((prev) => new Set([...prev, index]));
+    setConfirmacionVisual(false);
+    showToast(`PDF excluido de esta tanda; permanece intacto en Entrada`);
+  }
+
+  function restaurarErrorLectura(index) {
+    setErroresExcluidos((prev) => {
+      const next = new Set(prev);
+      next.delete(index);
+      return next;
+    });
+    setConfirmacionVisual(false);
+    showToast('PDF restaurado a la tanda');
   }
 
   async function confirmarRevision(checked) {
@@ -740,7 +780,7 @@ export default function TicketsPage() {
       return;
     }
     const accepted = window.confirm(
-      `¿Confirmás incorporar ${nNuevos} remito(s) nuevo(s) y archivar ${registros.length} PDF(s)? Se actualizará Stock-Historico.xlsx en la carpeta STOCK y se moverán los PDF a procesados.`
+      `¿Confirmás incorporar ${nNuevos} remito(s) nuevo(s) y archivar ${registros.length} PDF(s)? Se actualizará Stock-Historico.xlsx en la carpeta STOCK y se moverán solo esos PDF a procesados.${erroresLecturaExcluidos.length ? ` Los ${erroresLecturaExcluidos.length} PDF(s) excluidos quedarán intactos en Entrada.` : ''}`
     );
     if (!accepted) return;
 
@@ -820,7 +860,7 @@ export default function TicketsPage() {
             multiple
             onChange={onInput}
             className="hidden"
-            disabled={procesando}
+            disabled={procesando || Boolean(resultado)}
           />
           <IconFileText className="h-5 w-5 text-falpat" />
           <span className="text-xs text-slate-300">
@@ -829,7 +869,12 @@ export default function TicketsPage() {
               type="button"
               onClick={() => inputRef.current?.click()}
               className="text-falpat-soft underline hover:text-falpat"
-              disabled={procesando}
+              disabled={procesando || Boolean(resultado)}
+              title={
+                resultado
+                  ? 'La tanda ya fue leída; quitá registros o errores desde la tabla sin volver a procesar los PDF.'
+                  : undefined
+              }
             >
               elegí archivos
             </button>
@@ -849,7 +894,12 @@ export default function TicketsPage() {
                 <button
                   type="button"
                   onClick={() => removeFile(i)}
-                  disabled={procesando}
+                  disabled={procesando || Boolean(resultado)}
+                  title={
+                    resultado
+                      ? 'Usá las acciones de la tabla para quitar un PDF sin volver a procesar los demás.'
+                      : 'Quitar antes de leer'
+                  }
                   className="text-slate-500 hover:text-red-300"
                 >
                   <IconX className="h-3 w-3" />
@@ -989,13 +1039,58 @@ export default function TicketsPage() {
           {(resultado.errores || []).length > 0 && (
             <details className="rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-200">
               <summary className="cursor-pointer font-semibold uppercase tracking-wider text-red-300">
-                Errores ({(resultado.errores || []).length})
+                Errores de lectura ({erroresLectura.length})
               </summary>
-              <ul className="mt-1 space-y-0.5 pl-2">
-                {(resultado.errores || []).map((e, i) => (
-                  <li key={i} className="font-mono text-[11px]">{e.archivo}: {e.error}</li>
-                ))}
+              <ul className="mt-2 space-y-2">
+                {(resultado.errores || []).map((e, i) =>
+                  erroresExcluidos.has(i) ? null : (
+                    <li
+                      key={`${e.archivo || 'error'}-${i}`}
+                      className="flex flex-wrap items-start justify-between gap-2 rounded border border-red-500/20 bg-black/10 p-2"
+                    >
+                      <span className="min-w-0 break-words font-mono text-[11px]">
+                        {e.archivo || 'PDF sin identificar'}: {e.error}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => excluirErrorLectura(i)}
+                        disabled={!e.archivo || procesando || incorporando}
+                        className="shrink-0 rounded border border-amber-400/30 px-2 py-1 text-[10px] font-semibold text-amber-200 transition hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Excluir solo de esta tanda; deja el PDF original en Entrada"
+                      >
+                        Excluir · dejar en Entrada
+                      </button>
+                    </li>
+                  )
+                )}
               </ul>
+              {erroresLecturaExcluidos.length > 0 && (
+                <div className="mt-2 rounded border border-amber-400/25 bg-amber-400/[0.06] p-2 text-amber-100">
+                  <p className="font-semibold">
+                    {erroresLecturaExcluidos.length} PDF(s) fuera de esta tanda; permanecen intactos en Entrada.
+                  </p>
+                  <ul className="mt-1 space-y-1">
+                    {erroresLecturaExcluidos.map((error) => (
+                      <li
+                        key={`${error.archivo || 'error'}-${error.index}`}
+                        className="flex flex-wrap items-center justify-between gap-2"
+                      >
+                        <span className="break-all font-mono text-[10px]">
+                          {error.archivo || 'PDF sin identificar'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => restaurarErrorLectura(error.index)}
+                          disabled={procesando || incorporando}
+                          className="rounded px-2 py-1 text-[10px] font-semibold text-amber-200 underline underline-offset-2 hover:text-white disabled:opacity-50"
+                        >
+                          Deshacer
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </details>
           )}
 
@@ -1139,7 +1234,7 @@ export default function TicketsPage() {
                               type="button"
                               onClick={() => eliminarRegistro(r._editorId)}
                               className="rounded p-0.5 text-slate-400 hover:bg-white/5 hover:text-red-300"
-                              title="Eliminar"
+                              title="Quitar de esta tanda; el PDF original queda intacto en Entrada"
                             >
                               <IconTrash className="h-3 w-3" />
                             </button>
