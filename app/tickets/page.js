@@ -131,6 +131,7 @@ export default function TicketsPage() {
   const [arrastrando, setArrastrando] = useState(false);
   const [registrosEditados, setRegistrosEditados] = useState([]);
   const [erroresExcluidos, setErroresExcluidos] = useState(() => new Set());
+  const [archivosQuitados, setArchivosQuitados] = useState(() => new Set());
   const [huboEdiciones, setHuboEdiciones] = useState(false);
   const [editandoIdx, setEditandoIdx] = useState(null);
   const [idsEdicion, setIdsEdicion] = useState([]);
@@ -159,6 +160,8 @@ export default function TicketsPage() {
   );
   const progresoRef = useRef(null);
   const progresoFlush = useRef(null);
+  const ticketsRef = useRef(tickets);
+  ticketsRef.current = tickets;
 
   useEffect(() => {
     let active = true;
@@ -330,7 +333,8 @@ export default function TicketsPage() {
     [registros]
   );
   const erroresLectura = (resultado?.errores || []).filter(
-    (_, index) => !erroresExcluidos.has(index)
+    (error, index) =>
+      !erroresExcluidos.has(index) && !archivosQuitados.has(error.archivo)
   );
   const erroresLecturaExcluidos = (resultado?.errores || [])
     .map((error, index) => ({ ...error, index }))
@@ -380,7 +384,7 @@ export default function TicketsPage() {
   }
 
   useEffect(() => {
-    if (files.length === 0 || procesando) return;
+    if (files.length === 0 || ticketsRef.current.procesando || ticketsRef.current.resultado) return;
     procesar();
   }, [files]);
 
@@ -391,7 +395,28 @@ export default function TicketsPage() {
   }, [alertas]);
 
   function removeFile(index) {
+    const file = files[index];
+    if (!file) return;
+    const yaProcesado = Boolean(resultado);
+    if (
+      yaProcesado &&
+      !window.confirm(
+        `¿Sacar "${file.name}" de esta tanda? No se incorporará ni se moverá; el PDF original quedará intacto en Entrada. Los demás registros no se volverán a procesar.`
+      )
+    ) {
+      return;
+    }
+
     setFiles((prev) => prev.filter((_, i) => i !== index));
+    if (yaProcesado) {
+      setArchivosQuitados((prev) => new Set([...prev, file.name]));
+      setRegistrosEditados(registros.filter((registro) => registro.Archivo !== file.name));
+      setHuboEdiciones(true);
+      setConfirmacionVisual(false);
+      setEditandoIdx(null);
+      setIdsEdicion([]);
+      showToast(`${file.name} quitado de la tanda; el PDF original queda intacto en Entrada`);
+    }
   }
 
   // Abre el PDF del archivo leído directamente desde el navegador (funciona
@@ -411,6 +436,7 @@ export default function TicketsPage() {
     setFiles([]);
     limpiarTickets();
     setErroresExcluidos(new Set());
+    setArchivosQuitados(new Set());
     progresoRef.current = null;
     setProgreso(null);
     setRegistrosEditados([]);
@@ -894,18 +920,21 @@ export default function TicketsPage() {
                 <button
                   type="button"
                   onClick={() => removeFile(i)}
-                  disabled={procesando || Boolean(resultado)}
-                  title={
-                    resultado
-                      ? 'Usá las acciones de la tabla para quitar un PDF sin volver a procesar los demás.'
-                      : 'Quitar antes de leer'
-                  }
+                  disabled={procesando || incorporando}
+                  title="Quitar de esta tanda; después de leer, el PDF original queda intacto en Entrada y no se reprocesan los demás."
                   className="text-slate-500 hover:text-red-300"
                 >
                   <IconX className="h-3 w-3" />
                 </button>
               </span>
             ))}
+          </div>
+        )}
+        {archivosQuitados.size > 0 && (
+          <div className="rounded border border-amber-400/25 bg-amber-400/[0.06] p-2 text-[10px] text-amber-100">
+            {archivosQuitados.size} PDF(s) fuera de esta tanda; no se incorporan ni se mueven y quedan intactos en Entrada:
+            {' '}
+            {[...archivosQuitados].join(', ')}
           </div>
         )}
 
@@ -1043,7 +1072,7 @@ export default function TicketsPage() {
               </summary>
               <ul className="mt-2 space-y-2">
                 {(resultado.errores || []).map((e, i) =>
-                  erroresExcluidos.has(i) ? null : (
+                  erroresExcluidos.has(i) || archivosQuitados.has(e.archivo) ? null : (
                     <li
                       key={`${e.archivo || 'error'}-${i}`}
                       className="flex flex-wrap items-start justify-between gap-2 rounded border border-red-500/20 bg-black/10 p-2"
