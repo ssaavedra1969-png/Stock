@@ -37,7 +37,8 @@ La gestión operativa de entradas y salidas está en `/movimientos`.
   muestra viajes, entradas, salidas, toneladas y productos, con filtros por
   chofer, período, producto, planta y contraparte. El filtro **Razón social**
   toma los valores guardados en `razonSocial` de las Entradas; **Proveedor /
-  cliente** toma sus respectivos campos y es independiente. En el Informe
+  cliente** toma sus respectivos campos y es independiente. El filtro Producto
+  muestra y busca por descripción del material, no por código. En el Informe
   General, Razón social filtra solo la sección 02 Entradas. Los movimientos
   sin chofer informado se identifican como **Sin chofer**.
 - Las exportaciones PDF y Excel incluyen el logo, datos verificados de Grupo

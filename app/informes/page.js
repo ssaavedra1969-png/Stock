@@ -340,9 +340,8 @@ export default function Informes() {
   // Opciones de los filtros (valores únicos de la cache local).
   const prodOptions = useMemo(
     () =>
-      [...new Set(records.map((r) => r.codigoProducto).filter(Boolean))].sort((a, b) =>
-        a.localeCompare(b, 'es', { sensitivity: 'base' })
-      ),
+      [...new Set(records.map((r) => String(r.producto ?? '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })),
     [records]
   );
   const plantaOptions = useMemo(
@@ -399,9 +398,7 @@ export default function Informes() {
   const baseSinPeriodo = useMemo(() => {
     let arr = records;
     if (productosSel.length > 0) {
-      arr = arr.filter(
-        (r) => productosSel.includes(r.codigoProducto) || productosSel.includes(r.producto)
-      );
+      arr = arr.filter((r) => productosSel.includes(String(r.producto ?? '').trim()));
     }
     if (planta) arr = arr.filter((r) => r.planta === planta);
     if (razonSocial && tipo !== 'general') {
