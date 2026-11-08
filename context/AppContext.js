@@ -162,7 +162,12 @@ export function AppProvider({ children }) {
   }, [cargarBaseConocimiento]);
 
   const procesarTickets = useCallback(async (files, options = {}) => {
-    setTickets({ procesando: true, resultado: null, error: '' });
+    const append = options.append === true;
+    setTickets((prev) => ({
+      procesando: true,
+      resultado: append ? prev.resultado : null,
+      error: '',
+    }));
     try {
       // El OCR corre en el propio navegador (pdf.js + tesseract.js): no
       // depende de un servidor con Python/Tesseract instalado.
@@ -176,11 +181,34 @@ export function AppProvider({ children }) {
       ]);
       const base = unirBase(learnFromRecords(registrosConocidos), conocimiento);
       const data = await procesarArchivos(files, { base, onProgress: options.onProgress });
-      setTickets({ procesando: false, resultado: data, error: '' });
-      return data;
+      let resultadoFinal = data;
+      setTickets((prev) => {
+        if (!append || !prev.resultado) {
+          resultadoFinal = data;
+          return { procesando: false, resultado: data, error: '' };
+        }
+        const anterior = prev.resultado;
+        resultadoFinal = {
+          ...anterior,
+          ...data,
+          registros: [...(anterior.registros || []), ...(data.registros || [])],
+          errores: [...(anterior.errores || []), ...(data.errores || [])],
+          alertas: [...(anterior.alertas || []), ...(data.alertas || [])],
+          total: (anterior.total || 0) + (data.total || 0),
+          nuevos: (anterior.nuevos || 0) + (data.nuevos || 0),
+          duplicados: (anterior.duplicados || 0) + (data.duplicados || 0),
+          similares: (anterior.similares || 0) + (data.similares || 0),
+        };
+        return { procesando: false, resultado: resultadoFinal, error: '' };
+      });
+      return resultadoFinal;
     } catch (err) {
       const msg = err.message || 'No se pudieron procesar los archivos.';
-      setTickets({ procesando: false, resultado: null, error: msg });
+      setTickets((prev) => ({
+        procesando: false,
+        resultado: append ? prev.resultado : null,
+        error: msg,
+      }));
       throw err;
     }
   }, [cargarBaseConocimiento, cargarRegistrosParaOCR]);

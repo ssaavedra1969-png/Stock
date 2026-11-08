@@ -130,6 +130,8 @@ export default function TicketsPage() {
   const [files, setFiles] = useState([]);
   const [arrastrando, setArrastrando] = useState(false);
   const [registrosEditados, setRegistrosEditados] = useState([]);
+  const [erroresExcluidos, setErroresExcluidos] = useState(() => new Set());
+  const [archivosQuitados, setArchivosQuitados] = useState(() => new Set());
   const [huboEdiciones, setHuboEdiciones] = useState(false);
   const [editandoIdx, setEditandoIdx] = useState(null);
   const [idsEdicion, setIdsEdicion] = useState([]);
@@ -158,6 +160,8 @@ export default function TicketsPage() {
   );
   const progresoRef = useRef(null);
   const progresoFlush = useRef(null);
+  const ticketsRef = useRef(tickets);
+  ticketsRef.current = tickets;
 
   useEffect(() => {
     let active = true;
@@ -328,7 +332,16 @@ export default function TicketsPage() {
         .filter((p) => p.campos.length > 0),
     [registros]
   );
-  const erroresLectura = resultado?.errores || [];
+  const erroresLectura = (resultado?.errores || []).filter(
+    (error, index) =>
+      !erroresExcluidos.has(index) && !archivosQuitados.has(error.archivo)
+  );
+  const erroresLecturaExcluidos = (resultado?.errores || [])
+    .map((error, index) => ({ ...error, index }))
+    .filter(
+      (error) =>
+        erroresExcluidos.has(error.index) && !archivosQuitados.has(error.archivo)
+    );
 
   const alertas = useMemo(() => {
     if (!resultado) return [];
@@ -341,18 +354,34 @@ export default function TicketsPage() {
       showToast('Solo se aceptan archivos PDF', 'error');
       return;
     }
-    setFiles((prev) => {
-      const vistos = new Set(prev.map((f) => `${f.name}|${f.size}|${f.lastModified}`));
-      const merge = [...prev];
-      for (const f of nuevos) {
-        const k = `${f.name}|${f.size}|${f.lastModified}`;
-        if (!vistos.has(k)) {
-          vistos.add(k);
-          merge.push(f);
-        }
-      }
-      return merge;
+    if (procesando || incorporando) {
+      showToast(
+        'Esperá a que termine el proceso actual antes de agregar más PDF.',
+        'error'
+      );
+      return;
+    }
+    const vistos = new Set(files.map((f) => `${f.name}|${f.size}|${f.lastModified}`));
+    const unicos = nuevos.filter((file) => {
+      const key = `${file.name}|${file.size}|${file.lastModified}`;
+      if (vistos.has(key)) return false;
+      vistos.add(key);
+      return true;
     });
+    if (unicos.length === 0) {
+      showToast('Esos PDF ya están en la tanda actual.', 'error');
+      return;
+    }
+
+    setFiles((prev) => [...prev, ...unicos]);
+    if (resultado) {
+      setArchivosQuitados((prev) => {
+        const next = new Set(prev);
+        for (const file of unicos) next.delete(file.name);
+        return next;
+      });
+      procesarAdicionales(unicos);
+    }
   }
 
   function onInput(event) {
@@ -367,7 +396,7 @@ export default function TicketsPage() {
   }
 
   useEffect(() => {
-    if (files.length === 0 || procesando) return;
+    if (files.length === 0 || ticketsRef.current.procesando || ticketsRef.current.resultado) return;
     procesar();
   }, [files]);
 
@@ -378,7 +407,28 @@ export default function TicketsPage() {
   }, [alertas]);
 
   function removeFile(index) {
+    const file = files[index];
+    if (!file) return;
+    const yaProcesado = Boolean(resultado);
+    if (
+      yaProcesado &&
+      !window.confirm(
+        `¿Sacar "${file.name}" de esta tanda? No se incorporará ni se moverá; el PDF original quedará intacto en Entrada. Los demás registros no se volverán a procesar.`
+      )
+    ) {
+      return;
+    }
+
     setFiles((prev) => prev.filter((_, i) => i !== index));
+    if (yaProcesado) {
+      setArchivosQuitados((prev) => new Set([...prev, file.name]));
+      setRegistrosEditados(registros.filter((registro) => registro.Archivo !== file.name));
+      setHuboEdiciones(true);
+      setConfirmacionVisual(false);
+      setEditandoIdx(null);
+      setIdsEdicion([]);
+      showToast(`${file.name} quitado de la tanda; el PDF original queda intacto en Entrada`);
+    }
   }
 
   // Abre el PDF del archivo leído directamente desde el navegador (funciona
@@ -397,6 +447,8 @@ export default function TicketsPage() {
   function limpiar() {
     setFiles([]);
     limpiarTickets();
+    setErroresExcluidos(new Set());
+    setArchivosQuitados(new Set());
     progresoRef.current = null;
     setProgreso(null);
     setRegistrosEditados([]);
@@ -490,6 +542,7 @@ export default function TicketsPage() {
   async function procesar() {
     if (files.length === 0) return;
     setUltimaIncorporacion(null);
+    setErroresExcluidos(new Set());
     setRegistrosEditados([]);
     setHuboEdiciones(false);
     try {
@@ -512,6 +565,47 @@ export default function TicketsPage() {
       showToast(`Procesado: ${nuevos} nuevo(s), ${dup} duplicado(s)`);
     } catch (err) {
       showToast(err.message || 'Error al procesar los remitos', 'error');
+    }
+  }
+
+  async function procesarAdicionales(nuevos) {
+    if (nuevos.length === 0) return;
+    progresoRef.current = {
+      total: nuevos.length,
+      archivos: nuevos.map((file) => file.name),
+      items: nuevos.map((file) => ({
+        archivo: file.name,
+        estado: 'pendiente',
+        progreso: 0,
+        fase: 'en cola',
+      })),
+      terminado: false,
+    };
+    setProgreso(progresoRef.current);
+    try {
+      const data = await procesarTickets(nuevos, {
+        append: true,
+        onProgress: onProgreso,
+      });
+      const offsetRegistros = resultado?.registros?.length || 0;
+      const nuevosIdentificados = (data.registros || []).map((registro, index) => ({
+        ...registro,
+        _editorId: `ticket-${offsetRegistros + index}`,
+      }));
+      setRegistrosEditados([...registros, ...nuevosIdentificados]);
+      setHuboEdiciones(true);
+      setConfirmacionVisual(false);
+      setEditandoIdx(null);
+      setIdsEdicion([]);
+      setUltimaIncorporacion(null);
+      showToast(
+        `Se agregaron ${nuevos.length} PDF(s) al lote · ${data.nuevos ?? data.registros?.length ?? 0} registro(s) leído(s)`
+      );
+    } catch (err) {
+      showToast(
+        `No se pudieron procesar los PDF agregados: ${err.message || 'error de lectura'}`,
+        'error'
+      );
     }
   }
 
@@ -666,7 +760,32 @@ export default function TicketsPage() {
     });
     setConfirmacionVisual(false);
     setHuboEdiciones(true);
-    showToast('Registro eliminado');
+    showToast('Registro quitado de esta tanda; el PDF original queda intacto en Entrada');
+  }
+
+  function excluirErrorLectura(index) {
+    const error = resultado?.errores?.[index];
+    if (!error?.archivo) {
+      showToast('No se puede excluir esta falla porque no identifica el PDF afectado.', 'error');
+      return;
+    }
+    const accepted = window.confirm(
+      `¿Quitar "${error.archivo}" solo de esta tanda? No se incorporará ni se moverá; el PDF original quedará intacto en Entrada para revisarlo después.`
+    );
+    if (!accepted) return;
+    setErroresExcluidos((prev) => new Set([...prev, index]));
+    setConfirmacionVisual(false);
+    showToast(`PDF excluido de esta tanda; permanece intacto en Entrada`);
+  }
+
+  function restaurarErrorLectura(index) {
+    setErroresExcluidos((prev) => {
+      const next = new Set(prev);
+      next.delete(index);
+      return next;
+    });
+    setConfirmacionVisual(false);
+    showToast('PDF restaurado a la tanda');
   }
 
   async function confirmarRevision(checked) {
@@ -740,7 +859,7 @@ export default function TicketsPage() {
       return;
     }
     const accepted = window.confirm(
-      `¿Confirmás incorporar ${nNuevos} remito(s) nuevo(s) y archivar ${registros.length} PDF(s)? Se actualizará Stock-Historico.xlsx en la carpeta STOCK y se moverán los PDF a procesados.`
+      `¿Confirmás incorporar ${nNuevos} remito(s) nuevo(s) y archivar ${registros.length} PDF(s)? Se actualizará Stock-Historico.xlsx en la carpeta STOCK y se moverán solo esos PDF a procesados.${erroresLecturaExcluidos.length ? ` Los ${erroresLecturaExcluidos.length} PDF(s) excluidos quedarán intactos en Entrada.` : ''}`
     );
     if (!accepted) return;
 
@@ -804,7 +923,11 @@ export default function TicketsPage() {
       <Paso
         n="1"
         titulo="Cargá los remitos"
-        ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK para leer los PDF de Entrada y consultar duplicados en el histórico."
+        ayuda={
+          resultado
+            ? 'Agregá más PDF al mismo lote; se procesarán solo los archivos nuevos y se conservarán las correcciones anteriores.'
+            : 'Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK para leer los PDF de Entrada y consultar duplicados en el histórico.'
+        }
       >
         <div
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
@@ -820,7 +943,7 @@ export default function TicketsPage() {
             multiple
             onChange={onInput}
             className="hidden"
-            disabled={procesando}
+            disabled={procesando || incorporando}
           />
           <IconFileText className="h-5 w-5 text-falpat" />
           <span className="text-xs text-slate-300">
@@ -829,7 +952,12 @@ export default function TicketsPage() {
               type="button"
               onClick={() => inputRef.current?.click()}
               className="text-falpat-soft underline hover:text-falpat"
-              disabled={procesando}
+              disabled={procesando || incorporando}
+              title={
+                resultado
+                  ? 'Agregar PDF nuevos al lote; solo se procesarán los archivos agregados.'
+                  : undefined
+              }
             >
               elegí archivos
             </button>
@@ -849,13 +977,21 @@ export default function TicketsPage() {
                 <button
                   type="button"
                   onClick={() => removeFile(i)}
-                  disabled={procesando}
+                  disabled={procesando || incorporando}
+                  title="Quitar de esta tanda; el PDF original queda intacto en Entrada y no se reprocesan los demás."
                   className="text-slate-500 hover:text-red-300"
                 >
                   <IconX className="h-3 w-3" />
                 </button>
               </span>
             ))}
+          </div>
+        )}
+        {archivosQuitados.size > 0 && (
+          <div className="rounded border border-amber-400/25 bg-amber-400/[0.06] p-2 text-[10px] text-amber-100">
+            {archivosQuitados.size} PDF(s) fuera de esta tanda; no se incorporan ni se mueven y quedan intactos en Entrada:
+            {' '}
+            {[...archivosQuitados].join(', ')}
           </div>
         )}
 
@@ -989,13 +1125,58 @@ export default function TicketsPage() {
           {(resultado.errores || []).length > 0 && (
             <details className="rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-200">
               <summary className="cursor-pointer font-semibold uppercase tracking-wider text-red-300">
-                Errores ({(resultado.errores || []).length})
+                Errores de lectura ({erroresLectura.length})
               </summary>
-              <ul className="mt-1 space-y-0.5 pl-2">
-                {(resultado.errores || []).map((e, i) => (
-                  <li key={i} className="font-mono text-[11px]">{e.archivo}: {e.error}</li>
-                ))}
+              <ul className="mt-2 space-y-2">
+                {(resultado.errores || []).map((e, i) =>
+                  erroresExcluidos.has(i) || archivosQuitados.has(e.archivo) ? null : (
+                    <li
+                      key={`${e.archivo || 'error'}-${i}`}
+                      className="flex flex-wrap items-start justify-between gap-2 rounded border border-red-500/20 bg-black/10 p-2"
+                    >
+                      <span className="min-w-0 break-words font-mono text-[11px]">
+                        {e.archivo || 'PDF sin identificar'}: {e.error}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => excluirErrorLectura(i)}
+                        disabled={!e.archivo || procesando || incorporando}
+                        className="shrink-0 rounded border border-amber-400/30 px-2 py-1 text-[10px] font-semibold text-amber-200 transition hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        title="Excluir solo de esta tanda; deja el PDF original en Entrada"
+                      >
+                        Excluir · dejar en Entrada
+                      </button>
+                    </li>
+                  )
+                )}
               </ul>
+              {erroresLecturaExcluidos.length > 0 && (
+                <div className="mt-2 rounded border border-amber-400/25 bg-amber-400/[0.06] p-2 text-amber-100">
+                  <p className="font-semibold">
+                    {erroresLecturaExcluidos.length} PDF(s) fuera de esta tanda; permanecen intactos en Entrada.
+                  </p>
+                  <ul className="mt-1 space-y-1">
+                    {erroresLecturaExcluidos.map((error) => (
+                      <li
+                        key={`${error.archivo || 'error'}-${error.index}`}
+                        className="flex flex-wrap items-center justify-between gap-2"
+                      >
+                        <span className="break-all font-mono text-[10px]">
+                          {error.archivo || 'PDF sin identificar'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => restaurarErrorLectura(error.index)}
+                          disabled={procesando || incorporando}
+                          className="rounded px-2 py-1 text-[10px] font-semibold text-amber-200 underline underline-offset-2 hover:text-white disabled:opacity-50"
+                        >
+                          Deshacer
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </details>
           )}
 
@@ -1139,7 +1320,7 @@ export default function TicketsPage() {
                               type="button"
                               onClick={() => eliminarRegistro(r._editorId)}
                               className="rounded p-0.5 text-slate-400 hover:bg-white/5 hover:text-red-300"
-                              title="Eliminar"
+                              title="Quitar de esta tanda; el PDF original queda intacto en Entrada"
                             >
                               <IconTrash className="h-3 w-3" />
                             </button>
