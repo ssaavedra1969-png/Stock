@@ -53,22 +53,26 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
   - `GET/POST /api/db` → leer / agregar registros (lee y escribe a GitHub con el token).
   - `PUT/DELETE /api/db/[id]` → editar / borrar un registro. Siempre recalcula `productos`.
 - **Clientes**:
-  - `app/page.js` → **Inicio** institucional con accesos rápidos y, reutilizada por
-    `app/movimientos/page.js`, la vista operativa de **Movimientos**. Esta última contiene
-    accesos diferenciados para Entrada desde PDF, Entrada manual y Salida manual; resumen
-    general, navegador del último movimiento e historial con filtros, búsqueda, orden por
-    columnas, edición y eliminación.
+  - `app/page.js` → **Inicio** con el resumen general de stock de la empresa y accesos
+    rápidos. La vista operativa está en `app/movimientos/page.js`: accesos diferenciados
+    para Entrada desde PDF, Entrada manual y Salida manual; resumen general, navegador del
+    último movimiento e historial con filtros, búsqueda, orden por columnas, edición y
+    eliminación.
   - `app/informes/page.js` → **Informes**: generador gerencial. Tipos: **Informe General**
     (default, 5 secciones numeradas: 01 Ventas, 02 Entradas, 03 Stock a la fecha por material
     —acumulado histórico independiente del período, ordenado por nombre—, 04 Evolución mensual
     12 meses, 05 Alertas de stock) + detalle operativo (Entradas, Salidas, Movimientos,
     Stock por planta) y análisis por producto, cliente, proveedor y chofer. Los tipos
     "Stock actual" y "Comparativo E/S" fueron REEMPLAZADOS por el Informe General (decisión
-    del usuario). La interfaz es un dashboard oscuro; las exportaciones incluyen encabezado
-    profesional y filtros aplicados. Excel del General = libro con 5 hojas. PDF del General =
-    carátula + una página por sección; todas las tablas PDF usan escala de grises imprimible,
-    encabezados y totales con contraste y líneas visibles para separar registros. Los filtros
-    de período de Ventas y Entradas se muestran por separado.
+    del usuario). El informe por chofer incluye filtro y detalle de viajes, toneladas y
+    productos; movimientos sin chofer se identifican y no se atribuyen a personas. Los filtros
+    de razón social toman `razonSocial` de las Entradas y no se mezclan con proveedor/cliente;
+    en Informe General se aplican solo a la sección Entradas. La interfaz es un dashboard
+    oscuro; las exportaciones incluyen encabezado profesional y filtros aplicados. Excel del
+    General = libro con 5 hojas. PDF del General = carátula + una página por sección; todas
+    las tablas PDF usan escala de grises imprimible, encabezados y totales con contraste y
+    líneas visibles para separar registros. Los filtros de período de Ventas y Entradas se
+    muestran por separado.
   - `app/incorporar/page.js` + `lib/importar.js` → **Incorporar**: carga masiva desde las
     plantillas Excel (Entradas/Salidas) con validación fila por fila, preview y confirmación.
   - `app/tickets/page.js` + `lib/tickets/ocr.mjs` + `lib/tickets/extract.mjs` → lectura
@@ -85,8 +89,8 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
   - `scripts/generar-plantillas.mjs` → regenera `public/plantillas/Plantilla-Entradas.xlsx` y
     `Plantilla-Salidas.xlsx` (se descargan desde /incorporar).
   - `public/plantillas/*.xlsx` → plantillas versionadas que usa la app (NO borrarlas del repo).
-  - `app/reportes/page.js` → **Reportes**: el informe original (filtros tipo/planta/búsqueda/
-    períodos rápidos, etiqueta Viajes), tabla por producto ordenable al hacer clic en "Producto".
+  - `app/reportes/page.js` → **Reportes**: análisis de entradas, salidas, balances y stock
+    por producto y planta; permite filtrar por período, unidad de medida, búsqueda y corte.
   - `context/AppContext.js` → carga global de datos + estado de edición (`openEdit`, `updateRecord`).
   - `components/ModalForm.js` → alta/edición (autocompleta código y unidad por producto; sugiere chofer/patente desde movimientos y `data/base.json`, y completa el campo relacionado solo si existe una asociación única).
   - `lib/api.js` → funciones HTTP (`getRecords`, `createRecord`, `updateRecord`, `deleteRecord`).
