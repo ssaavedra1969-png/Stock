@@ -85,7 +85,8 @@
     "AVE|168440": "AI417ZZ",
     "LCE|112297": "AH919KE",
     "SPO|65982": "AG266CJ",
-    "SPO|65983": "AG894ER"
+    "SPO|65983": "AG894ER",
+    "LCE|112340": "AH784OX"
   },
   "correccionesPorTicket": {
     "AVE|165420": {
@@ -287,6 +288,26 @@
       "Peso Neto": 35360,
       "Chofer": "TOLOSA CESAR",
       "Pat. Chasis": "AH784OY"
+    },
+    "SPO|66000": {
+      "Fecha": "14/10/2026",
+      "N Remito": "66000",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 37950,
+      "Peso Neto": 37960,
+      "Chofer": "OCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
+    },
+    "LCE|112340": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112340",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": 35080,
+      "Peso Neto": 34560,
+      "Chofer": "RODRIGUEZ MATIAS",
+      "Pat. Chasis": "AH784OX"
     }
   },
   "correccionesPorArchivo": {
@@ -499,12 +520,32 @@
       "Peso Neto": 35360,
       "Chofer": "TOLOSA CESAR",
       "Pat. Chasis": "AH784OY"
+    },
+    "SPO|20261014_SPOSITO.PDF": {
+      "Fecha": "14/10/2026",
+      "N Remito": "66000",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "ARENA MODULO 1.8-1.9",
+      "Neto": 37950,
+      "Peso Neto": 37960,
+      "Chofer": "OCHOA ANIBAL",
+      "Pat. Chasis": "AG894ER"
+    },
+    "LCE|20261015_LCE.PDF": {
+      "Fecha": "14/10/2026",
+      "N Remito": "112340",
+      "Razon Social": "GRUPO FALPAT SRL",
+      "Material": "ARENA GRANITICA 0/6",
+      "Neto": 35080,
+      "Peso Neto": 34560,
+      "Chofer": "RODRIGUEZ MATIAS",
+      "Pat. Chasis": "AH784OX"
     }
   },
   "reglasLectura": {
     "SPO|Material|ELPEITN GY KREME WOTULO 1 13 3 EN CRERCERA RID TALS 37 5 GULA WLNE ZA 3 0 PAS KL MOVAS": "ARENA GRANITICA 0/6",
     "LCE|Material|N D": "ARENA GRANITICA 0/6",
-    "LCE|Razon Social|ALMAJO NORTE": "ARENERA CANELONES",
+    "LCE|Razon Social|ALMAJO NORTE": null,
     "SPO|Razon Social|ALMAJO NORTE": "ARENERA CANELONES",
     "SPO|Material|D AZRIP ITN AREAL AINURPO 1 B I EN CABECERA RIO TALA GUIA MINCCA": "ARENA MODULO 1.8-1.9",
     "SPO|Razon Social|GRUPO FALPAT SRL": "ARENERA CANELONES",
@@ -515,7 +556,8 @@
     "SPO|Material|PLS 3 PIPA AK FIG MM ER A ORT TALK GULIA MIN RA": "ARENA FINA",
     "SPO|Material|ECRIPS ITN OF RREHA HBCULS I EN CABECERM RID TALN GUIA HINARS": "ARENA MODULO 1.8-1.9",
     "LCE|Material|PIEDRA PARTIDA 10 30": "PIEDRA PARTIDA 6/12",
-    "AVE|Razon Social|ARENERA CANELONES": "GRUPO FALPAT SRL"
+    "AVE|Razon Social|ARENERA CANELONES": "GRUPO FALPAT SRL",
+    "SPO|Razon Social|ARENERA CANELONES": "GRUPO FALPAT SRL"
   },
   "razonesSociales": [
     "ALMAJO NORTE",
