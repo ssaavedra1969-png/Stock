@@ -65,8 +65,10 @@ Este es el circuito habitual para guardar remitos en el archivo histórico:
    excluilo desde su error o quitá su fila: se incorporan solo los registros
    restantes y el PDF excluido queda intacto en `Entrada` para revisarlo luego.
    También podés usar la **X** del archivo ya cargado para retirarlo sin volver a
-   procesar los demás. Podés deshacer la exclusión de un error antes de guardar.
-   Para iniciar otra tanda, terminá o limpiá la lectura actual.
+   procesar los demás. Podés agregar más PDF a la misma tanda: solo se procesan
+   los nuevos y se conservan las ediciones anteriores. Podés deshacer la
+   exclusión de un error antes de guardar. Para empezar un lote separado,
+   terminá o limpiá la lectura actual.
 4. Cerrá `Salida\Stock-Historico.xlsx` si está abierto en Excel. En la misma
    pestaña que tiene los registros revisados, confirmá **Guardar en histórico**.
    Aceptá el segundo mensaje de confirmación. La página agrega los remitos

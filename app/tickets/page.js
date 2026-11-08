@@ -338,7 +338,10 @@ export default function TicketsPage() {
   );
   const erroresLecturaExcluidos = (resultado?.errores || [])
     .map((error, index) => ({ ...error, index }))
-    .filter((_, index) => erroresExcluidos.has(index));
+    .filter(
+      (error) =>
+        erroresExcluidos.has(error.index) && !archivosQuitados.has(error.archivo)
+    );
 
   const alertas = useMemo(() => {
     if (!resultado) return [];
@@ -351,25 +354,34 @@ export default function TicketsPage() {
       showToast('Solo se aceptan archivos PDF', 'error');
       return;
     }
-    if (procesando || resultado) {
+    if (procesando || incorporando) {
       showToast(
-        'Terminá o limpiá la tanda actual antes de cargar más PDF; así no se vuelven a procesar los archivos ya leídos.',
+        'Esperá a que termine el proceso actual antes de agregar más PDF.',
         'error'
       );
       return;
     }
-    setFiles((prev) => {
-      const vistos = new Set(prev.map((f) => `${f.name}|${f.size}|${f.lastModified}`));
-      const merge = [...prev];
-      for (const f of nuevos) {
-        const k = `${f.name}|${f.size}|${f.lastModified}`;
-        if (!vistos.has(k)) {
-          vistos.add(k);
-          merge.push(f);
-        }
-      }
-      return merge;
+    const vistos = new Set(files.map((f) => `${f.name}|${f.size}|${f.lastModified}`));
+    const unicos = nuevos.filter((file) => {
+      const key = `${file.name}|${file.size}|${file.lastModified}`;
+      if (vistos.has(key)) return false;
+      vistos.add(key);
+      return true;
     });
+    if (unicos.length === 0) {
+      showToast('Esos PDF ya están en la tanda actual.', 'error');
+      return;
+    }
+
+    setFiles((prev) => [...prev, ...unicos]);
+    if (resultado) {
+      setArchivosQuitados((prev) => {
+        const next = new Set(prev);
+        for (const file of unicos) next.delete(file.name);
+        return next;
+      });
+      procesarAdicionales(unicos);
+    }
   }
 
   function onInput(event) {
@@ -553,6 +565,47 @@ export default function TicketsPage() {
       showToast(`Procesado: ${nuevos} nuevo(s), ${dup} duplicado(s)`);
     } catch (err) {
       showToast(err.message || 'Error al procesar los remitos', 'error');
+    }
+  }
+
+  async function procesarAdicionales(nuevos) {
+    if (nuevos.length === 0) return;
+    progresoRef.current = {
+      total: nuevos.length,
+      archivos: nuevos.map((file) => file.name),
+      items: nuevos.map((file) => ({
+        archivo: file.name,
+        estado: 'pendiente',
+        progreso: 0,
+        fase: 'en cola',
+      })),
+      terminado: false,
+    };
+    setProgreso(progresoRef.current);
+    try {
+      const data = await procesarTickets(nuevos, {
+        append: true,
+        onProgress: onProgreso,
+      });
+      const offsetRegistros = resultado?.registros?.length || 0;
+      const nuevosIdentificados = (data.registros || []).map((registro, index) => ({
+        ...registro,
+        _editorId: `ticket-${offsetRegistros + index}`,
+      }));
+      setRegistrosEditados([...registros, ...nuevosIdentificados]);
+      setHuboEdiciones(true);
+      setConfirmacionVisual(false);
+      setEditandoIdx(null);
+      setIdsEdicion([]);
+      setUltimaIncorporacion(null);
+      showToast(
+        `Se agregaron ${nuevos.length} PDF(s) al lote · ${data.nuevos ?? data.registros?.length ?? 0} registro(s) leído(s)`
+      );
+    } catch (err) {
+      showToast(
+        `No se pudieron procesar los PDF agregados: ${err.message || 'error de lectura'}`,
+        'error'
+      );
     }
   }
 
@@ -870,7 +923,11 @@ export default function TicketsPage() {
       <Paso
         n="1"
         titulo="Cargá los remitos"
-        ayuda="Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK para leer los PDF de Entrada y consultar duplicados en el histórico."
+        ayuda={
+          resultado
+            ? 'Agregá más PDF al mismo lote; se procesarán solo los archivos nuevos y se conservarán las correcciones anteriores.'
+            : 'Arrastrá PDF, elegí archivos o seleccioná la carpeta STOCK para leer los PDF de Entrada y consultar duplicados en el histórico.'
+        }
       >
         <div
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
@@ -886,7 +943,7 @@ export default function TicketsPage() {
             multiple
             onChange={onInput}
             className="hidden"
-            disabled={procesando || Boolean(resultado)}
+            disabled={procesando || incorporando}
           />
           <IconFileText className="h-5 w-5 text-falpat" />
           <span className="text-xs text-slate-300">
@@ -895,10 +952,10 @@ export default function TicketsPage() {
               type="button"
               onClick={() => inputRef.current?.click()}
               className="text-falpat-soft underline hover:text-falpat"
-              disabled={procesando || Boolean(resultado)}
+              disabled={procesando || incorporando}
               title={
                 resultado
-                  ? 'La tanda ya fue leída; quitá registros o errores desde la tabla sin volver a procesar los PDF.'
+                  ? 'Agregar PDF nuevos al lote; solo se procesarán los archivos agregados.'
                   : undefined
               }
             >
@@ -921,7 +978,7 @@ export default function TicketsPage() {
                   type="button"
                   onClick={() => removeFile(i)}
                   disabled={procesando || incorporando}
-                  title="Quitar de esta tanda; después de leer, el PDF original queda intacto en Entrada y no se reprocesan los demás."
+                  title="Quitar de esta tanda; el PDF original queda intacto en Entrada y no se reprocesan los demás."
                   className="text-slate-500 hover:text-red-300"
                 >
                   <IconX className="h-3 w-3" />
