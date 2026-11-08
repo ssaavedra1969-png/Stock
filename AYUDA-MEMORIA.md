@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-11-07. Separación de Inicio institucional y Movimientos operativos; ver [continuidad](./docs/continuidad-inicio-movimientos-2026-11-07.md)._
+_Última actualización: 2026-11-08. Informes gerenciales y filtro de productos por descripción publicados; ver [continuidad de hoy](./docs/continuidad-informes-2026-11-08.md) y el antecedente de [Inicio y Movimientos](./docs/continuidad-inicio-movimientos-2026-11-07.md)._
 
 ---
 
@@ -15,6 +15,10 @@ entradas/salidas de materiales (arena, áridos, etc.) con peso en toneladas, cam
   PostgreSQL/MongoDB. Cada guardado = commit/API a GitHub.
 - Repo: `https://github.com/ssaavedra1969-png/Stock`
 - Producción: `https://stock-gamma-inky.vercel.app/`
+- Estado al 2026-11-08: producción contiene el Inicio con resumen de stock, los
+  informes gerenciales/exportaciones y el filtro Producto por descripción. No se
+  promovieron los archivos de datos de `dev`; `.env.local` permanece en
+  `GITHUB_BRANCH=dev`.
 
 ---
 
