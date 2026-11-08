@@ -35,8 +35,11 @@ gestión operativa de entradas y salidas está en `/movimientos`.
 - `/informes` genera informes gerenciales por producto, cliente, proveedor y
   chofer, además de los informes generales y operativos. El informe por chofer
   muestra viajes, entradas, salidas, toneladas y productos, con filtros por
-  chofer, período, producto, planta y contraparte; los movimientos sin chofer
-  informado se identifican como **Sin chofer**.
+  chofer, período, producto, planta y contraparte. El filtro **Razón social**
+  toma los valores guardados en `razonSocial` de las Entradas; **Proveedor /
+  cliente** toma sus respectivos campos y es independiente. En el Informe
+  General, Razón social filtra solo la sección 02 Entradas. Los movimientos
+  sin chofer informado se identifican como **Sin chofer**.
 - Las exportaciones PDF y Excel incluyen el logo, datos verificados de Grupo
   FALPAT, período, filtros aplicados y resúmenes ejecutivos. El Informe General
   se entrega en un libro Excel de cinco hojas; los PDF usan encabezados de

@@ -328,6 +328,7 @@ export default function Informes() {
   const [anio, setAnio] = useState('');
   const [productosSel, setProductosSel] = useState([]);
   const [planta, setPlanta] = useState('');
+  const [razonSocial, setRazonSocial] = useState('');
   const [contraparte, setContraparte] = useState('');
   const [chofer, setChofer] = useState('');
 
@@ -349,6 +350,16 @@ export default function Informes() {
       [...new Set(records.map((r) => r.planta).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, 'es', { sensitivity: 'base' })
       ),
+    [records]
+  );
+  const razonSocialOptions = useMemo(
+    () =>
+      [...new Set(
+        records
+          .filter((record) => record.carga === 'Entrada')
+          .map((record) => String(record.razonSocial ?? '').trim())
+          .filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })),
     [records]
   );
   const contraparteOptions = useMemo(() => {
@@ -382,7 +393,7 @@ export default function Informes() {
     [records]
   );
 
-// Base respetando producto/planta/contraparte, sin período global: las secciones
+// Base respetando producto/planta/razón social/contraparte, sin período global: las secciones
   // 01 (Ventas) y 02 (Entradas) del Informe General aplican su PROPIO filtro de
   // período en la parte superior de cada sección.
   const baseSinPeriodo = useMemo(() => {
@@ -393,6 +404,11 @@ export default function Informes() {
       );
     }
     if (planta) arr = arr.filter((r) => r.planta === planta);
+    if (razonSocial && tipo !== 'general') {
+      arr = arr.filter(
+        (r) => r.carga === 'Entrada' && String(r.razonSocial ?? '').trim() === razonSocial
+      );
+    }
     if (contraparte) {
       if (['salidas', 'por-cliente'].includes(tipo)) arr = arr.filter((r) => r.cliente === contraparte);
       else if (['entradas', 'por-proveedor'].includes(tipo)) arr = arr.filter((r) => r.proveedor === contraparte);
@@ -405,7 +421,7 @@ export default function Informes() {
       });
     }
     return arr;
-  }, [records, productosSel, planta, contraparte, tipo, chofer]);
+  }, [records, productosSel, planta, razonSocial, contraparte, tipo, chofer]);
 
   // Base completa con el período global (mes/año + desde/hasta), para los informes
   // de Entradas / Salidas / Movimientos / Stock por planta.
@@ -646,7 +662,12 @@ export default function Informes() {
     const promSal = movsSal ? tnSal / movsSal : 0;
 
     // --- Sección 02: ENTRADAS (del período, con su propio filtro) ---
-    const entradasBase = filtrarPeriodo(baseSinPeriodo, entradasF).filter((r) => r.carga === 'Entrada');
+    let entradasBase = filtrarPeriodo(baseSinPeriodo, entradasF).filter((r) => r.carga === 'Entrada');
+    if (razonSocial) {
+      entradasBase = entradasBase.filter(
+        (r) => String(r.razonSocial ?? '').trim() === razonSocial
+      );
+    }
     const entradasRows = agregarSeccion(entradasBase);
     const tnEnt = entradasBase.reduce((s, r) => s + pesoTn(r.pesoBalanza), 0);
     const movsEnt = entradasBase.length;
@@ -747,7 +768,7 @@ return {
       evo: { meses, pico, promE: promEvoE, promS: promEvoS },
       alertas: { rows: alertasRows },
     };
-  }, [tipo, baseSinPeriodo, ventasF, entradasF, acumuladoMap, records]);
+  }, [tipo, baseSinPeriodo, ventasF, entradasF, razonSocial, acumuladoMap, records]);
 
   // ----- Etiquetas del informe -----
   const reportTitle = TIPOS.find((t) => t.value === tipo)?.label || 'Informe';
@@ -782,12 +803,13 @@ const periodoLabel = useMemo(() => {
     const parts = [periodoLabel];
     if (productosSel.length > 0) parts.push(`Producto: ${productosSel.join(', ')}`);
     if (planta) parts.push(`Planta: ${planta}`);
+    if (razonSocial) parts.push(`Razón social (solo Entradas): ${razonSocial}`);
     if (contraparte) parts.push(`${contraparteLabel}: ${contraparte}`);
     if (tipo === 'por-chofer' && chofer) {
       parts.push(`Chofer: ${chofer === SIN_CHOFER ? 'Sin chofer' : chofer}`);
     }
     return parts.join('  ·  ');
-  }, [periodoLabel, productosSel, planta, contraparte, contraparteLabel, tipo, chofer]);
+  }, [periodoLabel, productosSel, planta, razonSocial, contraparte, contraparteLabel, tipo, chofer]);
 
   const filtrosAplicados = useMemo(() => {
     const items = [];
@@ -801,16 +823,18 @@ const periodoLabel = useMemo(() => {
     }
     if (productosSel.length > 0) items.push(`Producto: ${productosSel.join(', ')}`);
     if (planta) items.push(`Planta: ${planta}`);
+    if (razonSocial) items.push(`Razón social (solo Entradas): ${razonSocial}`);
     if (contraparte) items.push(`${contraparteLabel}: ${contraparte}`);
     if (tipo === 'por-chofer' && chofer) {
       items.push(`Chofer: ${chofer === SIN_CHOFER ? 'Sin chofer' : chofer}`);
     }
     return items;
-  }, [tipo, mes, anio, desde, hasta, ventasF, entradasF, productosSel, planta, contraparte, contraparteLabel, chofer]);
+  }, [tipo, mes, anio, desde, hasta, ventasF, entradasF, productosSel, planta, razonSocial, contraparte, contraparteLabel, chofer]);
 
   function clearFilters() {
     setProductosSel([]);
     setPlanta('');
+    setRazonSocial('');
     setContraparte('');
     setChofer('');
     setDesde('');
@@ -1393,6 +1417,7 @@ const periodoLabel = useMemo(() => {
             `Entradas (02): ${descripcionPeriodo(entradasF.mes, entradasF.anio, entradasF.desde, entradasF.hasta)}`,
             ...productosSel.map((producto) => `Producto: ${producto}`),
             ...(planta ? [`Planta: ${planta}`] : []),
+            ...(razonSocial ? [`Razón social (solo Entradas): ${razonSocial}`] : []),
             ...(contraparte ? [`${contraparteLabel}: ${contraparte}`] : []),
           ].join('  ·  ')
         : filterLabel;
@@ -2042,7 +2067,9 @@ const periodoLabel = useMemo(() => {
             <select
               value={tipo}
               onChange={(e) => {
-                setTipo(e.target.value);
+                const nextTipo = e.target.value;
+                setTipo(nextTipo);
+                if (['salidas', 'por-cliente'].includes(nextTipo)) setRazonSocial('');
                 setContraparte('');
                 setChofer('');
               }}
@@ -2077,6 +2104,21 @@ const periodoLabel = useMemo(() => {
               ))}
             </select>
           </label>
+          {!['salidas', 'por-cliente'].includes(tipo) && (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Razón social · solo Entradas
+              </span>
+              <select value={razonSocial} onChange={(e) => setRazonSocial(e.target.value)} className="field">
+                <option value="" className="bg-night-900">Todas</option>
+                {razonSocialOptions.map((nombre) => (
+                  <option key={nombre} value={nombre} className="bg-night-900">
+                    {nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{contraparteLabel}</span>
             <select value={contraparte} onChange={(e) => setContraparte(e.target.value)} className="field">
