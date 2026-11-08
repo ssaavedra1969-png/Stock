@@ -7,7 +7,7 @@
 // ============================================================
 import { useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { toMillis, parseWeight, normalizeText, anioMes, descripcionPeriodo } from '@/lib/utils';
+import { toMillis, parseWeight, normalizeText, anioMes, descripcionPeriodo, todayISO } from '@/lib/utils';
 import FiltroPeriodo from '@/components/FiltroPeriodo';
 import FiltrosAplicados from '@/components/FiltrosAplicados';
 import MultiSelect from '@/components/MultiSelect';
@@ -22,7 +22,10 @@ import {
   IconSearch,
   IconTruck,
   IconPieChart,
+  IconBox,
+  IconBuilding,
 } from '@/components/Icons';
+import { ChartCard, GlamBars } from '@/components/Charts';
 
 function fmtTn(n) {
   const sign = n < 0 ? '-' : '';
@@ -34,6 +37,30 @@ function toDateInput(d) {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function getCantidadYUnidad(value) {
+  const match = String(value ?? '').trim().match(/^([+-]?[\d.,]+)\s*([a-zA-Z]*)$/);
+  if (!match) return { cantidad: 0, unidad: 'sin unidad' };
+
+  const raw = match[1];
+  const lastSeparator = Math.max(raw.lastIndexOf('.'), raw.lastIndexOf(','));
+  let normalized = raw;
+  if (lastSeparator >= 0) {
+    const integer = raw.slice(0, lastSeparator).replace(/[.,]/g, '');
+    const fraction = raw.slice(lastSeparator + 1).replace(/[.,]/g, '');
+    const digitsAfter = raw.length - lastSeparator - 1;
+    normalized =
+      digitsAfter === 3 && integer
+        ? raw.replace(/[.,]/g, '')
+        : `${integer}.${fraction}`;
+  }
+
+  const cantidad = Number(normalized);
+  return {
+    cantidad: Number.isFinite(cantidad) ? cantidad : 0,
+    unidad: match[2].toLowerCase() || 'sin unidad',
+  };
 }
 
 function ErrorPanel({ message, onRetry }) {
@@ -71,6 +98,9 @@ const RANGOS = [
 
 export default function Informes() {
   const { records, productos, loading, error, reload } = useApp();
+  const [vista, setVista] = useState('flujo');
+  const [fechaCorte, setFechaCorte] = useState(() => todayISO());
+  const [unidadStock, setUnidadStock] = useState('tn');
   const [productosSel, setProductosSel] = useState([]);
   const [tipo, setTipo] = useState('Todos');
   const [planta, setPlanta] = useState('Todas');
@@ -172,38 +202,128 @@ export default function Informes() {
 
   const balanceTn = totals.entradasTn - totals.salidasTn;
 
+  const stockRows = useMemo(() => {
+    const end = fechaCorte ? new Date(`${fechaCorte}T23:59:59.999`).getTime() : Infinity;
+    const q = normalizeText(busqueda);
+    const map = new Map();
+    for (const record of records) {
+      const timestamp = toMillis(record.fechaRemito);
+      if (timestamp == null || timestamp > end) continue;
+      if (planta !== 'Todas' && record.planta !== planta) continue;
+      if (productosSel.length && !productosSel.includes(record.producto)) continue;
+
+      const { cantidad, unidad } = getCantidadYUnidad(record.pesoBalanza);
+      const producto = record.producto || 'Sin producto';
+      const codigo = record.codigoProducto || '—';
+      if (q && !normalizeText(`${producto} ${codigo} ${record.planta || ''}`).includes(q)) continue;
+      const key = `${record.planta || 'Sin planta'}§${codigo}§${producto}§${unidad}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          planta: record.planta || 'Sin planta',
+          producto,
+          codigo,
+          unidad,
+          entradas: 0,
+          salidas: 0,
+          ultimo: timestamp,
+        });
+      }
+      const row = map.get(key);
+      if (record.carga === 'Entrada') row.entradas += cantidad;
+      else row.salidas += cantidad;
+      row.ultimo = Math.max(row.ultimo, timestamp);
+    }
+
+    return [...map.values()]
+      .map((row) => ({
+        ...row,
+        stock: row.entradas - row.salidas,
+        ultimoMs: row.ultimo,
+        ultimo: new Date(row.ultimo).toLocaleDateString('es-AR'),
+      }))
+      .sort((a, b) => a.producto.localeCompare(b.producto, 'es', { sensitivity: 'base' }));
+  }, [records, fechaCorte, planta, productosSel, busqueda]);
+
+  const stockByProduct = useMemo(() => {
+    const map = new Map();
+    for (const row of stockRows) {
+      const key = `${row.codigo}§${row.producto}§${row.unidad}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          producto: row.producto,
+          codigo: row.codigo,
+          unidad: row.unidad,
+          entradas: 0,
+          salidas: 0,
+          stock: 0,
+          ultimoMs: row.ultimoMs,
+        });
+      }
+      const item = map.get(key);
+      item.entradas += row.entradas;
+      item.salidas += row.salidas;
+      item.stock += row.stock;
+      item.ultimoMs = Math.max(item.ultimoMs, row.ultimoMs);
+    }
+    return [...map.values()]
+      .map((item) => ({ ...item, ultimo: new Date(item.ultimoMs).toLocaleDateString('es-AR') }))
+      .sort((a, b) => b.stock - a.stock);
+  }, [stockRows]);
+
+  const stockByPlant = useMemo(() => {
+    const map = new Map();
+    for (const row of stockRows) {
+      const key = `${row.planta}§${row.unidad}`;
+      if (!map.has(key)) {
+        map.set(key, { planta: row.planta, unidad: row.unidad, productos: 0, stock: 0 });
+      }
+      const item = map.get(key);
+      item.productos += 1;
+      item.stock += row.stock;
+    }
+    return [...map.values()].sort((a, b) => b.stock - a.stock);
+  }, [stockRows]);
+
+  const stockUnits = useMemo(
+    () => [...new Set(records.map((record) => getCantidadYUnidad(record.pesoBalanza).unidad))].sort(),
+    [records]
+  );
+  const stockViewRows = (vista === 'stock-planta' ? stockByPlant : stockByProduct)
+    .filter((row) => row.unidad === unidadStock);
+  const stockChartRows = stockViewRows.slice(0, 12);
+  const stockChartTotal = stockViewRows.reduce((sum, row) => sum + row.stock, 0);
+  const flowChartRows = [...byProduct]
+    .sort((a, b) => b.entradasTn + b.salidasTn - a.entradasTn - a.salidasTn)
+    .slice(0, 12);
+
   const hasFilters =
     productosSel.length > 0 ||
-    tipo !== 'Todos' ||
     planta !== 'Todas' ||
     Boolean(busqueda) ||
-    Boolean(desde) ||
-    Boolean(hasta) ||
-    Boolean(mes) ||
-    Boolean(anio);
+    (vista === 'flujo' && (tipo !== 'Todos' || Boolean(desde) || Boolean(hasta) || Boolean(mes) || Boolean(anio)));
 
   const activeFilters = [
     productosSel.length > 0,
-    tipo !== 'Todos',
+    vista === 'flujo' && tipo !== 'Todos',
     planta !== 'Todas',
     Boolean(busqueda),
-    Boolean(desde),
-    Boolean(hasta),
-    Boolean(mes),
-    Boolean(anio),
+    vista === 'flujo' && (Boolean(desde) || Boolean(hasta) || Boolean(mes) || Boolean(anio)),
+    vista !== 'flujo' && Boolean(fechaCorte),
   ].filter(Boolean).length;
 
   const filtrosAplicados = useMemo(() => {
     const items = [];
-    if (mes || anio || desde || hasta) {
+    if (vista === 'flujo' && (mes || anio || desde || hasta)) {
       items.push(`Período: ${descripcionPeriodo(mes, anio, desde, hasta)}`);
     }
     if (productosSel.length > 0) items.push(`Producto: ${productosSel.join(', ')}`);
     if (planta !== 'Todas') items.push(`Planta: ${planta}`);
-    if (tipo !== 'Todos') items.push(`Tipo: ${tipo === 'Entrada' ? 'Entradas' : 'Salidas'}`);
+    if (vista === 'flujo' && tipo !== 'Todos') items.push(`Tipo: ${tipo === 'Entrada' ? 'Entradas' : 'Salidas'}`);
     if (busqueda) items.push(`Búsqueda: "${busqueda}"`);
+    if (vista !== 'flujo' && fechaCorte) items.push(`Stock calculado al: ${fechaCorte}`);
+    if (vista !== 'flujo') items.push(`Unidad: ${unidadStock}`);
     return items;
-  }, [mes, anio, desde, hasta, productosSel, planta, tipo, busqueda]);
+  }, [vista, mes, anio, desde, hasta, productosSel, planta, tipo, busqueda, fechaCorte, unidadStock]);
 
   function clearFilters() {
     setProductosSel([]);
@@ -214,6 +334,8 @@ export default function Informes() {
     setHasta('');
     setMes('');
     setAnio('');
+    setFechaCorte(todayISO());
+    setUnidadStock('tn');
   }
 
   function toggleSort(key) {
@@ -266,11 +388,44 @@ export default function Informes() {
 
       {error && <ErrorPanel message={error} onRetry={reload} />}
 
+      <div className="card">
+        <div className="mb-3">
+          <h2 className="section-title">¿Qué querés analizar?</h2>
+          <p className="section-sub mt-0.5">
+            El flujo mide movimientos de un período; el stock calculado suma entradas y salidas hasta una fecha.
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3" role="group" aria-label="Tipo de análisis">
+          {[
+            { value: 'flujo', label: 'Entradas y salidas', detail: 'Movimientos del período' },
+            { value: 'stock-producto', label: 'Stock por producto', detail: 'Saldo calculado por material' },
+            { value: 'stock-planta', label: 'Stock por planta', detail: 'Saldo calculado por ubicación' },
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setVista(option.value)}
+              aria-pressed={vista === option.value}
+              className={`rounded-xl border p-3 text-left transition ${
+                vista === option.value
+                  ? 'border-falpat/40 bg-falpat/10 text-falpat-soft'
+                  : 'border-white/10 bg-white/[0.02] text-slate-300 hover:border-white/20'
+              }`}
+            >
+              <span className="block text-xs font-bold">{option.label}</span>
+              <span className="mt-1 block text-[10px] text-slate-500">{option.detail}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Filtros */}
       <div className="card !p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <h2 className="section-title !text-lg">Filtros</h2>
+            <h2 className="section-title !text-lg">
+              {vista === 'flujo' ? 'Filtros de movimientos' : 'Filtros de stock'}
+            </h2>
             {activeFilters > 0 && (
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-falpat/25 px-1.5 text-[11px] font-bold text-falpat-soft">
                 {activeFilters}
@@ -319,26 +474,28 @@ export default function Informes() {
             </select>
           </div>
 
-          <div>
-            <label className="label">Tipo de movimiento</label>
-            <div className="inline-flex w-full rounded-lg border border-white/10 bg-black/20 p-1">
-              {TIPOS.map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  onClick={() => setTipo(o.value)}
-                  className={
-                    'flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ' +
-                    (tipo === o.value
-                      ? 'bg-falpat/20 text-falpat-soft shadow'
-                      : 'text-slate-400 hover:text-slate-200')
-                  }
-                >
-                  {o.label}
-                </button>
-              ))}
+          {vista === 'flujo' && (
+            <div>
+              <label className="label">Tipo de movimiento</label>
+              <div className="inline-flex w-full rounded-lg border border-white/10 bg-black/20 p-1">
+                {TIPOS.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setTipo(o.value)}
+                    className={
+                      'flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ' +
+                      (tipo === o.value
+                        ? 'bg-falpat/20 text-falpat-soft shadow'
+                        : 'text-slate-400 hover:text-slate-200')
+                    }
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="sm:col-span-2 lg:col-span-1">
             <label className="label">Búsqueda</label>
@@ -355,45 +512,84 @@ export default function Informes() {
           </div>
         </div>
 
-        {/* Período: Mes + Año (principal) y Desde/Hasta (detalle secundario) */}
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <FiltroPeriodo
-            mes={mes}
-            anio={anio}
-            desde={desde}
-            hasta={hasta}
-            anios={anios}
-            onMes={setMes}
-            onAnio={setAnio}
-            onDesde={setDesde}
-            onHasta={setHasta}
-          />
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-[11px] uppercase tracking-wider text-slate-500">
-            Período rápido:
-          </span>
-          {RANGOS.map((r) => (
-            <button
-              key={r.key}
-              type="button"
-              onClick={() => quickRange(r.key)}
-              className="omx-chip rounded-full border px-3 py-1 text-xs text-slate-300 transition hover:border-falpat/40 hover:bg-falpat/10 hover:text-falpat-soft"
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
+        {vista === 'flujo' ? (
+          <>
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <FiltroPeriodo
+                mes={mes}
+                anio={anio}
+                desde={desde}
+                hasta={hasta}
+                anios={anios}
+                onMes={setMes}
+                onAnio={setAnio}
+                onDesde={setDesde}
+                onHasta={setHasta}
+              />
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] uppercase tracking-wider text-slate-500">
+                Período rápido:
+              </span>
+              {RANGOS.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => quickRange(r.key)}
+                  className="omx-chip rounded-full border px-3 py-1 text-xs text-slate-300 transition hover:border-falpat/40 hover:bg-falpat/10 hover:text-falpat-soft"
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="mt-4 grid gap-4 border-t border-white/10 pt-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="label">Fecha de corte</span>
+              <input
+                type="date"
+                value={fechaCorte}
+                onChange={(event) => setFechaCorte(event.target.value)}
+                className="field"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="label">Unidad del gráfico y resumen</span>
+              <select value={unidadStock} onChange={(event) => setUnidadStock(event.target.value)} className="field">
+                {stockUnits.map((unit) => (
+                  <option key={unit} value={unit} className="bg-night-900">{unit}</option>
+                ))}
+              </select>
+            </label>
+            <p className="text-xs leading-5 text-slate-500 sm:col-span-2">
+              Stock calculado = entradas menos salidas hasta la fecha de corte. No equivale necesariamente al conteo físico.
+              Los gráficos muestran una sola unidad a la vez para no mezclar toneladas, kg, unidades y otros formatos.
+            </p>
+          </div>
+        )}
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
           <FiltrosAplicados items={filtrosAplicados} onLimpiar={hasFilters ? clearFilters : undefined} />
           <p className="text-xs text-slate-500">
-            Los pesos se suman desde el campo &quot;Peso (Balanza)&quot; en toneladas (tn).
+            {vista === 'flujo'
+              ? 'El balance mostrado es entradas menos salidas del período.'
+              : 'Los valores corresponden al historial disponible en desarrollo.'}
           </p>
         </div>
       </div>
 
+      {vista !== 'flujo' ? (
+        <StockVisual
+          loading={loading}
+          vista={vista}
+          unidad={unidadStock}
+          fechaCorte={fechaCorte}
+          rows={stockViewRows}
+          total={stockChartTotal}
+        />
+      ) : (
+        <>
       {/* Resumen compacto */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400">
         <span className="inline-flex items-center gap-1.5">
@@ -429,6 +625,27 @@ export default function Informes() {
           </b>
         </span>
       </div>
+
+      <ChartCard title="Entradas y salidas por producto (tn)" icon={IconPieChart}>
+        <GlamBars
+          labels={flowChartRows.map((item) => item.producto)}
+          datasets={[
+            {
+              label: 'Entradas (tn)',
+              data: flowChartRows.map((item) => item.entradasTn),
+              color: 'rgba(16,185,129,0.85)',
+            },
+            {
+              label: 'Salidas (tn)',
+              data: flowChartRows.map((item) => item.salidasTn),
+              color: 'rgba(56,189,248,0.85)',
+            },
+          ]}
+        />
+        <p className="mt-2 text-[11px] text-slate-500">
+          Se muestran hasta 12 productos, ordenados por volumen del período. Las toneladas excluyen movimientos registrados en otras unidades.
+        </p>
+      </ChartCard>
 
       {/* Tabla por producto */}
       <div className="card overflow-hidden !p-0">
@@ -550,6 +767,105 @@ export default function Informes() {
               </tbody>
             </table>
           </div>
+        )}
+      </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StockVisual({ loading, vista, unidad, fechaCorte, rows, total }) {
+  const byPlant = vista === 'stock-planta';
+  const chartRows = rows.slice(0, 12);
+  const format = (value) => `${Number(value || 0).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} ${unidad}`;
+
+  if (loading) {
+    return <div className="card p-8 text-center text-sm text-slate-500">Calculando stock al {fechaCorte}…</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="card">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Unidad seleccionada</div>
+          <div className="mt-1 font-mono text-lg font-bold text-falpat-soft">{unidad}</div>
+        </div>
+        <div className="card">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Stock calculado al {fechaCorte}
+          </div>
+          <div className="mt-1 font-mono text-lg font-bold text-white">{format(total)}</div>
+        </div>
+      </div>
+
+      <ChartCard
+        title={byPlant ? `Stock por planta (${unidad})` : `Stock por producto (${unidad})`}
+        icon={byPlant ? IconBuilding : IconBox}
+      >
+        {chartRows.length ? (
+          <GlamBars
+            labels={chartRows.map((row) => byPlant ? row.planta : row.producto)}
+            datasets={[{
+              label: `Stock calculado (${unidad})`,
+              data: chartRows.map((row) => row.stock),
+              color: 'rgba(124,58,237,0.82)',
+            }]}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-slate-500">
+            No hay saldo para los filtros seleccionados en esta unidad.
+          </div>
+        )}
+      </ChartCard>
+
+      <div className="card overflow-hidden !p-0">
+        <div className="border-b border-white/10 p-4">
+          <h2 className="section-title">{byPlant ? 'Detalle de stock por planta' : 'Detalle de stock por producto'}</h2>
+          <p className="section-sub mt-0.5">
+            Saldo = entradas históricas menos salidas históricas hasta la fecha de corte. Unidad: {unidad}.
+          </p>
+        </div>
+        {rows.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-slate-500">
+                  {(byPlant
+                    ? ['Planta', 'Productos', 'Stock calculado']
+                    : ['Producto', 'Código', 'Entradas', 'Salidas', 'Stock calculado', 'Último movimiento']
+                  ).map((label) => <th key={label} className="px-4 py-3 font-bold">{label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => (
+                  <tr key={`${byPlant ? row.planta : row.codigo + row.producto}-${index}`} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.03]">
+                    {byPlant ? (
+                      <>
+                        <td className="px-4 py-3 font-semibold text-slate-200">{row.planta}</td>
+                        <td className="px-4 py-3 text-slate-400">{row.productos}</td>
+                        <td className="px-4 py-3 font-mono font-semibold text-white">{format(row.stock)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3 font-semibold text-slate-200">{row.producto}</td>
+                        <td className="px-4 py-3 text-slate-400">{row.codigo}</td>
+                        <td className="px-4 py-3 font-mono text-emerald-300">{format(row.entradas)}</td>
+                        <td className="px-4 py-3 font-mono text-sky-300">{format(row.salidas)}</td>
+                        <td className="px-4 py-3 font-mono font-semibold text-white">{format(row.stock)}</td>
+                        <td className="px-4 py-3 text-slate-400">{row.ultimo}</td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-8 text-center text-sm text-slate-500">No hay datos para los filtros seleccionados.</div>
         )}
       </div>
     </div>

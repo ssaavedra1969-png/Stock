@@ -1,6 +1,6 @@
 # AYUDA MEMORIA — FALPAT Stock
 
-_Última actualización: 2026-11-02. Restauración del guardado de remitos en el histórico compartido._
+_Última actualización: 2026-11-07. Separación de Inicio institucional y Movimientos operativos; ver [continuidad](./docs/continuidad-inicio-movimientos-2026-11-07.md)._
 
 ---
 
@@ -53,19 +53,22 @@ npm run lan        # build ya hecho: sirve en toda la red (http://<IP>:3000)
   - `GET/POST /api/db` → leer / agregar registros (lee y escribe a GitHub con el token).
   - `PUT/DELETE /api/db/[id]` → editar / borrar un registro. Siempre recalcula `productos`.
 - **Clientes**:
-  - `app/page.js` → **Panel**: top bar con botones Registrar entrada/salida + mini stats,
-    navegador de registro, tabla de movimientos con filtro por carga (Todos/Entradas/Salidas),
-    búsqueda, orden por columnas, editar/borrar, columna de acciones fija a la derecha.
+  - `app/page.js` → **Inicio** institucional con accesos rápidos y, reutilizada por
+    `app/movimientos/page.js`, la vista operativa de **Movimientos**. Esta última contiene
+    accesos diferenciados para Entrada desde PDF, Entrada manual y Salida manual; resumen
+    general, navegador del último movimiento e historial con filtros, búsqueda, orden por
+    columnas, edición y eliminación.
   - `app/informes/page.js` → **Informes**: generador gerencial. Tipos: **Informe General**
     (default, 5 secciones numeradas: 01 Ventas, 02 Entradas, 03 Stock a la fecha por material
     —acumulado histórico independiente del período, ordenado por nombre—, 04 Evolución mensual
     12 meses, 05 Alertas de stock) + detalle operativo (Entradas, Salidas, Movimientos,
-    Stock por planta). Los tipos "Stock actual" y "Comparativo E/S" fueron REEMPLAZADOS por el
-    Informe General (decisión del usuario). Estética dashboard oscura estilo Glamour's Control:
-    panel glass, stat-cards con línea superior degradada por color, tipografía Plus Jakarta Sans
-    (`.font-display` en globals.css), tablas oscuras mono, badges. Exportación Excel/PDF: PDF del
-    General = carátula + una página por sección con encabezado propio (logo + título de sección +
-    período); Excel del General = libro con 5 hojas. PDF/Excel de detalles = formato claro.
+    Stock por planta) y análisis por producto, cliente, proveedor y chofer. Los tipos
+    "Stock actual" y "Comparativo E/S" fueron REEMPLAZADOS por el Informe General (decisión
+    del usuario). La interfaz es un dashboard oscuro; las exportaciones incluyen encabezado
+    profesional y filtros aplicados. Excel del General = libro con 5 hojas. PDF del General =
+    carátula + una página por sección; todas las tablas PDF usan escala de grises imprimible,
+    encabezados y totales con contraste y líneas visibles para separar registros. Los filtros
+    de período de Ventas y Entradas se muestran por separado.
   - `app/incorporar/page.js` + `lib/importar.js` → **Incorporar**: carga masiva desde las
     plantillas Excel (Entradas/Salidas) con validación fila por fila, preview y confirmación.
   - `app/tickets/page.js` + `lib/tickets/ocr.mjs` + `lib/tickets/extract.mjs` → lectura
