@@ -9,6 +9,7 @@
 // - Búsqueda en tiempo real.
 // ============================================================
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { formatDate, normalizeText, cn, toMillis, anioMes, descripcionPeriodo } from '@/lib/utils';
@@ -16,6 +17,7 @@ import SearchBar from '@/components/SearchBar';
 import FiltroPeriodo from '@/components/FiltroPeriodo';
 import FiltrosAplicados from '@/components/FiltrosAplicados';
 import SectionHero from '@/components/SectionHero';
+import { LOGO_PATH } from '@/lib/company';
 import {
   IconArrowUpRight,
   IconArrowDownLeft,
@@ -771,44 +773,157 @@ export default function Home() {
 
       {error && <ErrorPanel message={error} onRetry={reload} />}
 
-      {/* Barra superior: acciones (izquierda) + resumen (derecha) */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href="/tickets"
-            className="btn-primary whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
-            title="Leer remitos PDF para registrar una entrada"
-          >
-            <IconFileText className="h-3.5 w-3.5" />
-            Cargar Entrada PDF
-          </Link>
-          <button
-            type="button"
-            onClick={() => openModal('Entrada')}
-            className="btn-ghost whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
-            title="Registrar manualmente una entrada"
-          >
-            <IconArrowUpRight className="h-3.5 w-3.5" />
-            Entrada manual
-          </button>
-          <button
-            type="button"
-            onClick={() => openModal('Salida')}
-            className="btn-volt whitespace-nowrap !px-4 !py-2.5 !text-[13px]"
-            title="Registrar una salida de material"
-            aria-label="Registrar salida"
-          >
-            <IconArrowDownLeft className="h-3.5 w-3.5" />
-            Registrar salida
-          </button>
-        </div>
+      <section
+        aria-labelledby="home-hero-title"
+        className="relative isolate overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#07101b] shadow-[0_30px_90px_-55px_rgba(0,0,0,0.95)]"
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-80"
+          style={{
+            backgroundImage:
+              'radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 48%), radial-gradient(ellipse at 100% 100%, color-mix(in srgb, #facc15 9%, transparent), transparent 42%)',
+          }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.035),transparent_44%,rgba(255,255,255,0.015))]" />
 
-        <div className="flex items-center gap-2">
-          <MiniStat label="Entradas" value={stats.entradas} accent="text-falpat-soft" />
-          <MiniStat label="Salidas" value={stats.salidas} accent="text-volt" />
-          <MiniStat label="Total" value={stats.total} />
+        <div className="relative grid lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="flex flex-col items-start p-6 sm:p-9 lg:p-11">
+            <div className="mb-7 flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] p-1.5">
+                <Image
+                  src={LOGO_PATH}
+                  alt="Grupo FALPAT SRL"
+                  width={44}
+                  height={44}
+                  className="h-full w-full object-contain"
+                  priority
+                />
+              </span>
+              <div>
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-slate-100">
+                  Grupo FALPAT SRL
+                </p>
+                <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  Gestión de materiales · Luján
+                </p>
+              </div>
+            </div>
+
+            <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-falpat/25 bg-falpat/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-falpat-soft">
+              <span className="h-1.5 w-1.5 rounded-full bg-falpat shadow-glow" />
+              Control operativo de stock
+            </p>
+            <h2
+              id="home-hero-title"
+              className="max-w-2xl text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl xl:text-[3.25rem]"
+            >
+              Cada material y cada movimiento,{' '}
+              <span className="bg-gradient-to-r from-falpat-soft via-white to-volt bg-clip-text text-transparent">
+                bajo control.
+              </span>
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+              Un socio confiable en tu obra. Registrá entradas y salidas, consultá
+              remitos y seguí los movimientos de materiales en un solo lugar.
+            </p>
+            <p className="mt-2 max-w-2xl text-xs leading-6 text-slate-500 sm:text-sm">
+              En línea con el compromiso de FALPAT con la calidad, el soporte técnico
+              y el acompañamiento logístico para cada proyecto.
+            </p>
+
+            <div className="mt-7 flex w-full flex-wrap gap-2.5">
+              <Link
+                href="/tickets"
+                className="btn-primary whitespace-nowrap !px-4 !py-2.5 !text-[12px]"
+                title="Leer remitos PDF para registrar una entrada"
+              >
+                <IconFileText className="h-3.5 w-3.5" />
+                Cargar Entrada PDF
+              </Link>
+              <button
+                type="button"
+                onClick={() => openModal('Entrada')}
+                className="btn-ghost whitespace-nowrap !px-4 !py-2.5 !text-[12px]"
+                title="Registrar manualmente una entrada"
+              >
+                <IconArrowUpRight className="h-3.5 w-3.5" />
+                Entrada manual
+              </button>
+              <button
+                type="button"
+                onClick={() => openModal('Salida')}
+                className="btn-volt whitespace-nowrap !px-4 !py-2.5 !text-[12px]"
+                title="Registrar una salida de material"
+              >
+                <IconArrowDownLeft className="h-3.5 w-3.5" />
+                Registrar salida
+              </button>
+            </div>
+
+            <a
+              href="https://hormigon.grupofalpat.com.ar/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 transition hover:text-falpat-soft"
+            >
+              Conocé Grupo FALPAT
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <aside className="relative flex flex-col justify-between border-t border-white/[0.07] bg-black/20 p-5 sm:p-7 lg:border-l lg:border-t-0 lg:p-8">
+            <div>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                    Vista general
+                  </p>
+                  <h3 className="mt-1 text-lg font-bold text-white">Operación diaria</h3>
+                </div>
+                <span className="rounded-lg border border-white/10 bg-white/[0.035] p-2 text-falpat-soft">
+                  <IconBox className="h-5 w-5" />
+                </span>
+              </div>
+
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                <MiniStat label="Entradas" value={stats.entradas} accent="text-falpat-soft" />
+                <MiniStat label="Salidas" value={stats.salidas} accent="text-volt" />
+                <MiniStat label="Movimientos" value={stats.total} />
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <div className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+                  <span className="mt-0.5 text-falpat-soft"><IconFileText className="h-4 w-4" /></span>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-200">Entradas con respaldo</p>
+                    <p className="mt-1 text-[10px] leading-5 text-slate-500">Carga manual o lectura de remitos PDF.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+                  <span className="mt-0.5 text-volt"><IconArrowDownLeft className="h-4 w-4" /></span>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-200">Salidas registradas</p>
+                    <p className="mt-1 text-[10px] leading-5 text-slate-500">Seguimiento de despachos y destinos.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+                  <span className="mt-0.5 text-sky-300"><IconScale className="h-4 w-4" /></span>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-200">Consulta y trazabilidad</p>
+                    <p className="mt-1 text-[10px] leading-5 text-slate-500">Buscá, filtrá y revisá el historial de movimientos.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center gap-2 border-t border-white/[0.07] pt-4 text-[10px] text-slate-500">
+              <IconBuilding className="h-3.5 w-3.5 shrink-0 text-falpat-soft" />
+              <span>Ruta 6 y 34 km 156 · Luján, Buenos Aires</span>
+            </div>
+          </aside>
         </div>
-      </div>
+      </section>
 
       {/* Visor del registro actual */}
       {loading ? (
